@@ -348,6 +348,78 @@ canvas{width:100%;height:260px}
 }
 
 
+.gauges-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:16px;
+    margin-top:20px;
+}
+
+.gauge-card{
+    background:linear-gradient(180deg,#0f172a,#020617);
+    border-radius:20px;
+    padding:16px;
+    text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    transition:transform .25s ease;
+}
+
+.gauge-card:hover{
+    transform:translateY(-4px);
+}
+
+.gauge-label{
+    font-size:14px;
+    opacity:.7;
+    margin-bottom:6px;
+}
+
+.gauge-container{
+    position:relative;
+    width:130px;
+    height:130px;
+    margin:0 auto;
+}
+
+.gauge-svg{
+    transform:rotate(-90deg);
+}
+
+.gauge-circle-bg{
+    fill:none;
+    stroke:#1e293b;
+    stroke-width:12;
+}
+
+.gauge-circle-progress{
+    fill:none;
+    stroke:#38bdf8;
+    stroke-width:12;
+    stroke-linecap:round;
+    transition:stroke-dashoffset 1s ease;
+}
+
+.gauge-text{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    font-weight:700;
+}
+
+.gauge-sublabel{
+    margin-top:8px;
+    font-size:14px;
+}
+
+.gauge-meta-info{
+    font-size:12px;
+    opacity:.6;
+}
+
+
 
 </style>
 </head>
@@ -364,7 +436,7 @@ canvas{width:100%;height:260px}
   <button onclick="showPage('custos')">⚙️</button>
   <button onclick="showPage('lancamento')">➕</button>
   <button onclick="showPage('historico')">📄</button>
-  <button onclick="showPage('graficos')">📊</button>
+  <button onclick="showPage('metas')">🎯</button>
 </nav>
 
 <!-- VEÍCULOS -->
@@ -486,20 +558,37 @@ canvas{width:100%;height:260px}
     </section>
 
 
-<!-- HISTÓRICO -->
-<section id="historico" class="page">
-  <h2>📄 Histórico</h2>
-  <div id="listaHistorico"></div>
-  <button onclick="exportCSV()">📤 Exportar CSV</button>
-</section>
+    <!-- HISTÓRICO -->
+    <section id="historico" class="page">
+        <h2>📄 Histórico</h2>
+        <div id="listaHistorico"></div>
+        <button onclick="exportCSV()">📤 Exportar CSV</button>
+    </section>
 
-<!-- GRÁFICOS -->
-<section id="graficos" class="page">
-  <h2>📊 Gráfico Mensal</h2>
-  <div class="card">
-    <canvas id="grafico" width="360" height="260"></canvas>
-  </div>
-</section>
+    <!-- METAS -->
+    <section id="metas" class="page">
+        <h2>🎯 Metas Mensais</h2>
+
+        <div class="card">
+            <label>Ano</label>
+            <select id="metaAno" onchange="renderMetas()"></select>
+        </div>
+
+        <div class="card">
+            <label>Meta mensal padrão (R$)</label>
+            <input type="number" id="metaPadrao" placeholder="Ex: 8000">
+
+            <button onclick="aplicarMetaAnual()">
+                Aplicar para todos os meses
+            </button>
+
+            <small>
+                💡 Você poderá ajustar cada mês individualmente depois
+            </small>
+        </div>
+
+        <div id="gaugesContainer" class="gauges-grid"></div>
+    </section>
 
 <!-- Modals -->
 <div id="modalEdicao" class="modal hidden">
@@ -557,8 +646,12 @@ canvas{width:100%;height:260px}
     // ======= STORAGE =======
     let data = JSON.parse(localStorage.getItem('kmApp')) || {
     veiculos:[],
-    ativo:null
+    ativo:null,
+    metas: {}
     };
+
+    //verifica o ano de edição
+    let anoSelecionado = new Date().getFullYear();
 
     // Guarda temporariamente o resultado calculado
     let resultadoAtual = null;
@@ -587,8 +680,8 @@ canvas{width:100%;height:260px}
     if(id === 'lancamento'){atualizarCustoKmNovoLancamento(); carregarKmTemp(); atualizarUIRota();}
     if(id === 'novo') atualizarCustoKmNovoLancamento();
     if(id==='historico') renderHistorico();
-    if(id==='graficos') renderGrafico();
     if(id === 'custos') {carregarCustos(); atualizarCustoKm();}
+    if(id === 'metas'){carregarAnosMeta(); renderMetas();}
     }
 
     // ======= VEÍCULOS =======
@@ -716,7 +809,6 @@ canvas{width:100%;height:260px}
         renderVeiculos();
         carregarCustos();
         renderHistorico();
-        renderGrafico();
         atualizarCustoKm();
         atualizarCustoKmNovoLancamento();
 
@@ -934,6 +1026,14 @@ canvas{width:100%;height:260px}
             custoTotal,
             lucro
         });
+
+        //adicona os dados as metas dos gauges
+        const dataLancamento = new Date(lancamento.data);
+        const ano = dataLancamento.getFullYear();
+        const mes = dataLancamento.getMonth(); // 0–11
+
+        addFaturamentoMes(ano, mes, Number(lancamento.valor));
+
         save();
 
         // limpa rota
@@ -950,7 +1050,8 @@ canvas{width:100%;height:260px}
 
         // atualiza telas dependentes
         renderHistorico();
-        renderGrafico();
+
+        generateGauges(ano);
 
         showToast("Rota fechada e salva 📄", "success");
     }
@@ -1110,7 +1211,7 @@ canvas{width:100%;height:260px}
 
         const h = v.historico.find(h => h.id === id);
         if(!h) return;
-
+        
         //Exclui direto os historicos
         //const ok = confirm("Deseja realmente excluir este lançamento?");
         //if(!ok) return;
@@ -1118,7 +1219,7 @@ canvas{width:100%;height:260px}
         v.historico = v.historico.filter(h => h.id !== id);
         save();
         renderHistorico();
-        renderGrafico();
+        generateGauges(anoSelecionado)
         showToast("Lançamento excluído ❌", "info");
     }
     
@@ -1214,13 +1315,181 @@ canvas{width:100%;height:260px}
         save();
         fecharModal();
         renderHistorico();
-        renderGrafico();
+        generateGauges(anoSelecionado);
 
         showToast("Lançamento recalculado e atualizado 🔄", "success");
     }
 
 
     // ======= GRÁFICO =======
+    // Renderiza gráfico mensal de lucro
+    function carregarAnosMeta(){
+        const select = document.getElementById("metaAno");
+        if(!select) return;
+
+        const anoAtual = new Date().getFullYear();
+        select.innerHTML = "";
+
+        for(let a = anoAtual - 1; a <= anoAtual + 1; a++){
+            const opt = document.createElement("option");
+            opt.value = a;
+            opt.textContent = a;
+            select.appendChild(opt);
+        }
+
+        select.value = anoAtual;
+    }
+
+    function calcularFaturamentoPorMes(v, ano){
+        const meses = {};
+
+        if(!v || !v.historico) return meses;
+
+        v.historico.forEach(h => {
+            const d = new Date(h.data);
+
+            if(d.getFullYear() !== Number(ano)) return;
+
+            const mes = d.getMonth(); // 0–11
+
+            if(!meses[mes]) meses[mes] = 0;
+
+            meses[mes] += Number(h.valor || 0);
+        });
+
+        return meses;
+    }
+
+    function generateGauges(ano){
+        const v = getAtivo();
+        const container = document.getElementById("gaugesContainer");
+        container.innerHTML = "";
+
+        if(!v) return;
+
+        const faturamento = calcularFaturamentoPorMes(v, ano);
+
+        const meses = [
+            "JAN","FEV","MAR","ABR","MAI","JUN",
+            "JUL","AGO","SET","OUT","NOV","DEZ"
+        ];
+
+        meses.forEach((nomeMes, mesIndex) => {
+            const meta = getMetaMes(ano, mesIndex);
+            if(!meta || meta <= 0) return; // só mostra se tiver meta
+
+            const faturado = faturamento[mesIndex] || 0;
+            const perc = Math.min((faturado / meta) * 100, 120);
+
+            const circumference = 2 * Math.PI * 55;
+            const offset = circumference - (perc / 100) * circumference;
+
+            const card = document.createElement("div");
+            card.className = "gauge-card";
+
+            card.innerHTML = `
+                <div class="gauge-label">${nomeMes}</div>
+
+                <div class="gauge-container">
+                    <svg class="gauge-svg" width="130" height="130">
+                        <circle class="gauge-circle-bg"
+                            cx="65" cy="65" r="55"></circle>
+
+                        <circle class="gauge-circle-progress"
+                            cx="65" cy="65" r="55"
+                            stroke-dasharray="${circumference}"
+                            stroke-dashoffset="${circumference}"
+                            data-offset="${offset}">
+                        </circle>
+                    </svg>
+
+                    <div class="gauge-text">0%</div>
+                </div>
+
+                <div class="gauge-sublabel">
+                    ${faturado.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+                </div>
+
+                <div class="gauge-meta-info">
+                    Meta:
+                    <input type="number"
+                        value="${meta}"
+                        style="margin-top:6px"
+                        oninput="
+                            setMetaMes(${ano},${mesIndex},this.value);
+                            renderMetas();
+                        ">
+                </div>
+            `;
+
+            container.appendChild(card);
+
+            // animação
+            setTimeout(() => {
+                const circle = card.querySelector(".gauge-circle-progress");
+                const text = card.querySelector(".gauge-text");
+
+                circle.style.strokeDashoffset = offset;
+                text.innerText = Math.round(perc) + "%";
+            }, 100);
+        });
+    }
+
+
+    function animateGauge(gaugeId, textId, perc, circumference){
+        const gauge = document.getElementById(gaugeId);
+        const text  = document.getElementById(textId);
+
+        if(!gauge || !text) return;
+
+        const offset = circumference - (perc / 100) * circumference;
+
+        // reset real
+        gauge.style.transition = "none";
+        gauge.style.strokeDashoffset = circumference;
+        gauge.getBoundingClientRect(); // força repaint
+
+        // anima
+        gauge.style.transition = "stroke-dashoffset 1s ease";
+        gauge.style.strokeDashoffset = offset;
+
+        // anima o número
+        let current = 0;
+        const target = Math.round(perc);
+
+        const step = Math.max(target / 30, 1);
+
+        const timer = setInterval(() => {
+            current += step;
+            if(current >= target){
+                current = target;
+                clearInterval(timer);
+            }
+            text.innerText = `${Math.round(current)}%`;
+        }, 30);
+    }
+
+    function renderMetas(){
+        const v = getAtivo();
+        const ano = metaAno.value;
+
+        if(!v){
+            gaugesContainer.innerHTML = "<small>Selecione um veículo.</small>";
+            return;
+        }
+
+        // Apenas gera os gauges
+        generateGauges(ano);
+    }
+
+
+
+
+
+    
+    
+    
+    
     // Renderiza gráfico mensal de lucro
     function renderGrafico(){
     const v = getAtivo();
@@ -1340,9 +1609,62 @@ canvas{width:100%;height:260px}
 
     // ======= AUX =======
     function getAtivo(){
-    return data.veiculos.find(v=>v.id===data.ativo);
+        return data.veiculos.find(v=>v.id===data.ativo);
     }
 
+    function getMetaMes(ano, mes){
+        return data.metas?.[ano]?.[mes] || 0;
+    }
+
+    function setMetaMes(ano, mes, valor) {
+        if (!data.metas) data.metas = {};
+        if (!data.metas[ano]) data.metas[ano] = {};
+
+        data.metas[ano][mes] = valor;
+        salvar();
+    }
+
+    function getFaturamentoMes(ano, mes) {
+        return data.faturamentoMensal?.[ano]?.[mes] || 0;
+    }
+
+    function addFaturamentoMes(ano, mes, valor) {
+        if (!data.faturamentoMensal) data.faturamentoMensal = {};
+        if (!data.faturamentoMensal[ano]) data.faturamentoMensal[ano] = {};
+
+        data.faturamentoMensal[ano][mes] =
+            (data.faturamentoMensal[ano][mes] || 0) + valor;
+
+        save();
+    }
+
+
+    function aplicarMetaAnual() {
+        const ano = document.getElementById("metaAno").value;
+        const metaPadrao = Number(document.getElementById("metaPadrao").value);
+
+        if (!metaPadrao || metaPadrao <= 0) {
+            showToast("Informe uma meta mensal válida", "info");
+            return;
+        }
+
+        if (!data.metas) data.metas = {};
+        if (!data.metas[ano]) data.metas[ano] = {};
+
+        // meses 0–11 (JS Date padrão)
+        for (let mes = 0; mes < 12; mes++) {
+            data.metas[ano][mes] = metaPadrao;
+        }
+
+        save();
+        renderMetas();
+        showToast("Metas aplicadas para todo o ano 🎯", "success");
+    }
+
+
+
+
+    
     renderVeiculos();
 
     window.addEventListener("load", () => {
@@ -1356,6 +1678,8 @@ canvas{width:100%;height:260px}
     if("serviceWorker" in navigator){
         navigator.serviceWorker.register("sw.js");
     }
+
+    
 
 </script>
 

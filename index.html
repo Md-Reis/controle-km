@@ -329,10 +329,12 @@ canvas{width:100%;height:260px}
 }
 
 #splash img{
-    width:220px;
-    max-width:70%;
-    animation:logoPulse 2s ease-in-out infinite;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;   /* cobre a tela inteira */
+    animation: logoPulse 2s ease-in-out infinite;
 }
+
 
 /* animações */
 @keyframes fadeOut{
@@ -393,7 +395,6 @@ canvas{width:100%;height:260px}
 
 .gauge-circle-progress{
     fill:none;
-    stroke:#38bdf8;
     stroke-width:12;
     stroke-linecap:round;
     transition:stroke-dashoffset 1s ease;
@@ -417,6 +418,110 @@ canvas{width:100%;height:260px}
 .gauge-meta-info{
     font-size:12px;
     opacity:.6;
+}
+
+.gauge-circle-progress {
+    stroke-linecap: round;
+    transition: stroke 0.3s ease;
+}
+
+.gauge-glow {
+    filter: blur(4px);
+    opacity: 0.7;
+}
+
+
+.meta-batida {
+    border: 1px solid #00e676;
+    transition: all 0.4s ease;
+}
+
+@keyframes pulseMeta {
+    0% {
+        box-shadow: 0 0 0px #00e676;
+    }
+    50% {
+        box-shadow: 0 0 20px #00e676;
+    }
+    100% {
+        box-shadow: 0 0 0px #00e676;
+    }
+}
+
+.meta-batida-ultra {
+    background: linear-gradient(135deg, #003b2e, #00c853);
+    border: 1px solid #00e676;
+    animation: pulseMeta 2s infinite;
+    transition: all 0.4s ease;
+}
+
+.meta-wrapper {
+    position: relative;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meta-edit-icon {
+    opacity: 0;
+    font-size: 12px;
+    transition: opacity 0.2s ease;
+}
+
+.meta-wrapper:hover .meta-edit-icon {
+    opacity: 1;
+}
+
+.meta-input {
+    width: 90px;
+    padding: 4px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #111;
+    color: #fff;
+}
+
+.card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.toggle-view{
+    background:rgba(255,255,255,0.08);
+    border:none;
+    width:18%;
+    height: 50px;
+    border-radius:10px;
+    padding:6px 10px;
+    cursor:pointer;
+    color:#fff;
+}
+
+.custo-item{
+    margin-bottom:14px;
+}
+
+.custo-slider,
+.custo-input{
+    width:100%;
+    margin-top:6px;
+}
+
+.custo-input{
+    background:#0f1630;
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px;
+    padding:10px;
+    color:#fff;
+}
+
+.custo-valor{
+    display:block;
+    margin-top:4px;
+    opacity:.8;
 }
 
 
@@ -452,7 +557,15 @@ canvas{width:100%;height:260px}
 
 <!-- CUSTOS -->
 <section id="custos" class="page">
-  <h2>⚙️ Custos do Veículo</h2>
+    <div class="card-header">
+        <h3>⚙️ Custos do Veículo</h3>
+
+        <button class="toggle-view"
+                onclick="toggleCustoView()"
+                title="Alternar visualização">
+            🎚️ / ⌨️
+        </button>
+    </div>
 
   <div class="card" id="resumoCustoKm">
     <strong>🚗 Veículo selecionado:</strong>
@@ -464,30 +577,120 @@ canvas{width:100%;height:260px}
     </h2>
   </div>
 
+    <!-- ================= CUSTOS DO VEÍCULO ================= -->
+    <!-- Combustível -->
+    <div class="custo-item" data-custo="comb">
+        <label>⛽ Combustível (R$)</label>
 
-  <div class="card">
-    <label>⛽ Combustível (R$/litro)</label>
-    <input type="range" min="4" max="10" step="0.1" id="cComb" oninput="updateSlider('cComb','vComb')">
-    <div><strong id="vComb"></strong></div>
-  </div>
+        <input type="range"
+            id="cComb"
+            min="0"
+            max="15"
+            step="0.1"
+            oninput="updateCusto('comb', this.value)"
+            style="display:none"
+            class="custo-slider">
 
-  <div class="card">
-    <label>🔧 Manutenção mensal</label>
-    <input type="range" min="0" max="600" step="10" id="cMan" oninput="updateSlider('cMan','vMan')">
-    <div><strong id="vMan"></strong></div>
-  </div>
+        <input type="number"
+            class="custo-input"
+            min="0"
+            step="0.1"
+            oninput="updateCusto('comb', this.value)">
 
-  <div class="card">
-    <label>🛞 Pneus (mensal)</label>
-    <input type="range" min="0" max="400" step="10" id="cPneu" oninput="updateSlider('cPneu','vPneu')">
-    <div><strong id="vPneu"></strong></div>
-  </div>
+        <small class="custo-valor" id="vComb">R$ 0,00</small>
+    </div>
 
-  <div class="card">
-    <label>🛡️ Seguro mensal</label>
-    <input type="range" min="0" max="500" step="10" id="cSeguro" oninput="updateSlider('cSeguro','vSeguro')">
-    <div><strong id="vSeguro"></strong></div>
-  </div>
+
+    <!-- Manutenção -->
+    <div class="custo-item" data-custo="man">
+        <label>🔧 Manutenção (R$)</label>
+
+        <input type="range"
+            id="cMan"
+            min="0"
+            max="300"
+            step="10"
+            oninput="updateCusto('man', this.value)"
+            style="display:none"
+            class="custo-slider">
+
+        <input type="number"
+            class="custo-input"
+            min="0"
+            step="10"
+            oninput="updateCusto('man', this.value)">
+
+        <small class="custo-valor" id="vMan">R$ 0,00</small>
+    </div>
+
+
+    <!-- Pneus -->
+    <div class="custo-item" data-custo="pneu">
+        <label>🛞 Pneus (R$)</label>
+
+        <input type="range"
+            id="cPneu"
+            min="0"
+            max="200"
+            step="5"
+            oninput="updateCusto('pneu', this.value)"
+            style="display:none"
+            class="custo-slider">
+
+        <input type="number"
+            class="custo-input"
+            min="0"
+            step="5"
+            oninput="updateCusto('pneu', this.value)">
+
+        <small class="custo-valor" id="vPneu">R$ 0,00</small>
+    </div>
+
+
+    <!-- Seguro -->
+    <div class="custo-item" data-custo="seg">
+        <label>🛡 Seguro (R$)</label>
+
+        <input type="range"
+            id="cSeg"
+            min="0"
+            max="400"
+            step="10"
+            oninput="updateCusto('seg', this.value)"
+            style="display:none"
+            class="custo-slider">
+
+        <input type="number"
+            class="custo-input"
+            min="0"
+            step="10"
+            oninput="updateCusto('seg', this.value)">
+
+        <small class="custo-valor" id="vSeg">R$ 0,00</small>
+    </div>
+
+    <!-- Outros -->
+    <div class="custo-item" data-custo="out">
+        <label>📦 Outros (R$)</label>
+
+        <input type="range"
+            id="cOut"
+            min="0"
+            max="200"
+            step="10"
+            oninput="updateCusto('out', this.value)"
+            style="display:none"
+            class="custo-slider">
+
+        <input type="number"
+            class="custo-input"
+            min="0"
+            step="10"
+            oninput="updateCusto('out', this.value)">
+
+        <small class="custo-valor" id="vOut">R$ 0,00</small>
+    </div>
+
 
   <div class="card">
     <button onclick="salvarCustos()">💾 Salvar Custos</button>
@@ -576,7 +779,7 @@ canvas{width:100%;height:260px}
 
         <div class="card">
             <label>Meta mensal padrão (R$)</label>
-            <input type="number" id="metaPadrao" placeholder="Ex: 8000">
+            <input type="number" id="metaGlobalInput" placeholder="Ex: 8000">
 
             <button onclick="aplicarMetaAnual()">
                 Aplicar para todos os meses
@@ -645,10 +848,12 @@ canvas{width:100%;height:260px}
     <script>
     // ======= STORAGE =======
     let data = JSON.parse(localStorage.getItem('kmApp')) || {
-    veiculos:[],
-    ativo:null,
-    metas: {}
-    };
+        veiculos:[],
+        ativo:null,
+        financeiro: {
+            anos: {}
+        }
+    }
 
     //verifica o ano de edição
     let anoSelecionado = new Date().getFullYear();
@@ -665,9 +870,24 @@ canvas{width:100%;height:260px}
     // Registra o km inicial no novo lançamento
     let kmTemp = JSON.parse(localStorage.getItem("kmTemp")) || null;
 
+    // Botão para alterar o layout dos custos
+    let custoView = 'input'; // ou 'slider'
+
+    // Estrutura base para metas
+    if (!data.financeiro) {
+        data.financeiro = { anos: {} };
+    }
+
     // salva tudo
     function save(){
     localStorage.setItem('kmApp',JSON.stringify(data));
+    }
+
+    function formatCurrency(valor) {
+        return Number(valor || 0).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+        });
     }
 
     // ======= PÁGINAS =======
@@ -698,7 +918,7 @@ canvas{width:100%;height:260px}
             id: Date.now(),
             nome,
             consumo,
-            custos:{comb:0,man:0,pneu:0,seguro:0},
+            custos:{comb:0,man:0,pneu:0,seg:0,out:0},
             historico:[]
         });
 
@@ -834,8 +1054,35 @@ canvas{width:100%;height:260px}
         showToast("Veículo excluído com sucesso ❌", "info");
     }
 
-
     // ======= CUSTOS =======
+    //Altera o layout de vizualização de custos
+    function toggleCustoView(){
+        custoView = custoView === 'slider' ? 'input' : 'slider';
+
+        document.querySelectorAll('.custo-item').forEach(item=>{
+            const slider = item.querySelector('.custo-slider');
+            const input  = item.querySelector('.custo-input');
+
+            if(custoView === 'input'){
+                input.style.display = 'block';
+                slider.style.display = 'none';
+                input.value = slider.value;
+            }else{
+                slider.style.display = 'block';
+                input.style.display = 'none';
+                slider.value = input.value;
+            }
+        });
+
+        showToast(
+            custoView === 'slider'
+                ? 'Visualização por slider 🎚️'
+                : 'Visualização por entrada ⌨️',
+            'info'
+        );
+    }
+
+    
     // Atualiza o valor exibido ao mover o slider
     function calcularCustoPorKm(v){
         if(!v || v.consumo <= 0) return 0;
@@ -844,9 +1091,10 @@ canvas{width:100%;height:260px}
 
         // custo fixo mensal convertido para KM
         const custoFixoMensal =
-            v.custos.man +
-            v.custos.pneu +
-            v.custos.seguro;
+            (v.custos.man || 0) +
+            (v.custos.pneu || 0) +
+            (v.custos.seg || 0) +
+            (v.custos.out || 0);
 
         // 🔴 premissa: 30 dias * média diária de KM
         // se no futuro quiser refinar, é aqui
@@ -858,26 +1106,30 @@ canvas{width:100%;height:260px}
 
         return custoComb + custoFixoKm;
     }
-
     
-    function updateSlider(sliderId, valueId){
-        const val = Number(document.getElementById(sliderId).value);
-        document.getElementById(valueId).innerText = "R$ " + val.toFixed(2);
-
+    function updateCusto(tipo, valor){
         const v = getAtivo();
         if(!v) return;
 
-        // associa slider → custo correto
-        if(sliderId === 'cComb')   v.custos.comb   = val;
-        if(sliderId === 'cMan')    v.custos.man    = val;
-        if(sliderId === 'cPneu')   v.custos.pneu   = val;
-        if(sliderId === 'cSeguro') v.custos.seguro = val;
+        valor = Number(valor) || 0;
 
-        // 🔁 qualquer custo altera o custo/km
+        v.custos[tipo] = valor;
+
+        // atualiza textos
+        document.getElementById('v' + tipo.charAt(0).toUpperCase() + tipo.slice(1))
+            .innerText = "R$ " + valor.toFixed(2);
+
+        // sincroniza slider e input
+        document.querySelectorAll(`[data-custo="${tipo}"]`).forEach(item=>{
+            item.querySelector('.custo-slider').value = valor;
+            item.querySelector('.custo-input').value  = valor;
+        });
+
         atualizarCustoKm();
         atualizarCustoKmNovoLancamento();
+        renderVeiculos();
+        save();
     }
-
 
     function salvarCustos(){
         const v = getAtivo();
@@ -890,8 +1142,10 @@ canvas{width:100%;height:260px}
             comb: +cComb.value,
             man: +cMan.value,
             pneu: +cPneu.value,
-            seguro: +cSeguro.value
-    };
+            seg: +cSeg.value,
+            out: +cOut.value
+        };
+
     atualizarCustoKm();
     renderVeiculos();
     atualizarCustoKmNovoLancamento();
@@ -901,18 +1155,20 @@ canvas{width:100%;height:260px}
 
     // Carrega custos do veículo ativo nos sliders
     function carregarCustos(){
-    const v = getAtivo();
-    if(!v) return;
+        const v = getAtivo();
+        if(!v) return;
 
-    cComb.value = v.custos.comb || 6.2;
-    cMan.value = v.custos.man || 0;
-    cPneu.value = v.custos.pneu || 0;
-    cSeguro.value = v.custos.seguro || 0;
+        cComb.value = v.custos.comb || 0;
+        cMan.value  = v.custos.man || 0;
+        cPneu.value = v.custos.pneu || 0;
+        cSeg.value  = v.custos.seg || 0;
+        cOut.value  = v.custos.out || 0;
 
-    updateSlider('cComb','vComb');
-    updateSlider('cMan','vMan');
-    updateSlider('cPneu','vPneu');
-    updateSlider('cSeguro','vSeguro');
+        updateCusto('comb', cComb.value);
+        updateCusto('man',  cMan.value);
+        updateCusto('pneu', cPneu.value);
+        updateCusto('seg',  cSeg.value);
+        updateCusto('out',  cOut.value);
     }
 
     // ======= LANÇAMENTO =======
@@ -1028,12 +1284,11 @@ canvas{width:100%;height:260px}
         });
 
         //adicona os dados as metas dos gauges
-        const dataLancamento = new Date(lancamento.data);
-        const ano = dataLancamento.getFullYear();
-        const mes = dataLancamento.getMonth(); // 0–11
+        const agora = new Date();
+        const ano = agora.getFullYear();
+        const mes = agora.getMonth();
 
-        addFaturamentoMes(ano, mes, Number(lancamento.valor));
-
+        addFaturamentoMes(ano, mes, valor);
         save();
 
         // limpa rota
@@ -1050,7 +1305,7 @@ canvas{width:100%;height:260px}
 
         // atualiza telas dependentes
         renderHistorico();
-
+        recalcularFinanceiroPorHistorico();
         generateGauges(ano);
 
         showToast("Rota fechada e salva 📄", "success");
@@ -1201,6 +1456,33 @@ canvas{width:100%;height:260px}
         });
     }
 
+    function recalcularFinanceiroPorHistorico() {
+        if (!data.financeiro) {
+            data.financeiro = { anos: {} };
+        }
+
+        // zera todos os faturamentos
+        Object.keys(data.financeiro.anos).forEach(ano => {
+            data.financeiro.anos[ano].faturamento = new Array(12).fill(0);
+        });
+
+        data.veiculos.forEach(v => {
+            v.historico?.forEach(h => {
+
+                const dataLanc = new Date(h.data);
+                const ano = dataLanc.getFullYear();
+                const mes = dataLanc.getMonth();
+
+                const anoObj = getAnoFinanceiro(ano);
+
+                anoObj.faturamento[mes] += Number(h.valor) || 0;
+
+            });
+        });
+
+        save();
+    }
+
     // Placeholder de deletar historico
     function delHist(id){
         const v = getAtivo();
@@ -1218,6 +1500,7 @@ canvas{width:100%;height:260px}
 
         v.historico = v.historico.filter(h => h.id !== id);
         save();
+        recalcularFinanceiroPorHistorico();
         renderHistorico();
         generateGauges(anoSelecionado)
         showToast("Lançamento excluído ❌", "info");
@@ -1313,6 +1596,7 @@ canvas{width:100%;height:260px}
         h.lucro = lucro;
 
         save();
+        recalcularFinanceiroPorHistorico();
         fecharModal();
         renderHistorico();
         generateGauges(anoSelecionado);
@@ -1323,6 +1607,17 @@ canvas{width:100%;height:260px}
 
     // ======= GRÁFICO =======
     // Renderiza gráfico mensal de lucro
+    
+    function getAnoFinanceiro(ano) {
+        if (!data.financeiro.anos[ano]) {
+            data.financeiro.anos[ano] = {
+                metas: {},
+                faturamento: {}
+            };
+        }
+        return data.financeiro.anos[ano];
+    }
+    
     function carregarAnosMeta(){
         const select = document.getElementById("metaAno");
         if(!select) return;
@@ -1360,114 +1655,229 @@ canvas{width:100%;height:260px}
         return meses;
     }
 
-    function generateGauges(ano){
-        const v = getAtivo();
-        const container = document.getElementById("gaugesContainer");
-        container.innerHTML = "";
+    function getDadosMes(ano, mes) {
+        const anoObj = getAnoFinanceiro(ano);
 
-        if(!v) return;
+        return {
+            meta: anoObj.metas[mes] || 0,
+            faturamento: anoObj.faturamento[mes] || 0
+        };
+    }
 
-        const faturamento = calcularFaturamentoPorMes(v, ano);
+    function generateGauges(ano) {
+        const container = document.getElementById('gaugesContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
 
         const meses = [
-            "JAN","FEV","MAR","ABR","MAI","JUN",
-            "JUL","AGO","SET","OUT","NOV","DEZ"
+            "Jan","Fev","Mar","Abr","Mai","Jun",
+            "Jul","Ago","Set","Out","Nov","Dez"
         ];
 
+        const anoObj = getAnoFinanceiro(ano);
+
         meses.forEach((nomeMes, mesIndex) => {
-            const meta = getMetaMes(ano, mesIndex);
-            if(!meta || meta <= 0) return; // só mostra se tiver meta
 
-            const faturado = faturamento[mesIndex] || 0;
-            const perc = Math.min((faturado / meta) * 100, 120);
+            const meta = anoObj.metas[mesIndex] || 0;
+            const faturamento = anoObj.faturamento[mesIndex] || 0;
 
+            if (!meta || meta <= 0) return;
+
+            const perc = meta > 0 ? (faturamento / meta) * 100 : 0;
             const circumference = 2 * Math.PI * 55;
-            const offset = circumference - (perc / 100) * circumference;
 
-            const card = document.createElement("div");
-            card.className = "gauge-card";
+            const card = document.createElement('div');
+            card.className = 'gauge-card';
+
+            // 🟢 aplica classe quando bate meta
+            if (perc >= 100) {
+               card.classList.add("meta-batida");
+            }
 
             card.innerHTML = `
                 <div class="gauge-label">${nomeMes}</div>
 
                 <div class="gauge-container">
-                    <svg class="gauge-svg" width="130" height="130">
+                    <svg class="gauge-svg" width="130" height="130" viewBox="0 0 130 130">
                         <circle class="gauge-circle-bg"
-                            cx="65" cy="65" r="55"></circle>
+                                cx="65" cy="65" r="55">
+                        </circle>
 
+                        <!-- Glow -->
+                        <circle class="gauge-circle-progress gauge-glow"
+                                cx="65" cy="65" r="55"
+                                stroke-dasharray="${circumference}"
+                                stroke-dashoffset="${circumference}"
+                                id="glow-${ano}-${mesIndex}">
+                        </circle>
+
+                        <!-- Principal -->
                         <circle class="gauge-circle-progress"
-                            cx="65" cy="65" r="55"
-                            stroke-dasharray="${circumference}"
-                            stroke-dashoffset="${circumference}"
-                            data-offset="${offset}">
+                                cx="65" cy="65" r="55"
+                                stroke-dasharray="${circumference}"
+                                stroke-dashoffset="${circumference}"
+                                id="gauge-${ano}-${mesIndex}">
                         </circle>
                     </svg>
 
-                    <div class="gauge-text">0%</div>
+                    <div class="gauge-text"
+                        id="text-${ano}-${mesIndex}">
+                        0%
+                    </div>
                 </div>
 
                 <div class="gauge-sublabel">
-                    ${faturado.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+                    ${formatCurrency(faturamento)}
                 </div>
 
                 <div class="gauge-meta-info">
-                    Meta:
-                    <input type="number"
-                        value="${meta}"
-                        style="margin-top:6px"
-                        oninput="
-                            setMetaMes(${ano},${mesIndex},this.value);
-                            renderMetas();
-                        ">
+                    Meta: 
+                    <span class="meta-wrapper">
+                        <span class="meta-text"
+                            data-ano="${ano}"
+                            data-mes="${mesIndex}">
+                            ${formatCurrency(meta)}
+                        </span>
+                        <span class="meta-edit-icon">✏️</span>
+                    </span>
                 </div>
             `;
 
             container.appendChild(card);
 
-            // animação
+            // 🔥 agora usa sua função animateGauge
             setTimeout(() => {
-                const circle = card.querySelector(".gauge-circle-progress");
-                const text = card.querySelector(".gauge-text");
-
-                circle.style.strokeDashoffset = offset;
-                text.innerText = Math.round(perc) + "%";
+                animateGauge(
+                    `gauge-${ano}-${mesIndex}`,
+                    `text-${ano}-${mesIndex}`,
+                    perc,
+                    circumference
+                );
             }, 100);
+
         });
     }
+    
 
 
-    function animateGauge(gaugeId, textId, perc, circumference){
+    function animateGauge(gaugeId, textId, perc, circumference) {
         const gauge = document.getElementById(gaugeId);
+        const glow  = document.getElementById(gaugeId.replace("gauge", "glow"));
         const text  = document.getElementById(textId);
 
-        if(!gauge || !text) return;
+        if (!gauge || !text) return;
 
-        const offset = circumference - (perc / 100) * circumference;
+        // 🔵 Limita visualmente até 100%
+        const percLimitado = Math.min(perc, 100);
 
-        // reset real
+        const offset = circumference - (percLimitado / 100) * circumference;
+
+        // 🎨 Define cor baseada na meta
+        let cor;
+
+        if (perc < 40) {
+            cor = "#ff5252"; // 🔴
+        } else if (perc < 100) {
+            cor = "#ffc107"; // 🟡
+        } else {
+            cor = "#00e676"; // 🟢
+        }
+
+        // aplica cor
+        gauge.style.stroke = cor;
+        if (glow) glow.style.stroke = cor;
+
+        // 🔥 Glow apenas se meta batida
+        //if (perc >= 100) {
+        //    if (glow) glow.style.opacity = "0.9";
+        //} else {
+        //    if (glow) glow.style.opacity = "0";
+        //}
+
+        // 🔄 Reset real antes de animar
         gauge.style.transition = "none";
         gauge.style.strokeDashoffset = circumference;
+
+        if (glow) {
+            glow.style.transition = "none";
+            glow.style.strokeDashoffset = circumference;
+        }
+
         gauge.getBoundingClientRect(); // força repaint
 
-        // anima
+        // 🚀 Animação
         gauge.style.transition = "stroke-dashoffset 1s ease";
         gauge.style.strokeDashoffset = offset;
 
-        // anima o número
+        if (glow) {
+            glow.style.transition = "stroke-dashoffset 1s ease";
+            glow.style.strokeDashoffset = offset;
+        }
+
+        // 🔢 Anima número
         let current = 0;
         const target = Math.round(perc);
-
         const step = Math.max(target / 30, 1);
 
         const timer = setInterval(() => {
             current += step;
-            if(current >= target){
+
+            if (current >= target) {
                 current = target;
                 clearInterval(timer);
             }
+
             text.innerText = `${Math.round(current)}%`;
         }, 30);
     }
+
+    document.addEventListener("click", function(e){
+
+        const metaText = e.target.closest(".meta-text");
+        if(!metaText) return;
+
+        const ano = Number(metaText.dataset.ano);
+        const mes = Number(metaText.dataset.mes);
+
+        const anoObj = getAnoFinanceiro(ano);
+        const valorAtual = anoObj.metas[mes] || 0;
+
+        // evita criar múltiplos inputs
+        if(metaText.querySelector("input")) return;
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.className = "meta-input";
+        input.value = valorAtual;
+        input.min = 0;
+        input.step = "0.01";
+
+        metaText.innerHTML = "";
+        metaText.appendChild(input);
+        input.focus();
+        input.select();
+
+        function salvar(){
+            const novoValor = Number(input.value);
+
+            if(!isNaN(novoValor) && novoValor >= 0){
+                anoObj.metas[mes] = novoValor;
+                save();
+            }
+
+            generateGauges(anoSelecionado);
+        }
+
+        input.addEventListener("blur", salvar);
+
+        input.addEventListener("keydown", function(ev){
+            if(ev.key === "Enter"){
+                input.blur();
+            }
+        });
+
+    });
 
     function renderMetas(){
         const v = getAtivo();
@@ -1482,14 +1892,6 @@ canvas{width:100%;height:260px}
         generateGauges(ano);
     }
 
-
-
-
-
-    
-    
-    
-    
     // Renderiza gráfico mensal de lucro
     function renderGrafico(){
     const v = getAtivo();
@@ -1617,54 +2019,49 @@ canvas{width:100%;height:260px}
     }
 
     function setMetaMes(ano, mes, valor) {
-        if (!data.metas) data.metas = {};
-        if (!data.metas[ano]) data.metas[ano] = {};
-
-        data.metas[ano][mes] = valor;
-        salvar();
-    }
-
-    function getFaturamentoMes(ano, mes) {
-        return data.faturamentoMensal?.[ano]?.[mes] || 0;
+        const anoObj = getAnoFinanceiro(ano);
+        anoObj.metas[mes] = Number(valor) || 0;
+        save();
     }
 
     function addFaturamentoMes(ano, mes, valor) {
-        if (!data.faturamentoMensal) data.faturamentoMensal = {};
-        if (!data.faturamentoMensal[ano]) data.faturamentoMensal[ano] = {};
+        const anoObj = getAnoFinanceiro(ano);
 
-        data.faturamentoMensal[ano][mes] =
-            (data.faturamentoMensal[ano][mes] || 0) + valor;
+        if (!anoObj.faturamento[mes]) {
+            anoObj.faturamento[mes] = 0;
+        }
 
+        anoObj.faturamento[mes] += Number(valor) || 0;
         save();
     }
 
-
     function aplicarMetaAnual() {
-        const ano = document.getElementById("metaAno").value;
-        const metaPadrao = Number(document.getElementById("metaPadrao").value);
+        const ano = Number(document.getElementById("metaAno").value);
+        const valor = Number(document.getElementById("metaGlobalInput").value);
 
-        if (!metaPadrao || metaPadrao <= 0) {
-            showToast("Informe uma meta mensal válida", "info");
+        if (!ano) {
+            showToast("Selecione um ano", "info");
             return;
         }
 
-        if (!data.metas) data.metas = {};
-        if (!data.metas[ano]) data.metas[ano] = {};
+        if (!valor || valor <= 0) {
+            showToast("Digite uma meta válida", "info");
+            return;
+        }
 
-        // meses 0–11 (JS Date padrão)
+        const anoObj = getAnoFinanceiro(ano);
+
         for (let mes = 0; mes < 12; mes++) {
-            data.metas[ano][mes] = metaPadrao;
+            anoObj.metas[mes] = valor;
         }
 
         save();
-        renderMetas();
-        showToast("Metas aplicadas para todo o ano 🎯", "success");
+        generateGauges(ano);
+
+        showToast("Meta aplicada para todos os meses ✅", "success");
     }
 
 
-
-
-    
     renderVeiculos();
 
     window.addEventListener("load", () => {
@@ -1678,8 +2075,6 @@ canvas{width:100%;height:260px}
     if("serviceWorker" in navigator){
         navigator.serviceWorker.register("sw.js");
     }
-
-    
 
 </script>
 

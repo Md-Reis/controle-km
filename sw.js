@@ -6,6 +6,9 @@ self.addEventListener("install", e => {
       cache.addAll([
         "./",
         "./index.html",
+        "./entregas.html",
+        "./viagens.html",
+        "./style.css",
         "./manifest.json",
         "./assets/logo.webp",
         "./assets/icon-192.png",
@@ -20,5 +23,3 @@ self.addEventListener("fetch", e => {
     caches.match(e.request).then(r => r || fetch(e.request))
   );
 });
-
-

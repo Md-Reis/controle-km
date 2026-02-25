@@ -233,6 +233,16 @@
         <label>Telefone / WhatsApp</label>
         <input id="detalheTelefone" type="tel" placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15" oninput="mascaraTelefone(this)">
 
+        <label>Mensagens rápidas</label>
+            <div class="flex" style="gap:8px;margin-bottom:10px">
+            <button onclick="enviarWhats('chegada')" style="background:#25d366;color:#fff;font-size:13px">
+                📍 Estou chegando
+            </button>
+            <button onclick="enviarWhats('entrega')" style="background:#25d366;color:#fff;font-size:13px">
+                ✅ Passageiro entregue
+            </button>
+        </div>
+        
         <label>Passageiros</label>
         <div id="listaPassageiros"></div>
         <button onclick="adicionarPassageiro()"
@@ -411,6 +421,20 @@ function mascaraTelefone(input) {
     v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
   }
   input.value = v;
+}
+
+function enviarWhats(tipo) {
+  const tel = document.getElementById("detalheTelefone").value.replace(/\D/g, '');
+  if (!tel || tel.length < 10) { showToast("Cadastre o telefone do cliente primeiro", "info"); return; }
+
+    const nome = document.getElementById("detalheNomeInput").value || 'cliente';
+    const mensagens = {
+    chegada: `Olá! Estou chegando para buscar o passageiro. 🚗`,
+    entrega: `Passageiro entregue com sucesso! ✅`
+  };
+
+  const url = `https://wa.me/55${tel}?text=${encodeURIComponent(mensagens[tipo])}`;
+  window.open(url, '_blank');
 }
 
 function adicionarPassageiro() {

@@ -961,9 +961,13 @@ canvas{width:100%;height:260px}
     // Botão para alterar o layout dos custos
     let custoView = 'input'; // ou 'slider'
 
-    // Estrutura base para metas
+    // Faz com o que LocalStorage seja limpo
     if (!data.financeiro) {
-        data.financeiro = { anos: {} };
+    data.financeiro = { anos: {} };
+    }
+
+    if (!data.financeiro.anos) {
+        data.financeiro.anos = {};
     }
 
     // salva tudo

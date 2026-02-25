@@ -367,7 +367,7 @@
 </div>
 
 
-    <script>
+    <script type="module">
     // ======= STORAGE =======
     let data = JSON.parse(localStorage.getItem('kmApp')) || {
         veiculos:[],
@@ -1782,25 +1782,6 @@
         navigator.serviceWorker.register("sw.js");
     }
 
-</script>
-
-    <div id="toast" style="
-        position:fixed;
-        bottom:20px;
-        left:50%;
-        transform:translateX(-50%);
-        background:#020617;
-        color:white;
-        padding:14px 18px;
-        border-radius:12px;
-        display:none;
-        box-shadow:0 10px 30px rgba(0,0,0,.4);
-        z-index:9999;
-        font-weight:500;
-    "></div>
-
-    
-    <script type="module">
         // ======= VEÍCULOS =======
         async function addVeiculo(){
             const nome = vNome.value.trim();
@@ -1870,6 +1851,21 @@
         window.db = db;
 
     </script>
+
+    <div id="toast" style="
+        position:fixed;
+        bottom:20px;
+        left:50%;
+        transform:translateX(-50%);
+        background:#020617;
+        color:white;
+        padding:14px 18px;
+        border-radius:12px;
+        display:none;
+        box-shadow:0 10px 30px rgba(0,0,0,.4);
+        z-index:9999;
+        font-weight:500;
+    "></div>
     
 </body>
 <footer></footer>

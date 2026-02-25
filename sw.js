@@ -7,6 +7,7 @@ self.addEventListener("install", e => {
         "./",
         "./index.html",
         "./manifest.json",
+        "./style.css",
         "./assets/logo.webp",
         "./assets/icon-192.png",
         "./assets/icon-512.png"
@@ -20,3 +21,4 @@ self.addEventListener("fetch", e => {
     caches.match(e.request).then(r => r || fetch(e.request))
   );
 });
+

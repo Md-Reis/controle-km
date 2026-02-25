@@ -9,29 +9,864 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Viagens</title>
 <link rel="stylesheet" href="./style.css">
+<style>
+  .cliente-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(199,183,255,.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform .2s ease, border-color .2s ease;
+    backdrop-filter: blur(10px);
+  }
+  .cliente-card:active { transform: scale(0.98); }
+  .cliente-card:hover  { border-color: rgba(199,183,255,.25); }
+  .cliente-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary), #4f46e5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: bold; color: #fff; flex-shrink: 0;
+  }
+  .cliente-info { flex: 1; min-width: 0; }
+  .cliente-nome { font-weight: 600; font-size: 15px; }
+  .cliente-sub  { font-size: 12px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Bottom sheet */
+  .detalhe-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 200;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    animation: fadeIn .2s ease;
+  }
+  .detalhe-overlay.hidden { display: none; }
+  .detalhe-sheet {
+    background: #0b1020;
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 16px 16px 48px;
+    animation: slideUp .3s ease;
+  }
+  .detalhe-handle {
+    width: 40px; height: 4px;
+    background: rgba(255,255,255,.15);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .detalhe-tabs {
+    display: flex; gap: 8px; margin: 14px 0;
+  }
+  .detalhe-tabs button {
+    flex: 1; padding: 9px; border-radius: 8px;
+    background: #020617; color: var(--muted); font-size: 13px; width: auto;
+  }
+  .detalhe-tabs button.active { background: var(--primary); color: #000; }
+
+  .passageiro-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .passageiro-row input { margin-bottom: 0; flex: 1; }
+  .passageiro-row button { width: auto; padding: 10px 14px; background: #ef4444; flex-shrink: 0; }
+
+  .hist-item {
+    background: #111827;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(199,183,255,.06);
+  }
+  .hist-item-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+
+  .vselect {
+    width: 100%; padding: 10px; border-radius: 10px;
+    border: none; background: #020617; color: var(--text); margin-bottom: 10px;
+  }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .filter-row select { margin-bottom: 0; flex: 1; }
+</style>
 </head>
 <body>
 
 <nav>
-  <button onclick="window.location.href='index.html'" style="flex:0 0 auto;padding:10px 14px">← Início</button>
+  <button onclick="window.location.href='index.html'" >← Início</button>
+  <button onclick="showPage('clientes')"   id="navClientes"   class="active">👥</button>
+  <button onclick="showPage('lancamento')" id="navLancamento">➕</button>
+  <button onclick="showPage('historico')"  id="navHistorico">📄</button>
+  <button onclick="showPage('metas')"      id="navMetas">🎯</button>
 </nav>
 
-<div class="page active" style="text-align:center;padding-top:80px">
-  <div style="font-size:64px;margin-bottom:16px">🚕</div>
-  <h2 style="margin-bottom:8px">Viagens</h2>
-  <p style="opacity:.5;font-size:15px">Módulo em desenvolvimento</p>
-  <p style="opacity:.35;font-size:13px;margin-top:8px">Em breve: registro de corridas e transporte de passageiros</p>
 
-  <div class="card" style="margin-top:40px;text-align:left;max-width:320px;margin-left:auto;margin-right:auto">
-    <small style="opacity:.5">📋 Planejado para este módulo:</small>
-    <ul style="margin:10px 0 0 0;padding-left:20px;opacity:.6;font-size:14px;line-height:2">
-      <li>Novo lançamento de corrida</li>
-      <li>Histórico de viagens</li>
-      <li>Metas mensais de viagens</li>
-      <li>Comparativo receita vs custo</li>
-    </ul>
+<!-- ===== CLIENTES ===== -->
+<section id="clientes" class="page active">
+  <h2>👥 Clientes</h2>
+  <div class="card">
+    <button onclick="abrirNovoCliente()">➕ Novo Cliente</button>
+  </div>
+  <div id="listaClientes"></div>
+</section>
+
+
+<!-- ===== LANÇAMENTO ===== -->
+<section id="lancamento" class="page">
+  <h2>➕ Nova Viagem</h2>
+
+  <div class="card" style="margin-bottom:12px">
+    <strong>🚗 Veículo ativo</strong>
+    <div id="vgVeiculoNome" style="margin:4px 0"></div>
+    <small>⛽ Custo por KM</small>
+    <div id="vgCustoKm" style="font-weight:600;color:var(--secondary)">—</div>
+  </div>
+
+  <div class="card">
+    <label>Cliente</label>
+    <select id="vgCliente" class="vselect" onchange="onClienteChange()">
+      <option value="">— Selecione um cliente —</option>
+    </select>
+
+    <div id="vgPassageiroWrap" style="display:none">
+      <label>Passageiro</label>
+      <select id="vgPassageiro" class="vselect"></select>
+    </div>
+
+    <button onclick="abrirEdicaoClienteRapida()" id="btnEditClienteRapido"
+            style="background:rgba(255,255,255,.06);color:var(--text);margin-top:4px;display:none">
+      ✏️ Editar cliente
+    </button>
+  </div>
+
+  <div class="card lancamento-card">
+    <button id="btnLimparViagem" class="btn-limpar hidden" onclick="confirmarLimpezaViagem()">✕</button>
+
+    <label>KM inicial</label>
+    <input id="vgKmInicial" type="number">
+
+    <label>KM final</label>
+    <input id="vgKmFinal" type="number">
+
+    <label>KM rodados</label>
+    <input id="vgKm" type="number" disabled>
+
+    <label>Valor recebido (R$)</label>
+    <input id="vgValor" type="number">
+
+    <div id="vgPreview" style="margin-top:10px;font-weight:bold;"></div>
+
+    <div style="margin-top:16px">
+      <button onclick="salvarViagem()">💾 Salvar Viagem</button>
+    </div>
+  </div>
+
+  <div id="vgResultadoCard" class="card" style="display:none">
+    <h3>📊 Resultado</h3>
+    <p>KM rodados: <strong id="vgRKm"></strong></p>
+    <p>Valor recebido: <strong id="vgRValor"></strong></p>
+    <p>Custo total: <strong id="vgRCusto"></strong></p>
+    <hr>
+    <h2 id="vgRLucro" style="color:var(--primary)"></h2>
+  </div>
+</section>
+
+
+<!-- ===== HISTÓRICO ===== -->
+<section id="historico" class="page">
+  <h2>📄 Histórico de Viagens</h2>
+  <div class="filter-row">
+    <select id="filtroCliente" class="vselect" onchange="renderHistoricoViagens()">
+      <option value="">Todos os clientes</option>
+    </select>
+  </div>
+  <div id="listaHistoricoViagens"></div>
+  <button onclick="exportCSVViagens()">📤 Exportar CSV</button>
+</section>
+
+
+<!-- ===== METAS ===== -->
+<section id="metas" class="page">
+  <h2>🎯 Metas de Viagens</h2>
+
+  <div class="card">
+    <label>Ano</label>
+    <select id="metaAnoViagem" onchange="renderMetasViagem()"></select>
+  </div>
+
+  <div class="card">
+    <label>Meta mensal padrão (R$)</label>
+    <input type="number" id="metaGlobalViagem" placeholder="Ex: 5000">
+    <button onclick="aplicarMetaAnualViagem()">Aplicar para todos os meses</button>
+    <small>💡 Você poderá ajustar cada mês individualmente depois</small>
+  </div>
+
+  <div id="gaugesViagem" class="gauges-grid"></div>
+</section>
+
+
+<!-- ===== DETALHE CLIENTE (bottom sheet) ===== -->
+<div id="detalheOverlay" class="detalhe-overlay hidden">
+  <div class="detalhe-sheet">
+    <div class="detalhe-handle"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 id="detalheNome" style="margin:0;font-size:20px"></h2>
+      <button onclick="fecharDetalhe()" style="width:auto;padding:6px 12px;background:rgba(255,255,255,.08);color:var(--text)">✕</button>
+    </div>
+
+    <div class="detalhe-tabs">
+      <button onclick="showDetalheTab('dadosTab')"      id="tabDados"      class="active">📋 Dados</button>
+      <button onclick="showDetalheTab('histClienteTab')" id="tabHistCliente">📄 Histórico</button>
+    </div>
+
+    <!-- ABA DADOS -->
+    <div id="dadosTab">
+      <div class="card">
+        <label>Nome do cliente</label>
+        <input id="detalheNomeInput" type="text" placeholder="Nome do cliente">
+
+        <label>Telefone / WhatsApp</label>
+        <input id="detalheTelefone" type="tel" placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15" oninput="mascaraTelefone(this)">
+
+        <label>Passageiros</label>
+        <div id="listaPassageiros"></div>
+        <button onclick="adicionarPassageiro()"
+                style="background:rgba(255,255,255,.06);color:var(--text);margin-top:4px">
+          ➕ Adicionar passageiro
+        </button>
+      </div>
+
+      <div class="flex" style="gap:8px;margin-top:8px">
+        <button onclick="salvarCliente()">💾 Salvar</button>
+        <button class="danger" onclick="confirmarDelCliente()" id="btnDelCliente" style="display:none">🗑️ Excluir</button>
+      </div>
+    </div>
+
+    <!-- ABA HISTÓRICO DO CLIENTE -->
+    <div id="histClienteTab" style="display:none">
+      <div id="listaHistCliente"><small>Nenhuma viagem registrada.</small></div>
+    </div>
   </div>
 </div>
 
+
+<!-- Modal limpeza viagem -->
+<div id="modalLimpezaViagem" class="modal hidden">
+  <div class="modal-box confirmar-box">
+    <h3>Limpar viagem?</h3>
+    <p>Todos os dados preenchidos serão apagados.</p>
+    <div class="modal-actions">
+      <button onclick="document.getElementById('modalLimpezaViagem').classList.add('hidden')">Cancelar</button>
+      <button class="danger" onclick="limparViagem()">🧹 Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal excluir cliente -->
+<div id="modalDelCliente" class="modal hidden">
+  <div class="modal-box confirmar-box">
+    <h3>Excluir cliente?</h3>
+    <p>O histórico de viagens será mantido, mas o cliente não aparecerá mais na lista.</p>
+    <div class="modal-actions">
+      <button onclick="document.getElementById('modalDelCliente').classList.add('hidden')">Cancelar</button>
+      <button class="danger" onclick="deletarClienteConfirmado()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="toast" style="
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:#020617;color:white;padding:14px 18px;border-radius:12px;
+  display:none;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:9999;font-weight:500;
+"></div>
+
+
+<script>
+// ===== STORAGE =====
+let data = JSON.parse(localStorage.getItem('kmApp')) || {
+  veiculos:[], lancamentos:[], ativo:null, financeiro:{anos:{}}
+};
+if (!data.financeiro)  data.financeiro  = {anos:{}};
+if (!data.lancamentos) data.lancamentos = [];
+
+let vData = JSON.parse(localStorage.getItem('viagensApp')) || {
+  clientes:[], viagens:[], financeiro:{anos:{}}
+};
+if (!vData.clientes)   vData.clientes   = [];
+if (!vData.viagens)    vData.viagens    = [];
+if (!vData.financeiro) vData.financeiro = {anos:{}};
+
+let clienteEditandoId = null;
+
+function save()  { localStorage.setItem('kmApp',     JSON.stringify(data));  }
+function vSave() { localStorage.setItem('viagensApp', JSON.stringify(vData)); }
+
+function formatCurrency(v) {
+  return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+}
+function showToast(msg, type="success") {
+  const t = document.getElementById("toast");
+  const c = {success:"#22c55e",error:"#ef4444",info:"#38bdf8"};
+  t.innerText = msg;
+  t.style.borderLeft = `6px solid ${c[type]||c.success}`;
+  t.style.display = "block";
+  setTimeout(()=>t.style.display="none", 2500);
+}
+
+// ===== PÁGINAS =====
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const btn = document.getElementById('nav'+id.charAt(0).toUpperCase()+id.slice(1));
+  if (btn) btn.classList.add('active');
+
+  if (id==='clientes')   renderClientes();
+  if (id==='lancamento') initLancamento();
+  if (id==='historico')  { popularFiltroCliente(); renderHistoricoViagens(); }
+  if (id==='metas')      { carregarAnosMetaViagem(); renderMetasViagem(); }
+}
+
+// ===== AUX =====
+function getAtivo() { return data.veiculos.find(v=>v.id===data.ativo); }
+
+function calcularCustoPorKm(v) {
+  if (!v||v.consumo<=0) return 0;
+  const cComb = v.custos.comb / v.consumo;
+  const fixo  = (v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0);
+  return cComb + fixo/(30*30);
+}
+
+function inicialNome(nome) {
+  if (!nome) return '?';
+  const p = nome.trim().split(' ');
+  return p.length>=2 ? p[0][0].toUpperCase()+p[1][0].toUpperCase() : p[0][0].toUpperCase();
+}
+
+// ===== CLIENTES =====
+function renderClientes() {
+  const lista = document.getElementById("listaClientes");
+  if (vData.clientes.length===0) {
+    lista.innerHTML = "<small style='opacity:.5'>Nenhum cliente cadastrado.</small>";
+    return;
+  }
+  lista.innerHTML = "";
+  vData.clientes.forEach(c => {
+    const viagens    = vData.viagens.filter(v=>v.clienteId===c.id).length;
+    const passageiros = (c.passageiros||[]).map(p=>p.nome).join(", ")||"—";
+    const card = document.createElement("div");
+    card.className = "cliente-card";
+    card.onclick   = () => abrirDetalhe(c.id);
+    card.innerHTML = `
+      <div class="cliente-avatar">${inicialNome(c.nome)}</div>
+      <div class="cliente-info">
+        <div class="cliente-nome">${c.nome}</div>
+        <div class="cliente-sub">👤 ${passageiros} · 🚕 ${viagens} viagem${viagens!==1?'s':''}</div>
+      </div>
+      <span style="color:var(--muted);font-size:18px">›</span>
+    `;
+    lista.appendChild(card);
+  });
+}
+
+function abrirNovoCliente() {
+  clienteEditandoId = null;
+  document.getElementById("detalheNome").innerText       = "Novo Cliente";
+  document.getElementById("detalheNomeInput").value      = "";
+  document.getElementById("detalheTelefone").value       = "";
+  document.getElementById("btnDelCliente").style.display = "none";
+  document.getElementById("listaPassageiros").innerHTML  = "";
+  showDetalheTab('dadosTab');
+  document.getElementById("detalheOverlay").classList.remove("hidden");
+}
+
+function abrirDetalhe(id) {
+  const c = vData.clientes.find(c=>c.id===id);
+  if (!c) return;
+  clienteEditandoId = id;
+  document.getElementById("detalheNome").innerText       = c.nome;
+  document.getElementById("detalheNomeInput").value      = c.nome;
+  document.getElementById("detalheTelefone").value       = c.telefone||"";
+  document.getElementById("btnDelCliente").style.display = "block";
+
+  const lista = document.getElementById("listaPassageiros");
+  lista.innerHTML = "";
+  (c.passageiros||[]).forEach((p,i)=>adicionarLinhaPassageiro(p.nome,i));
+
+  showDetalheTab('dadosTab');
+  document.getElementById("detalheOverlay").classList.remove("hidden");
+}
+
+function mascaraTelefone(input) {
+  let v = input.value.replace(/\D/g, '');
+  if (v.length <= 10) {
+    v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  } else {
+    v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+  }
+  input.value = v;
+}
+
+function adicionarPassageiro() {
+  const idx = document.getElementById("listaPassageiros").querySelectorAll(".passageiro-row").length;
+  adicionarLinhaPassageiro("", idx);
+}
+
+function adicionarLinhaPassageiro(nome, idx) {
+  const lista = document.getElementById("listaPassageiros");
+  const row   = document.createElement("div");
+  row.className = "passageiro-row";
+  row.innerHTML = `
+    <input type="text" placeholder="Nome do passageiro" value="${nome}" data-pidx="${idx}">
+    <button onclick="this.parentElement.remove()">✕</button>
+  `;
+  lista.appendChild(row);
+}
+
+function salvarCliente() {
+  const nome = document.getElementById("detalheNomeInput").value.trim();
+  const tel  = document.getElementById("detalheTelefone").value.trim();
+  if (!nome) { showToast("Informe o nome do cliente","info"); return; }
+
+  const passageiros = [];
+  document.querySelectorAll(".passageiro-row input").forEach(inp=>{
+    const n = inp.value.trim();
+    if (n) passageiros.push({nome:n});
+  });
+
+  if (clienteEditandoId===null) {
+    vData.clientes.push({id:Date.now(), nome, telefone:tel, passageiros});
+    showToast("Cliente cadastrado ✅","success");
+  } else {
+    const c = vData.clientes.find(c=>c.id===clienteEditandoId);
+    if (!c) return;
+    c.nome=nome; c.telefone=tel; c.passageiros=passageiros;
+    document.getElementById("detalheNome").innerText = nome;
+    showToast("Cliente atualizado ✅","success");
+  }
+  vSave();
+  renderClientes();
+  fecharDetalhe();
+}
+
+function confirmarDelCliente() {
+  document.getElementById("modalDelCliente").classList.remove("hidden");
+}
+function deletarClienteConfirmado() {
+  vData.clientes = vData.clientes.filter(c=>c.id!==clienteEditandoId);
+  vSave();
+  document.getElementById("modalDelCliente").classList.add("hidden");
+  fecharDetalhe();
+  renderClientes();
+  showToast("Cliente removido ❌","info");
+}
+function fecharDetalhe() {
+  document.getElementById("detalheOverlay").classList.add("hidden");
+  clienteEditandoId = null;
+}
+
+function showDetalheTab(tabId) {
+  document.getElementById("dadosTab").style.display      = "none";
+  document.getElementById("histClienteTab").style.display = "none";
+  document.getElementById("tabDados").classList.remove("active");
+  document.getElementById("tabHistCliente").classList.remove("active");
+  document.getElementById(tabId).style.display = "block";
+  if (tabId==="dadosTab")      document.getElementById("tabDados").classList.add("active");
+  if (tabId==="histClienteTab"){ document.getElementById("tabHistCliente").classList.add("active"); renderHistCliente(); }
+}
+
+function renderHistCliente() {
+  const lista = document.getElementById("listaHistCliente");
+  if (!clienteEditandoId) { lista.innerHTML="<small>Selecione um cliente.</small>"; return; }
+
+  const viagens = vData.viagens
+    .filter(v=>v.clienteId===clienteEditandoId)
+    .sort((a,b)=>new Date(b.data)-new Date(a.data));
+
+  if (viagens.length===0) { lista.innerHTML="<small style='opacity:.5'>Nenhuma viagem registrada.</small>"; return; }
+
+  lista.innerHTML = "";
+  viagens.forEach(v=>{
+    const item = document.createElement("div");
+    item.className = "hist-item";
+    item.innerHTML = `
+      <div class="hist-item-header">
+        <span>📅 ${new Date(v.data).toLocaleDateString("pt-BR")}</span>
+        <span style="color:${v.lucro>=0?'var(--accent)':'var(--danger)'};font-weight:bold">${formatCurrency(v.valor)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted)">
+        👤 ${v.passageiroNome||'—'} · 📍 ${v.km} km · 💸 Custo: ${formatCurrency(v.custoTotal)}
+      </div>
+      <div style="font-size:13px;margin-top:4px">
+        💰 Lucro: <strong style="color:${v.lucro>=0?'var(--accent)':'var(--danger)'}">${formatCurrency(v.lucro)}</strong>
+      </div>
+    `;
+    lista.appendChild(item);
+  });
+}
+
+// ===== LANÇAMENTO =====
+function initLancamento() {
+  const v = getAtivo();
+  document.getElementById("vgVeiculoNome").innerText = v ? v.nome : "Nenhum veículo selecionado";
+  document.getElementById("vgCustoKm").innerText = (v&&v.consumo>0&&v.custos?.comb>0)
+    ? `R$ ${calcularCustoPorKm(v).toFixed(2)} / km` : "—";
+
+  const sel = document.getElementById("vgCliente");
+  sel.innerHTML = '<option value="">— Selecione um cliente —</option>';
+  vData.clientes.forEach(c=>{
+    const opt = document.createElement("option");
+    opt.value=c.id; opt.textContent=c.nome;
+    sel.appendChild(opt);
+  });
+
+  document.getElementById("vgKmInicial").oninput = ()=>{ calcKmViagem(); atualizarPreviewViagem(); atualizarBtnLimpar(); };
+  document.getElementById("vgKmFinal").oninput   = ()=>{ calcKmViagem(); atualizarPreviewViagem(); atualizarBtnLimpar(); };
+  document.getElementById("vgValor").oninput     = ()=>{ atualizarPreviewViagem(); atualizarBtnLimpar(); };
+}
+
+function onClienteChange() {
+  const clienteId = Number(document.getElementById("vgCliente").value);
+  const wrap    = document.getElementById("vgPassageiroWrap");
+  const btnEdit = document.getElementById("btnEditClienteRapido");
+  const sel     = document.getElementById("vgPassageiro");
+
+  if (!clienteId) { wrap.style.display="none"; btnEdit.style.display="none"; return; }
+
+  const c = vData.clientes.find(c=>c.id===clienteId);
+  if (!c) return;
+
+  const passageiros = c.passageiros||[];
+  sel.innerHTML = "";
+
+  if (passageiros.length===0) {
+    sel.innerHTML = `<option value="${c.nome}">${c.nome}</option>`;
+    wrap.style.display = "none";
+  } else if (passageiros.length===1) {
+    sel.innerHTML = `<option value="${passageiros[0].nome}">${passageiros[0].nome}</option>`;
+    wrap.style.display = "none";
+  } else {
+    passageiros.forEach(p=>{
+      const opt=document.createElement("option");
+      opt.value=p.nome; opt.textContent=p.nome;
+      sel.appendChild(opt);
+    });
+    wrap.style.display = "block";
+  }
+  btnEdit.style.display = "block";
+}
+
+function abrirEdicaoClienteRapida() {
+  const id = Number(document.getElementById("vgCliente").value);
+  if (id) abrirDetalhe(id);
+}
+
+function calcKmViagem() {
+  const ini = Number(document.getElementById("vgKmInicial").value);
+  const fim = Number(document.getElementById("vgKmFinal").value);
+  document.getElementById("vgKm").value = (ini>0&&fim>0&&fim>=ini) ? fim-ini : "";
+}
+
+function atualizarPreviewViagem() {
+  const preview = document.getElementById("vgPreview");
+  const v     = getAtivo();
+  const km    = Number(document.getElementById("vgKm").value);
+  const valor = Number(document.getElementById("vgValor").value);
+  if (!v||!km||!valor) { preview.innerText=""; return; }
+  const lucro = valor - km*calcularCustoPorKm(v);
+  preview.innerText = `Lucro estimado: R$ ${lucro.toFixed(2)}`;
+  preview.style.color = lucro>=0 ? "#22c55e" : "#ef4444";
+}
+
+function atualizarBtnLimpar() {
+  const btn = document.getElementById("btnLimparViagem");
+  const tem = document.getElementById("vgKmInicial").value.trim() ||
+              document.getElementById("vgKmFinal").value.trim()   ||
+              document.getElementById("vgValor").value.trim();
+  tem ? btn.classList.remove("hidden") : btn.classList.add("hidden");
+}
+
+function confirmarLimpezaViagem() {
+  document.getElementById("modalLimpezaViagem").classList.remove("hidden");
+}
+function limparViagem() {
+  ["vgKmInicial","vgKmFinal","vgKm","vgValor"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("vgPreview").innerText = "";
+  document.getElementById("vgResultadoCard").style.display = "none";
+  document.getElementById("modalLimpezaViagem").classList.add("hidden");
+  atualizarBtnLimpar();
+  showToast("Campos limpos ✔","info");
+}
+
+function salvarViagem() {
+  const v          = getAtivo();
+  const clienteId  = Number(document.getElementById("vgCliente").value);
+  const ini        = Number(document.getElementById("vgKmInicial").value);
+  const fim        = Number(document.getElementById("vgKmFinal").value);
+  const valor      = Number(document.getElementById("vgValor").value);
+  const passageiro = document.getElementById("vgPassageiro").value;
+
+  if (!v)                     { showToast("Nenhum veículo selecionado","error"); return; }
+  if (!clienteId)             { showToast("Selecione um cliente","info"); return; }
+  if (!ini||!fim||fim<=ini)   { showToast("KM inicial/final inválidos","info"); return; }
+  if (!valor||valor<=0)       { showToast("Informe o valor recebido","info"); return; }
+
+  const km         = fim-ini;
+  const custoTotal = km*calcularCustoPorKm(v);
+  const lucro      = valor-custoTotal;
+  const agora      = new Date();
+
+  const viagem = {
+    id: Date.now(),
+    clienteId, veiculoId:v.id, passageiroNome:passageiro,
+    data: agora.toISOString(),
+    kmInicial:ini, kmFinal:fim, km, valor, custoTotal, lucro, tipo:'viagem'
+  };
+  vData.viagens.push(viagem);
+  addFaturamentoMesViagem(agora.getFullYear(), agora.getMonth(), valor);
+  vSave();
+
+  // Espelha em kmApp para metas gerais do index
+  data.lancamentos.push({
+    id:viagem.id, veiculoId:v.id, data:agora.toISOString(),
+    km, valor, custoTotal, lucro, tipo:'viagem'
+  });
+  recalcularFinanceiroGeral();
+  save();
+
+  // Resultado
+  document.getElementById("vgRKm").innerText    = km+" km";
+  document.getElementById("vgRValor").innerText = "R$ "+valor.toFixed(2);
+  document.getElementById("vgRCusto").innerText = "R$ "+custoTotal.toFixed(2);
+  const rLucro = document.getElementById("vgRLucro");
+  rLucro.innerText   = "💰 Lucro: R$ "+lucro.toFixed(2);
+  rLucro.style.color = lucro>=0 ? "var(--primary)" : "var(--danger)";
+  document.getElementById("vgResultadoCard").style.display = "block";
+
+  setTimeout(()=>{ document.getElementById("vgResultadoCard").style.display="none"; limparViagem(); }, 3000);
+  showToast("Viagem salva com sucesso 💾","success");
+}
+
+// ===== HISTÓRICO GERAL =====
+function popularFiltroCliente() {
+  const sel = document.getElementById("filtroCliente");
+  const val = sel.value;
+  sel.innerHTML = '<option value="">Todos os clientes</option>';
+  vData.clientes.forEach(c=>{
+    const opt=document.createElement("option");
+    opt.value=c.id; opt.textContent=c.nome;
+    sel.appendChild(opt);
+  });
+  sel.value = val;
+}
+
+function renderHistoricoViagens() {
+  const lista    = document.getElementById("listaHistoricoViagens");
+  const filtroId = Number(document.getElementById("filtroCliente").value)||null;
+  const viagens  = vData.viagens
+    .filter(v=>!filtroId||v.clienteId===filtroId)
+    .sort((a,b)=>new Date(b.data)-new Date(a.data));
+
+  if (viagens.length===0) { lista.innerHTML="<small style='opacity:.5'>Nenhuma viagem registrada.</small>"; return; }
+
+  lista.innerHTML="";
+  viagens.forEach(v=>{
+    const cliente = vData.clientes.find(c=>c.id===v.clienteId);
+    const item=document.createElement("div");
+    item.className="card";
+    const cor = v.lucro>=0?"var(--primary)":"var(--danger)";
+    item.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <strong>📅 ${new Date(v.data).toLocaleDateString("pt-BR")}</strong>
+        <span style="font-size:12px;color:var(--muted)">${cliente?.nome||'—'}</span>
+      </div>
+      <p style="margin:4px 0">👤 Passageiro: <strong>${v.passageiroNome||'—'}</strong></p>
+      <p style="margin:4px 0">📍 KM rodados: <strong>${v.km} km</strong></p>
+      <p style="margin:4px 0">💵 Valor recebido: <strong>R$ ${v.valor.toFixed(2)}</strong></p>
+      <p style="margin:4px 0">💸 Custo total: <strong>R$ ${v.custoTotal.toFixed(2)}</strong></p>
+      <hr>
+      <h2 style="color:${cor}">💰 Lucro: R$ ${v.lucro.toFixed(2)}</h2>
+      <div class="flex" style="margin-top:8px">
+        <button class="danger" onclick="delViagem(${v.id})">🗑️ Excluir</button>
+      </div>
+    `;
+    lista.appendChild(item);
+  });
+}
+
+function delViagem(id) {
+  vData.viagens    = vData.viagens.filter(v=>v.id!==id);
+  data.lancamentos = data.lancamentos.filter(l=>l.id!==id);
+  recalcularFinanceiroGeral(); save();
+  recalcularFinanceiroViagem(); vSave();
+  renderHistoricoViagens();
+  showToast("Viagem excluída ❌","info");
+}
+
+// ===== METAS VIAGEM =====
+function getAnoFinanceiroViagem(ano) {
+  if (!vData.financeiro.anos[ano])
+    vData.financeiro.anos[ano]={metas:{},faturamento:{}};
+  return vData.financeiro.anos[ano];
+}
+function addFaturamentoMesViagem(ano,mes,valor) {
+  const a=getAnoFinanceiroViagem(ano);
+  if (!a.faturamento[mes]) a.faturamento[mes]=0;
+  a.faturamento[mes]+=Number(valor)||0;
+  vSave();
+}
+function recalcularFinanceiroViagem() {
+  Object.keys(vData.financeiro.anos).forEach(ano=>{
+    vData.financeiro.anos[ano].faturamento=new Array(12).fill(0);
+  });
+  vData.viagens.forEach(v=>{
+    const d=new Date(v.data);
+    const a=getAnoFinanceiroViagem(d.getFullYear());
+    a.faturamento[d.getMonth()]+=Number(v.valor)||0;
+  });
+  vSave();
+}
+
+// Recalcula financeiro geral (metas totais index)
+function recalcularFinanceiroGeral() {
+  if (!data.financeiro) data.financeiro={anos:{}};
+  Object.keys(data.financeiro.anos).forEach(ano=>{
+    data.financeiro.anos[ano].faturamento=new Array(12).fill(0);
+  });
+  data.lancamentos.forEach(l=>{
+    const d=new Date(l.data); const ano=d.getFullYear();
+    if (!data.financeiro.anos[ano]) data.financeiro.anos[ano]={metas:{},faturamento:{}};
+    const f=data.financeiro.anos[ano].faturamento;
+    if (!f[d.getMonth()]) f[d.getMonth()]=0;
+    f[d.getMonth()]+=Number(l.valor)||0;
+  });
+}
+
+function carregarAnosMetaViagem() {
+  const sel=document.getElementById("metaAnoViagem");
+  if (!sel) return;
+  const a=new Date().getFullYear();
+  sel.innerHTML="";
+  for(let y=a-1;y<=a+1;y++){
+    const opt=document.createElement("option");
+    opt.value=y; opt.textContent=y; sel.appendChild(opt);
+  }
+  sel.value=a;
+}
+function renderMetasViagem() {
+  generateGaugesViagem(document.getElementById("metaAnoViagem").value);
+}
+function aplicarMetaAnualViagem() {
+  const ano=Number(document.getElementById("metaAnoViagem").value);
+  const val=Number(document.getElementById("metaGlobalViagem").value);
+  if (!ano)       { showToast("Selecione um ano","info"); return; }
+  if (!val||val<=0){ showToast("Digite uma meta válida","info"); return; }
+  const a=getAnoFinanceiroViagem(ano);
+  for(let m=0;m<12;m++) a.metas[m]=val;
+  vSave(); generateGaugesViagem(ano);
+  showToast("Meta aplicada para todos os meses ✅","success");
+}
+
+function generateGaugesViagem(ano) {
+  const container=document.getElementById('gaugesViagem');
+  if (!container) return;
+  container.innerHTML='';
+  const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const anoObj=getAnoFinanceiroViagem(ano);
+
+  meses.forEach((nomeMes,i)=>{
+    const meta=anoObj.metas[i]||0;
+    const fat =anoObj.faturamento[i]||0;
+    if (!meta||meta<=0) return;
+
+    const perc=( fat/meta)*100;
+    const circ=2*Math.PI*55;
+    const card=document.createElement('div');
+    card.className='gauge-card';
+    if(perc>=100) card.classList.add("meta-batida");
+
+    card.innerHTML=`
+      <div class="gauge-label">${nomeMes}</div>
+      <div class="gauge-container">
+        <svg class="gauge-svg" width="130" height="130" viewBox="0 0 130 130">
+          <circle class="gauge-circle-bg" cx="65" cy="65" r="55"></circle>
+          <circle class="gauge-circle-progress gauge-glow" cx="65" cy="65" r="55"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ}" id="vglow-${ano}-${i}"></circle>
+          <circle class="gauge-circle-progress" cx="65" cy="65" r="55"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ}" id="vgauge-${ano}-${i}"></circle>
+        </svg>
+        <div class="gauge-text" id="vgtext-${ano}-${i}">0%</div>
+      </div>
+      <div class="gauge-sublabel">${formatCurrency(fat)}</div>
+      <div class="gauge-meta-info">Meta:
+        <span class="meta-wrapper">
+          <span class="meta-text-v" data-ano="${ano}" data-mes="${i}">${formatCurrency(meta)}</span>
+          <span class="meta-edit-icon">✏️</span>
+        </span>
+      </div>
+    `;
+    container.appendChild(card);
+    setTimeout(()=>animateGauge(`vgauge-${ano}-${i}`,`vgtext-${ano}-${i}`,perc,circ),100);
+  });
+}
+
+function animateGauge(gaugeId,textId,perc,circ) {
+  const gauge=document.getElementById(gaugeId);
+  const glow =document.getElementById(gaugeId.replace("vgauge","vglow"));
+  const text =document.getElementById(textId);
+  if(!gauge||!text) return;
+  const pL=Math.min(perc,100);
+  const offset=circ-(pL/100)*circ;
+  const cor=perc<40?"#ff5252":perc<100?"#ffc107":"#00e676";
+  gauge.style.stroke=cor; if(glow) glow.style.stroke=cor;
+  gauge.style.transition="none"; gauge.style.strokeDashoffset=circ;
+  if(glow){glow.style.transition="none";glow.style.strokeDashoffset=circ;}
+  gauge.getBoundingClientRect();
+  gauge.style.transition="stroke-dashoffset 1s ease"; gauge.style.strokeDashoffset=offset;
+  if(glow){glow.style.transition="stroke-dashoffset 1s ease";glow.style.strokeDashoffset=offset;}
+  let cur=0; const tgt=Math.round(perc); const step=Math.max(tgt/30,1);
+  const timer=setInterval(()=>{
+    cur+=step; if(cur>=tgt){cur=tgt;clearInterval(timer);}
+    text.innerText=`${Math.round(cur)}%`;
+  },30);
+}
+
+// Edição inline de meta
+document.addEventListener("click",function(e){
+  const mt=e.target.closest(".meta-text-v");
+  if(!mt) return;
+  const ano=Number(mt.dataset.ano); const mes=Number(mt.dataset.mes);
+  const a=getAnoFinanceiroViagem(ano);
+  if(mt.querySelector("input")) return;
+  const inp=document.createElement("input");
+  inp.type="number"; inp.className="meta-input"; inp.value=a.metas[mes]||0; inp.min=0; inp.step="0.01";
+  mt.innerHTML=""; mt.appendChild(inp); inp.focus(); inp.select();
+  function salvar(){ const v=Number(inp.value); if(!isNaN(v)&&v>=0){a.metas[mes]=v;vSave();} generateGaugesViagem(ano); }
+  inp.addEventListener("blur",salvar);
+  inp.addEventListener("keydown",ev=>{if(ev.key==="Enter")inp.blur();});
+});
+
+// ===== CSV =====
+function exportCSVViagens() {
+  if(vData.viagens.length===0){showToast("Nenhuma viagem para exportar","info");return;}
+  let csv='Data,Cliente,Passageiro,KM,Recebido,Custo,Lucro\n';
+  vData.viagens.forEach(v=>{
+    const c=vData.clientes.find(c=>c.id===v.clienteId);
+    csv+=`${v.data},${c?.nome||''},${v.passageiroNome||''},${v.km},${v.valor},${v.custoTotal},${v.lucro}\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='viagens.csv'; a.click();
+}
+
+// ===== INIT =====
+renderClientes();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
 </body>
 </html>

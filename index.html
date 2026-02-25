@@ -20,9 +20,9 @@
 <!-- Splash (iOS) -->
 <link rel="apple-touch-startup-image" href="assets/logo.webp">
 
-<link rel="stylesheet" href="./style.css">
-
 <title>Controle KM – Entregas</title>
+
+<link rel="stylesheet" href="./style.css">
 
 </head>
 
@@ -367,7 +367,7 @@
 </div>
 
 
-    <script type="module">
+    <script>
     // ======= STORAGE =======
     let data = JSON.parse(localStorage.getItem('kmApp')) || {
         veiculos:[],
@@ -377,14 +377,9 @@
         draftLancamento: null
     }
 
-    // Garante campo draft
+    // garante campo draft
     if(!data.draftLancamento){
         data.draftLancamento = null;
-    }
-
-    // Garante evitar erros na validação de lançamentos
-    if(!data.lancamentos){
-        data.lancamentos = [];
     }
 
     //verifica o ano de edição
@@ -433,7 +428,33 @@
     if(id === 'metas'){carregarAnosMeta(); renderMetas();}
     }
 
-    
+    // ======= VEÍCULOS =======
+    function addVeiculo(){
+        const nome = vNome.value.trim();
+        const consumo = parseFloat(vConsumo.value);
+
+        if(!nome || !consumo){
+            showToast("Preencha nome e consumo do veículo", "info");
+            return;
+        }
+
+        data.veiculos.push({
+            id: Date.now(),
+            nome,
+            consumo,
+            custos:{comb:0,man:0,pneu:0,seg:0,out:0},
+        });
+
+        data.ativo = data.veiculos.at(-1).id;
+
+        // limpa campos
+        vNome.value = '';
+        vConsumo.value = '';
+
+        save();
+        renderVeiculos();
+        showToast("Veículo adicionado e selecionado ✅", "success");
+    }
 
     function atualizarCustoKm(){
         const v = getAtivo();
@@ -899,7 +920,7 @@
         const custoKm = calcularCustoPorKm(v);
         const custoTotal = km * custoKm;
         const lucro = valor - custoTotal;
- 
+
         data.lancamentos.push({
             id: Date.now(),
             veiculoId: v.id,
@@ -919,39 +940,25 @@
         // limpar draft
         delete data.draftLancamento;
 
-        // nostra os resultados que estão sendo salvos
-        calcularResultado();
+        save();
 
-        // Mostrar resultado automaticamente
-        calcularResultado();
+        // limpar campos
+        lKmInicial.value = "";
+        lKmFinal.value = "";
+        lKm.value = "";
+        lValor.value = "";
+        const preview = document.getElementById("previewLucro");
+        
+        if(preview) preview.innerText = "";
 
-        // Após 4 segundos, limpar tudo
-        setTimeout(() => {
-
-            // esconder resultado
-            if(resultadoCard){
-                resultadoCard.style.display = "none";
-            }
-
-            resultadoAtual = null;
-
-            // limpar campos
-            lKmInicial.value = "";
-            lKmFinal.value   = "";
-            lKm.value        = "";
-            lValor.value     = "";
-
-            const preview = document.getElementById("previewLucro");
-            if(preview) preview.innerText = "";
-
-            delete data.draftLancamento;
-            save();
-
-            atualizarEstadoLimpeza();
-
-        }, 3000);
+        // esconder resultado
+        if(typeof resultadoCard !== "undefined" && resultadoCard){
+            resultadoCard.style.display = "none";
+        }
+        resultadoAtual = null;
 
         // atualizar botão limpar
+        atualizarEstadoLimpeza();
         renderHistorico();
         recalcularFinanceiroPorHistorico();
         generateGauges(agora.getFullYear());
@@ -1411,6 +1418,8 @@
         });
     }
     
+
+
     function animateGauge(gaugeId, textId, perc, circumference) {
         const gauge = document.getElementById(gaugeId);
         const glow  = document.getElementById(gaugeId.replace("gauge", "glow"));
@@ -1782,75 +1791,7 @@
         navigator.serviceWorker.register("sw.js");
     }
 
-        // ======= VEÍCULOS =======
-        async function addVeiculo(){
-            const nome = vNome.value.trim();
-            const consumo = parseFloat(vConsumo.value);
-
-            if(!nome || !consumo){
-                showToast("Preencha nome e consumo do veículo", "info");
-                return;
-            }
-
-            const veiculosRef = collection(db, "empresas", "empresa_padrao", "veiculos");
-
-            await addDoc(veiculosRef, {
-                nome,
-                consumo,
-                custos:{comb:0,man:0,pneu:0,seg:0,out:0},
-                createdAt: new Date()
-            });
-
-            vNome.value = '';
-            vConsumo.value = '';
-
-            await carregarVeiculosFirebase();
-
-            showToast("Veículo adicionado e selecionado ✅", "success");
-        }
-
-        async function carregarVeiculosFirebase() {
-            const veiculosRef = collection(db, "empresas", "empresa_padrao", "veiculos");
-            const snapshot = await getDocs(veiculosRef);
-
-            data.veiculos = [];
-
-            snapshot.forEach(doc => {
-                data.veiculos.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-
-            renderVeiculos();
-        }
-
-        carregarVeiculosFirebase();
-
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-
-        import { 
-        getFirestore, 
-        collection, 
-        addDoc, 
-        getDocs 
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCMwkiLkJf8ry5OlwJLo9rwiTHEjXmHGyQ",
-            authDomain: "gestao-rotas-c64c8.firebaseapp.com",
-            projectId: "gestao-rotas-c64c8",
-            storageBucket: "gestao-rotas-c64c8.firebasestorage.app",
-            messagingSenderId: "881627572389",
-            appId: "1:881627572389:web:7e6e4eb0105cf5c51a454c"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        window.db = db;
-
-    </script>
+</script>
 
     <div id="toast" style="
         position:fixed;
@@ -1866,7 +1807,7 @@
         z-index:9999;
         font-weight:500;
     "></div>
-    
+
 </body>
 <footer></footer>
 </html>

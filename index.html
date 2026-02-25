@@ -433,32 +433,7 @@
     if(id === 'metas'){carregarAnosMeta(); renderMetas();}
     }
 
-    // ======= VEÍCULOS =======
-    async function addVeiculo(){
-        const nome = vNome.value.trim();
-        const consumo = parseFloat(vConsumo.value);
-
-        if(!nome || !consumo){
-            showToast("Preencha nome e consumo do veículo", "info");
-            return;
-        }
-
-        const veiculosRef = collection(db, "empresas", "empresa_padrao", "veiculos");
-
-        await addDoc(veiculosRef, {
-            nome,
-            consumo,
-            custos:{comb:0,man:0,pneu:0,seg:0,out:0},
-            createdAt: new Date()
-        });
-
-        vNome.value = '';
-        vConsumo.value = '';
-
-        await carregarVeiculosFirebase();
-
-        showToast("Veículo adicionado e selecionado ✅", "success");
-    }
+    
 
     function atualizarCustoKm(){
         const v = getAtivo();
@@ -1807,28 +1782,6 @@
         navigator.serviceWorker.register("sw.js");
     }
 
-    /////// FUNÇÕES FIREBASE ///////
-
-    async function carregarVeiculosFirebase() {
-        const veiculosRef = collection(db, "empresas", "empresa_padrao", "veiculos");
-        const snapshot = await getDocs(veiculosRef);
-
-        data.veiculos = [];
-
-        snapshot.forEach(doc => {
-            data.veiculos.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-
-        renderVeiculos();
-    }
-
-    carregarVeiculosFirebase();
-
-    
-
 </script>
 
     <div id="toast" style="
@@ -1848,6 +1801,50 @@
 
     
     <script type="module">
+        // ======= VEÍCULOS =======
+        async function addVeiculo(){
+            const nome = vNome.value.trim();
+            const consumo = parseFloat(vConsumo.value);
+
+            if(!nome || !consumo){
+                showToast("Preencha nome e consumo do veículo", "info");
+                return;
+            }
+
+            const veiculosRef = collection(db, "empresas", "empresa_padrao", "veiculos");
+
+            await addDoc(veiculosRef, {
+                nome,
+                consumo,
+                custos:{comb:0,man:0,pneu:0,seg:0,out:0},
+                createdAt: new Date()
+            });
+
+            vNome.value = '';
+            vConsumo.value = '';
+
+            await carregarVeiculosFirebase();
+
+            showToast("Veículo adicionado e selecionado ✅", "success");
+        }
+
+        async function carregarVeiculosFirebase() {
+            const veiculosRef = collection(db, "empresas", "empresa_padrao", "veiculos");
+            const snapshot = await getDocs(veiculosRef);
+
+            data.veiculos = [];
+
+            snapshot.forEach(doc => {
+                data.veiculos.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            renderVeiculos();
+        }
+
+        carregarVeiculosFirebase();
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 

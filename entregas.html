@@ -630,38 +630,63 @@
     if (!container) return;
     container.innerHTML = '';
 
+    const SD=210, TD=240, CX=75, CY=75, R=55;
+    const circ   = 2 * Math.PI * R;
+    const arcLen = (TD / 360) * circ;
+
+    function pxy(cx,cy,r,deg) {
+      const rad = (deg-90) * Math.PI / 180;
+      return { x: cx+r*Math.cos(rad), y: cy+r*Math.sin(rad) };
+    }
+
     const meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
     const anoObj = getAnoFinanceiro(ano);
 
     meses.forEach((nomeMes, mesIndex) => {
-      const meta       = anoObj.metas[mesIndex] || 0;
+      const meta        = anoObj.metas[mesIndex] || 0;
       const faturamento = anoObj.faturamento[mesIndex] || 0;
       if (!meta || meta <= 0) return;
 
-      const perc = (faturamento / meta) * 100;
-      const circumference = 2 * Math.PI * 55;
+      const perc    = (faturamento / meta) * 100;
+      const percVis = Math.min(perc, 100);
+      const cor     = perc<40 ? "#ff5252" : perc<70 ? "#ffc107" : perc<100 ? "#4ade80" : "#00e676";
+
+      let ticks = '';
+      for (let i=0; i<=10; i++) {
+        const deg = SD + (i/10) * TD;
+        const inn = pxy(CX,CY,42,deg), out = pxy(CX,CY,50,deg);
+        ticks += `<line class="${i%5===0?'tick-major':'tick'}"
+          x1="${inn.x.toFixed(1)}" y1="${inn.y.toFixed(1)}"
+          x2="${out.x.toFixed(1)}" y2="${out.y.toFixed(1)}"/>`;
+      }
 
       const card = document.createElement('div');
-      card.className = 'gauge-card';
-      if (perc >= 100) card.classList.add("meta-batida");
+      card.className = 'gauge-card' + (perc >= 100 ? ' meta-batida' : '');
 
       card.innerHTML = `
         <div class="gauge-label">${nomeMes}</div>
-        <div class="gauge-container">
-          <svg class="gauge-svg" width="130" height="130" viewBox="0 0 130 130">
-            <circle class="gauge-circle-bg" cx="65" cy="65" r="55"></circle>
-            <circle class="gauge-circle-progress gauge-glow" cx="65" cy="65" r="55"
-              stroke-dasharray="${circumference}" stroke-dashoffset="${circumference}"
-              id="glow-${ano}-${mesIndex}"></circle>
-            <circle class="gauge-circle-progress" cx="65" cy="65" r="55"
-              stroke-dasharray="${circumference}" stroke-dashoffset="${circumference}"
-              id="gauge-${ano}-${mesIndex}"></circle>
+        <div class="speedo-wrap">
+          <svg class="speedo-svg" width="150" height="95" viewBox="0 0 150 95">
+            ${ticks}
+            <circle class="speedo-bg" cx="${CX}" cy="${CY}" r="${R}"
+              stroke-dasharray="${arcLen} ${circ}"
+              transform="rotate(${SD-90} ${CX} ${CY})"/>
+            <circle class="speedo-glow" id="sglow-${ano}-${mesIndex}" cx="${CX}" cy="${CY}" r="${R}"
+              stroke="${cor}" stroke-dasharray="${arcLen} ${circ}" stroke-dashoffset="${arcLen}"
+              transform="rotate(${SD-90} ${CX} ${CY})"/>
+            <circle class="speedo-progress" id="sprog-${ano}-${mesIndex}" cx="${CX}" cy="${CY}" r="${R}"
+              stroke="${cor}" stroke-dasharray="${arcLen} ${circ}" stroke-dashoffset="${arcLen}"
+              transform="rotate(${SD-90} ${CX} ${CY})"/>
+            <line id="sneedle-${ano}-${mesIndex}"
+              x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY}"
+              stroke="white" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
+            <circle cx="${CX}" cy="${CY}" r="4" fill="#1e293b" stroke="white" stroke-width="1.5"/>
+            <text x="${CX}" y="60" text-anchor="middle" fill="white"
+              font-size="15" font-weight="700" id="stxt-${ano}-${mesIndex}">0%</text>
           </svg>
-          <div class="gauge-text" id="text-${ano}-${mesIndex}">0%</div>
         </div>
         <div class="gauge-sublabel">${formatCurrency(faturamento)}</div>
-        <div class="gauge-meta-info">
-          Meta:
+        <div class="gauge-meta-info">Meta:
           <span class="meta-wrapper">
             <span class="meta-text" data-ano="${ano}" data-mes="${mesIndex}">${formatCurrency(meta)}</span>
             <span class="meta-edit-icon">✏️</span>
@@ -670,43 +695,60 @@
       `;
 
       container.appendChild(card);
-
       setTimeout(() => {
-        animateGauge(`gauge-${ano}-${mesIndex}`, `text-${ano}-${mesIndex}`, perc, circumference);
+        animateGauge(`sprog-${ano}-${mesIndex}`, `stxt-${ano}-${mesIndex}`,
+                     `sglow-${ano}-${mesIndex}`, `sneedle-${ano}-${mesIndex}`, perc, arcLen);
       }, 100);
     });
   }
 
-  function animateGauge(gaugeId, textId, perc, circumference) {
-    const gauge = document.getElementById(gaugeId);
-    const glow  = document.getElementById(gaugeId.replace("gauge", "glow"));
-    const text  = document.getElementById(textId);
-    if (!gauge || !text) return;
+  function animateGauge(progId, textId, glowId, needleId, perc, arcLen) {
+    const prog   = document.getElementById(progId);
+    const glow   = document.getElementById(glowId);
+    const needle = document.getElementById(needleId);
+    const text   = document.getElementById(textId);
+    if (!prog || !text) return;
 
-    const percLimitado = Math.min(perc, 100);
-    const offset = circumference - (percLimitado / 100) * circumference;
-    const cor = perc < 40 ? "#ff5252" : perc < 100 ? "#ffc107" : "#00e676";
+    const SD=210, TD=240;
+    const percVis = Math.min(perc, 100);
+    const offset  = arcLen - (percVis/100) * arcLen;
+    const cor     = perc<40 ? "#ff5252" : perc<70 ? "#ffc107" : perc<100 ? "#4ade80" : "#00e676";
 
-    gauge.style.stroke = cor;
+    prog.style.stroke = cor;
     if (glow) glow.style.stroke = cor;
+    prog.style.transition = "none";
+    prog.style.strokeDashoffset = arcLen;
+    if (glow) { glow.style.transition="none"; glow.style.strokeDashoffset=arcLen; }
+    prog.getBoundingClientRect();
+    prog.style.transition = "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)";
+    prog.style.strokeDashoffset = offset;
+    if (glow) { glow.style.transition="stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)"; glow.style.strokeDashoffset=offset; }
 
-    gauge.style.transition = "none";
-    gauge.style.strokeDashoffset = circumference;
-    if (glow) { glow.style.transition = "none"; glow.style.strokeDashoffset = circumference; }
-    gauge.getBoundingClientRect();
+    if (needle) {
+      const SD2=210, TD2=240, CX2=75, CY2=75, R2=55;
+      const startTime = performance.now();
+      const duration  = 1200;
+      function animNeedle(now) {
+        const t    = Math.min((now - startTime) / duration, 1);
+        const ease = t < 0.5 ? 2*t*t : (4 - 2*t)*t - 1;
+        const p    = percVis * ease;
+        const deg  = SD2 + (p / 100) * TD2;
+        const rad  = (deg - 90) * Math.PI / 180;
+        const nx   = (CX2 + (R2 - 10) * Math.cos(rad)).toFixed(2);
+        const ny   = (CY2 + (R2 - 10) * Math.sin(rad)).toFixed(2);
+        needle.setAttribute('x2', nx);
+        needle.setAttribute('y2', ny);
+        if (t < 1) requestAnimationFrame(animNeedle);
+      }
+      requestAnimationFrame(animNeedle);
+    }
 
-    gauge.style.transition = "stroke-dashoffset 1s ease";
-    gauge.style.strokeDashoffset = offset;
-    if (glow) { glow.style.transition = "stroke-dashoffset 1s ease"; glow.style.strokeDashoffset = offset; }
-
-    let current = 0;
-    const target = Math.round(perc);
-    const step   = Math.max(target / 30, 1);
-    const timer  = setInterval(() => {
-      current += step;
-      if (current >= target) { current = target; clearInterval(timer); }
-      text.innerText = `${Math.round(current)}%`;
-    }, 30);
+    let cur=0; const tgt=Math.round(perc); const step=Math.max(tgt/40,0.5);
+    const timer = setInterval(() => {
+      cur += step;
+      if (cur >= tgt) { cur=tgt; clearInterval(timer); }
+      text.textContent = Math.round(cur) + "%";
+    }, 25);
   }
 
   document.addEventListener("click", function(e) {

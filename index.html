@@ -35,7 +35,7 @@
 
 <nav>
   <button onclick="showPage('veiculos')" class="active">🚗</button>
-  <button onclick="showPage('custos')">⚙️</button>
+
   <button onclick="showPage('metas')">🎯</button>
 </nav>
 
@@ -71,69 +71,22 @@
       </div>
     </a>
 
+    <a href="cotacao.html" style="text-decoration:none;color:inherit;grid-column:1/-1">
+      <div class="veiculo-card" style="text-align:center;padding:20px 16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px">
+        <div style="font-size:32px">💰</div>
+        <div style="text-align:left">
+          <div style="font-weight:bold;font-size:15px">Cotação de Viagem</div>
+          <div style="font-size:12px;opacity:.55;margin-top:2px">Gere orçamentos e envie pelo WhatsApp</div>
+        </div>
+      </div>
+    </a>
+
   </div>
 </div>
 </section>
 
 
 <!-- CUSTOS -->
-<section id="custos" class="page">
-  <div class="card-header">
-    <h3>⚙️ Custos do Veículo</h3>
-    <button class="toggle-view" onclick="toggleCustoView()" title="Alternar visualização">🎚️ / ⌨️</button>
-  </div>
-
-  <div class="card" id="resumoCustoKm">
-    <strong>🚗 Veículo selecionado:</strong>
-    <div id="nomeVeiculoCusto" style="margin-bottom:6px"></div>
-    <small>⛽ Custo por KM atual</small>
-    <h2 id="custoKmAtual" style="color:var(--secondary);margin:6px 0">—</h2>
-  </div>
-
-  <!-- Combustível -->
-  <div class="custo-item" data-custo="comb">
-    <label>⛽ Combustível (R$)</label>
-    <input type="range" id="cComb" min="0" max="15" step="0.1" oninput="updateCusto('comb', this.value)" style="display:none" class="custo-slider">
-    <input type="text" class="custo-input money" inputmode="numeric" autocomplete="off">
-    <small class="custo-valor" id="vComb">R$ 0,00</small>
-  </div>
-
-  <!-- Manutenção -->
-  <div class="custo-item" data-custo="man">
-    <label>🔧 Manutenção (R$)</label>
-    <input type="range" id="cMan" min="0" max="300" step="10" oninput="updateCusto('man', this.value)" style="display:none" class="custo-slider">
-    <input type="text" class="custo-input money" inputmode="numeric" autocomplete="off">
-    <small class="custo-valor" id="vMan">R$ 0,00</small>
-  </div>
-
-  <!-- Pneus -->
-  <div class="custo-item" data-custo="pneu">
-    <label>🛞 Pneus (R$)</label>
-    <input type="range" id="cPneu" min="0" max="200" step="5" oninput="updateCusto('pneu', this.value)" style="display:none" class="custo-slider">
-    <input type="text" class="custo-input money" inputmode="numeric" autocomplete="off">
-    <small class="custo-valor" id="vPneu">R$ 0,00</small>
-  </div>
-
-  <!-- Seguro -->
-  <div class="custo-item" data-custo="seg">
-    <label>🛡 Seguro (R$)</label>
-    <input type="range" id="cSeg" min="0" max="400" step="10" oninput="updateCusto('seg', this.value)" style="display:none" class="custo-slider">
-    <input type="text" class="custo-input money" inputmode="numeric" autocomplete="off">
-    <small class="custo-valor" id="vSeg">R$ 0,00</small>
-  </div>
-
-  <!-- Outros -->
-  <div class="custo-item" data-custo="out">
-    <label>📦 Outros (R$)</label>
-    <input type="range" id="cOut" min="0" max="200" step="10" oninput="updateCusto('out', this.value)" style="display:none" class="custo-slider">
-    <input type="text" class="custo-input money" inputmode="numeric" autocomplete="off">
-    <small class="custo-valor" id="vOut">R$ 0,00</small>
-  </div>
-
-  <div class="card">
-    <button onclick="salvarCustos()">💾 Salvar Custos</button>
-  </div>
-</section>
 
 
 <!-- METAS TOTAIS -->
@@ -154,15 +107,48 @@
 
 <!-- Modal Editar Veículo -->
 <div id="modalVeiculoEdit" class="modal hidden">
-  <div class="modal-box">
-    <h2>Editar Veículo</h2>
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto">
+    <h2>✏️ Editar Veículo</h2>
+
     <label>Nome</label>
     <input type="text" id="editNomeVeiculo">
+
     <label>Consumo (km/l)</label>
-    <input type="number" step="0.1" id="editConsumoVeiculo">
-    <div class="flex">
-      <button onclick="salvarEdicaoVeiculo()">Salvar</button>
-      <button class="danger" onclick="document.getElementById('modalVeiculoEdit').classList.add('hidden')">Cancelar</button>
+    <input type="number" step="0.1" id="editConsumoVeiculo" oninput="atualizarPreviewKm()">
+
+    <label>KM médio mensal</label>
+    <input type="number" id="editKmMensal" oninput="atualizarPreviewKm()" placeholder="Ex: 1500">
+    <small style="opacity:.6">Usado para diluir custos fixos por km</small>
+
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,.07);margin:14px 0">
+    <strong style="font-size:13px;opacity:.6;text-transform:uppercase;letter-spacing:.05em">Custos Mensais</strong>
+
+    <label style="margin-top:10px">⛽ Combustível (R$/mês)</label>
+    <input type="number" step="0.01" id="editComb" oninput="atualizarPreviewKm()" placeholder="0,00">
+
+    <label>🔧 Manutenção (R$/mês)</label>
+    <input type="number" step="0.01" id="editMan" oninput="atualizarPreviewKm()" placeholder="0,00">
+
+    <label>🛞 Pneus (R$/mês)</label>
+    <input type="number" step="0.01" id="editPneu" oninput="atualizarPreviewKm()" placeholder="0,00">
+
+    <label>🛡 Seguro (R$/mês)</label>
+    <input type="number" step="0.01" id="editSeg" oninput="atualizarPreviewKm()" placeholder="0,00">
+
+    <label>📦 Outros (R$/mês)</label>
+    <input type="number" step="0.01" id="editOut" oninput="atualizarPreviewKm()" placeholder="0,00">
+
+    <div id="previewCustoKm" style="
+      background:rgba(124,106,230,.1);border:1px solid rgba(124,106,230,.2);
+      border-radius:10px;padding:12px;margin-top:12px;text-align:center;
+    ">
+      <small style="opacity:.6">Custo estimado por km</small>
+      <div id="previewKmVal" style="font-size:22px;font-weight:800;color:var(--primary);margin-top:2px">—</div>
+    </div>
+
+    <div class="flex" style="margin-top:14px">
+      <button onclick="salvarEdicaoVeiculo()">💾 Salvar</button>
+      <button class="danger" onclick="fecharModalVeiculo()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -197,7 +183,6 @@
   if (!data.financeiro) data.financeiro = { anos: {} };
   if (!data.lancamentos) data.lancamentos = [];
 
-  let custoView = 'input';
   let veiculoEditandoId = null;
 
   function save() {
@@ -215,7 +200,6 @@
     document.getElementById(id).classList.add('active');
     event.target.classList.add('active');
 
-    if (id === 'custos')  { carregarCustos(); atualizarCustoKm(); }
     if (id === 'metas')   { carregarAnosTotalMeta(); renderMetasTotal(); }
   }
 
@@ -226,10 +210,10 @@
 
   function calcularCustoPorKm(v) {
     if (!v || v.consumo <= 0) return 0;
-    const custoComb = v.custos.comb / v.consumo;
-    const custoFixoMensal = (v.custos.man || 0) + (v.custos.pneu || 0) + (v.custos.seg || 0) + (v.custos.out || 0);
-    const kmMensalEstimado = 30 * 30;
-    return custoComb + (kmMensalEstimado > 0 ? custoFixoMensal / kmMensalEstimado : 0);
+    const custoComb       = v.custos.comb / v.consumo;
+    const custoFixoMensal = (v.custos.man||0) + (v.custos.pneu||0) + (v.custos.seg||0) + (v.custos.out||0);
+    const kmMensal        = Number(v.kmMensal) || 900; // usa o km cadastrado, fallback 900
+    return custoComb + (kmMensal > 0 ? custoFixoMensal / kmMensal : 0);
   }
 
   function showToast(msg, type = "success") {
@@ -247,7 +231,7 @@
     const consumo = parseFloat(vConsumo.value);
     if (!nome || !consumo) { showToast("Preencha nome e consumo do veículo", "info"); return; }
 
-    data.veiculos.push({ id: Date.now(), nome, consumo, custos: { comb: 0, man: 0, pneu: 0, seg: 0, out: 0 } });
+    data.veiculos.push({ id: Date.now(), nome, consumo, kmMensal: 900, custos: { comb: 0, man: 0, pneu: 0, seg: 0, out: 0 } });
     data.ativo = data.veiculos.at(-1).id;
     vNome.value = '';
     vConsumo.value = '';
@@ -256,18 +240,6 @@
     showToast("Veículo adicionado e selecionado ✅", "success");
   }
 
-  function atualizarCustoKm() {
-    const v = getAtivo();
-    if (!v) {
-      custoKmAtual.innerText = "—";
-      nomeVeiculoCusto.innerText = "Nenhum veículo selecionado";
-      return;
-    }
-    nomeVeiculoCusto.innerText = v.nome;
-    custoKmAtual.innerText = (v.consumo > 0 && v.custos?.comb > 0)
-      ? `R$ ${calcularCustoPorKm(v).toFixed(2)} / km`
-      : "—";
-  }
 
   function renderVeiculos() {
     listaVeiculos.innerHTML = '';
@@ -317,8 +289,6 @@
     data.ativo = id;
     save();
     renderVeiculos();
-    carregarCustos();
-    atualizarCustoKm();
     showToast(`Veículo "${v.nome}" selecionado 🚗`, "success");
   }
 
@@ -328,23 +298,61 @@
     veiculoEditandoId = id;
     document.getElementById("editNomeVeiculo").value    = v.nome;
     document.getElementById("editConsumoVeiculo").value = v.consumo;
+    document.getElementById("editKmMensal").value       = v.kmMensal || 900;
+    document.getElementById("editComb").value = v.custos?.comb  || 0;
+    document.getElementById("editMan").value  = v.custos?.man   || 0;
+    document.getElementById("editPneu").value = v.custos?.pneu  || 0;
+    document.getElementById("editSeg").value  = v.custos?.seg   || 0;
+    document.getElementById("editOut").value  = v.custos?.out   || 0;
+    atualizarPreviewKm();
     document.getElementById("modalVeiculoEdit").classList.remove("hidden");
+  }
+
+  function fecharModalVeiculo() {
+    document.getElementById("modalVeiculoEdit").classList.add("hidden");
+    veiculoEditandoId = null;
+  }
+
+  function atualizarPreviewKm() {
+    const consumo   = Number(document.getElementById("editConsumoVeiculo").value) || 0;
+    const kmMensal  = Number(document.getElementById("editKmMensal").value)       || 900;
+    const comb      = Number(document.getElementById("editComb").value) || 0;
+    const man       = Number(document.getElementById("editMan").value)  || 0;
+    const pneu      = Number(document.getElementById("editPneu").value) || 0;
+    const seg       = Number(document.getElementById("editSeg").value)  || 0;
+    const out       = Number(document.getElementById("editOut").value)  || 0;
+
+    const el = document.getElementById("previewKmVal");
+    if (!el) return;
+    if (consumo <= 0 || comb <= 0) { el.innerText = "—"; return; }
+
+    const custoComb  = comb / consumo;
+    const fixoMensal = man + pneu + seg + out;
+    const total      = custoComb + (kmMensal > 0 ? fixoMensal / kmMensal : 0);
+    el.innerText     = `R$ ${total.toFixed(3)} / km`;
   }
 
   function salvarEdicaoVeiculo() {
     if (veiculoEditandoId === null) { showToast("Nenhum veículo em edição", "error"); return; }
-    const v        = data.veiculos.find(v => v.id === veiculoEditandoId);
-    const novoNome = document.getElementById("editNomeVeiculo").value.trim();
-    const novoConsumo = Number(document.getElementById("editConsumoVeiculo").value);
+    const v          = data.veiculos.find(v => v.id === veiculoEditandoId);
+    const novoNome   = document.getElementById("editNomeVeiculo").value.trim();
+    const novoConsumo= Number(document.getElementById("editConsumoVeiculo").value);
+    const novoKmMens = Number(document.getElementById("editKmMensal").value) || 900;
     if (!novoNome || !novoConsumo || novoConsumo <= 0) { showToast("Nome ou consumo inválido", "info"); return; }
-    v.nome    = novoNome;
-    v.consumo = novoConsumo;
+    v.nome     = novoNome;
+    v.consumo  = novoConsumo;
+    v.kmMensal = novoKmMens;
+    v.custos   = {
+      comb: Number(document.getElementById("editComb").value) || 0,
+      man:  Number(document.getElementById("editMan").value)  || 0,
+      pneu: Number(document.getElementById("editPneu").value) || 0,
+      seg:  Number(document.getElementById("editSeg").value)  || 0,
+      out:  Number(document.getElementById("editOut").value)  || 0,
+    };
     save();
     renderVeiculos();
-    atualizarCustoKm();
-    document.getElementById('modalVeiculoEdit').classList.add("hidden");
-    veiculoEditandoId = null;
-    showToast("Veículo atualizado 🚗", "success");
+    fecharModalVeiculo();
+    showToast("Veículo atualizado ✅", "success");
   }
 
   function delVeiculo(id) {
@@ -356,89 +364,6 @@
   }
 
   // ======= CUSTOS =======
-  function toggleCustoView() {
-    custoView = custoView === 'slider' ? 'input' : 'slider';
-    document.querySelectorAll('.custo-item').forEach(item => {
-      const slider = item.querySelector('.custo-slider');
-      const input  = item.querySelector('.custo-input');
-      if (custoView === 'input') {
-        input.style.display  = 'block';
-        slider.style.display = 'none';
-        input.value = slider.value;
-      } else {
-        slider.style.display = 'block';
-        input.style.display  = 'none';
-        slider.value = input.value;
-      }
-    });
-    showToast(custoView === 'slider' ? 'Visualização por slider 🎚️' : 'Visualização por entrada ⌨️', 'info');
-  }
-
-  function formatMoneyMachine(value) {
-    let numbers = value.replace(/\D/g, "");
-    if (!numbers) return "0,00";
-    return (parseInt(numbers, 10) / 100).toFixed(2).replace(".", ",");
-  }
-
-  function parseMoneyToFloat(value) {
-    return parseFloat(value.replace(".", "").replace(",", ".")) || 0;
-  }
-
-  document.querySelectorAll(".money").forEach(input => {
-    input.value = "0,00";
-    input.addEventListener("input", function () {
-      this.value = formatMoneyMachine(this.value);
-      const tipo = this.closest(".custo-item").dataset.custo;
-      const valorFloat = parseMoneyToFloat(this.value);
-      const v = getAtivo();
-      if (!v) return;
-      v.custos[tipo] = valorFloat;
-      document.getElementById('v' + tipo.charAt(0).toUpperCase() + tipo.slice(1)).innerText = "R$ " + valorFloat.toFixed(2);
-      atualizarCustoKm();
-      save();
-    });
-  });
-
-  function updateCusto(tipo, valor) {
-    const v = getAtivo();
-    if (!v) return;
-    valor = Number(valor) || 0;
-    v.custos[tipo] = valor;
-    document.getElementById('v' + tipo.charAt(0).toUpperCase() + tipo.slice(1)).innerText = "R$ " + valor.toFixed(2);
-    document.querySelectorAll(`[data-custo="${tipo}"]`).forEach(item => {
-      item.querySelector('.custo-slider').value = valor;
-      item.querySelector('.custo-input').value  = formatMoneyMachine((valor * 100).toString());
-    });
-    atualizarCustoKm();
-    renderVeiculos();
-    save();
-  }
-
-  function salvarCustos() {
-    const v = getAtivo();
-    if (!v) { showToast("Selecione um veículo primeiro", "error"); return; }
-    v.custos = {
-      comb: parseMoneyToFloat(document.querySelector('[data-custo="comb"] .custo-input').value),
-      man:  parseMoneyToFloat(document.querySelector('[data-custo="man"] .custo-input').value),
-      pneu: parseMoneyToFloat(document.querySelector('[data-custo="pneu"] .custo-input').value),
-      seg:  parseMoneyToFloat(document.querySelector('[data-custo="seg"] .custo-input').value),
-      out:  parseMoneyToFloat(document.querySelector('[data-custo="out"] .custo-input').value)
-    };
-    atualizarCustoKm();
-    renderVeiculos();
-    save();
-    showToast("Custos atualizados com sucesso ✅", "success");
-  }
-
-  function carregarCustos() {
-    const v = getAtivo();
-    if (!v) return;
-    updateCusto('comb', v.custos.comb || 0);
-    updateCusto('man',  v.custos.man  || 0);
-    updateCusto('pneu', v.custos.pneu || 0);
-    updateCusto('seg',  v.custos.seg  || 0);
-    updateCusto('out',  v.custos.out  || 0);
-  }
 
   // ======= METAS TOTAIS =======
   function getAnoFinanceiro(ano) {
@@ -616,6 +541,75 @@
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js");
+  }
+</script>
+
+<!-- Toggle Tema (Sol/Lua) -->
+<button id="theme-toggle" title="Alternar tema" onclick="toggleTheme()">🌙</button>
+
+<!-- FAB backdrop -->
+<div id="fab-backdrop" onclick="closeFab()"></div>
+
+<!-- FAB Container -->
+<div id="fab-container">
+
+  <!-- Opções (aparecem ao abrir) -->
+  <div class="fab-options" id="fab-options">
+
+    <div class="fab-option" onclick="window.location.href='cotacao.html'">
+      <div class="fab-option-label">Cotação</div>
+      <button class="fab-option-btn fab-opt-cotacao">💰</button>
+    </div>
+
+    <div class="fab-option" onclick="window.location.href='viagens.html'">
+      <div class="fab-option-label">Nova Viagem</div>
+      <button class="fab-option-btn fab-opt-viagem">🚕</button>
+    </div>
+
+    <div class="fab-option" onclick="window.location.href='entregas.html'">
+      <div class="fab-option-label">Nova Entrega</div>
+      <button class="fab-option-btn fab-opt-entrega">📦</button>
+    </div>
+
+  </div>
+
+  <!-- Botão principal -->
+  <button id="fab-main" onclick="toggleFab()">+</button>
+
+</div>
+
+<script>
+  /* ── TEMA ── */
+  (function() {
+    const saved = localStorage.getItem('kmTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+  })();
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('kmTheme', next);
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
+  }
+
+  /* ── FAB ── */
+  function toggleFab() {
+    const opts     = document.getElementById('fab-options');
+    const main     = document.getElementById('fab-main');
+    const backdrop = document.getElementById('fab-backdrop');
+    const open = opts.classList.toggle('visible');
+    main.classList.toggle('open', open);
+    backdrop.classList.toggle('visible', open);
+  }
+
+  function closeFab() {
+    document.getElementById('fab-options').classList.remove('visible');
+    document.getElementById('fab-main').classList.remove('open');
+    document.getElementById('fab-backdrop').classList.remove('visible');
   }
 </script>
 

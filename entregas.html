@@ -213,9 +213,8 @@
     if (!v || v.consumo <= 0) return 0;
     const custoComb = v.custos.comb / v.consumo;
     const custoFixoMensal = (v.custos.man || 0) + (v.custos.pneu || 0) + (v.custos.seg || 0) + (v.custos.out || 0);
-    const kmMensalEstimado = 30 * 30;
-    const custoFixoKm = kmMensalEstimado > 0 ? custoFixoMensal / kmMensalEstimado : 0;
-    return custoComb + custoFixoKm;
+    const kmMensal = Number(v.kmMensal) || 2000;
+    return custoComb + (kmMensal > 0 ? custoFixoMensal / kmMensal : 0);
   }
 
   function showToast(msg, type = "success") {
@@ -809,6 +808,75 @@
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js");
+  }
+</script>
+
+<!-- Toggle Tema (Sol/Lua) -->
+<button id="theme-toggle" title="Alternar tema" onclick="toggleTheme()">🌙</button>
+
+<!-- FAB backdrop -->
+<div id="fab-backdrop" onclick="closeFab()"></div>
+
+<!-- FAB Container -->
+<div id="fab-container">
+
+  <!-- Opções (aparecem ao abrir) -->
+  <div class="fab-options" id="fab-options">
+
+    <div class="fab-option" onclick="window.location.href='cotacao.html'">
+      <div class="fab-option-label">Cotação</div>
+      <button class="fab-option-btn fab-opt-cotacao">💰</button>
+    </div>
+
+    <div class="fab-option" onclick="window.location.href='viagens.html'">
+      <div class="fab-option-label">Nova Viagem</div>
+      <button class="fab-option-btn fab-opt-viagem">🚕</button>
+    </div>
+
+    <div class="fab-option" onclick="window.location.href='entregas.html'">
+      <div class="fab-option-label">Nova Entrega</div>
+      <button class="fab-option-btn fab-opt-entrega">📦</button>
+    </div>
+
+  </div>
+
+  <!-- Botão principal -->
+  <button id="fab-main" onclick="toggleFab()">+</button>
+
+</div>
+
+<script>
+  /* ── TEMA ── */
+  (function() {
+    const saved = localStorage.getItem('kmTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+  })();
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('kmTheme', next);
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
+  }
+
+  /* ── FAB ── */
+  function toggleFab() {
+    const opts     = document.getElementById('fab-options');
+    const main     = document.getElementById('fab-main');
+    const backdrop = document.getElementById('fab-backdrop');
+    const open = opts.classList.toggle('visible');
+    main.classList.toggle('open', open);
+    backdrop.classList.toggle('visible', open);
+  }
+
+  function closeFab() {
+    document.getElementById('fab-options').classList.remove('visible');
+    document.getElementById('fab-main').classList.remove('open');
+    document.getElementById('fab-backdrop').classList.remove('visible');
   }
 </script>
 

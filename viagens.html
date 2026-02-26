@@ -155,6 +155,11 @@
     <label>KM rodados</label>
     <input id="vgKm" type="number" disabled>
 
+    <button id="btnEntregue" onclick="enviarWhatsEntrega()"
+      style="background:#25d366;color:#fff;margin-top:4px;display:none">
+      ✅ Avisar passageiro entregue
+    </button>
+
     <label>Valor recebido (R$)</label>
     <input id="vgValor" type="number">
 
@@ -237,9 +242,6 @@
             <div class="flex" style="gap:8px;margin-bottom:10px">
             <button onclick="enviarWhats('chegada')" style="background:#25d366;color:#fff;font-size:13px">
                 📍 Estou chegando
-            </button>
-            <button onclick="enviarWhats('entrega')" style="background:#25d366;color:#fff;font-size:13px">
-                ✅ Passageiro entregue
             </button>
         </div>
         
@@ -427,14 +429,33 @@ function enviarWhats(tipo) {
   const tel = document.getElementById("detalheTelefone").value.replace(/\D/g, '');
   if (!tel || tel.length < 10) { showToast("Cadastre o telefone do cliente primeiro", "info"); return; }
 
-    const nome = document.getElementById("detalheNomeInput").value || 'cliente';
+    const nome = document.getElementById("detalheNomeInput").value || ''; //Nome do cliente
     const mensagens = {
-    chegada: `Olá! Estou chegando para buscar o passageiro. 🚗`,
-    entrega: `Passageiro entregue com sucesso! ✅`
+    chegada: `🚗 Olá ${nome}! Estou chegando para buscar o passageiro.`,
   };
 
   const url = `https://wa.me/55${tel}?text=${encodeURIComponent(mensagens[tipo])}`;
   window.open(url, '_blank');
+}
+
+function enviarWhatsEntrega() {
+  const clienteId  = Number(document.getElementById("vgCliente").value);
+  const passageiro = document.getElementById("vgPassageiro").value;
+
+  if (!clienteId) { showToast("Selecione um cliente primeiro", "info"); return; }
+
+  const cliente = vData.clientes.find(c => c.id === clienteId);
+  if (!cliente?.telefone) { showToast("Cliente sem telefone cadastrado", "info"); return; }
+
+  const tel = cliente.telefone.replace(/\D/g, '');
+  if (!tel || tel.length < 10) { showToast("Telefone do cliente inválido", "info"); return; }
+
+  const nome = passageiro || 'o passageiro';
+  const msg  = `✅ Olá! Informamos que o passageiro ${nome} chegou ao seu destino.
+  \n\nAgradecemos a preferência e estamos à disposição para sempre que necessário tornar a sua viagem totalmente tranquila e segura.
+  \n\nEsperamos vê-lo novamente em breve!`;
+
+  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 function adicionarPassageiro() {
@@ -594,7 +615,16 @@ function abrirEdicaoClienteRapida() {
 function calcKmViagem() {
   const ini = Number(document.getElementById("vgKmInicial").value);
   const fim = Number(document.getElementById("vgKmFinal").value);
-  document.getElementById("vgKm").value = (ini>0&&fim>0&&fim>=ini) ? fim-ini : "";
+  const km  = fim - ini;
+  const btn = document.getElementById("btnEntregue");
+
+  if (ini > 0 && fim > 0 && fim >= ini) {
+    document.getElementById("vgKm").value = km;
+    btn.style.display = "block";
+  } else {
+    document.getElementById("vgKm").value = "";
+    btn.style.display = "none";
+  }
 }
 
 function atualizarPreviewViagem() {
@@ -798,34 +828,64 @@ function aplicarMetaAnualViagem() {
 }
 
 function generateGaugesViagem(ano) {
-  const container=document.getElementById('gaugesViagem');
+  const container = document.getElementById('gaugesViagem');
   if (!container) return;
-  container.innerHTML='';
-  const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-  const anoObj=getAnoFinanceiroViagem(ano);
+  container.innerHTML = '';
 
-  meses.forEach((nomeMes,i)=>{
-    const meta=anoObj.metas[i]||0;
-    const fat =anoObj.faturamento[i]||0;
-    if (!meta||meta<=0) return;
+  const SD=210, TD=240, CX=75, CY=75, R=55;
+  const circ   = 2 * Math.PI * R;
+  const arcLen = (TD / 360) * circ;
 
-    const perc=( fat/meta)*100;
-    const circ=2*Math.PI*55;
-    const card=document.createElement('div');
-    card.className='gauge-card';
-    if(perc>=100) card.classList.add("meta-batida");
+  function pxy(cx,cy,r,deg) {
+    const rad = (deg-90) * Math.PI / 180;
+    return { x: cx+r*Math.cos(rad), y: cy+r*Math.sin(rad) };
+  }
 
-    card.innerHTML=`
+  const meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const anoObj = getAnoFinanceiroViagem(ano);
+
+  meses.forEach((nomeMes, i) => {
+    const meta = anoObj.metas[i] || 0;
+    const fat  = anoObj.faturamento[i] || 0;
+    if (!meta || meta <= 0) return;
+
+    const perc    = (fat / meta) * 100;
+    const percVis = Math.min(perc, 100);
+    const cor     = perc<40 ? "#ff5252" : perc<70 ? "#ffc107" : perc<100 ? "#4ade80" : "#00e676";
+
+    let ticks = '';
+    for (let t=0; t<=10; t++) {
+      const deg = SD + (t/10) * TD;
+      const inn = pxy(CX,CY,42,deg), out = pxy(CX,CY,50,deg);
+      ticks += `<line class="${t%5===0?'tick-major':'tick'}"
+        x1="${inn.x.toFixed(1)}" y1="${inn.y.toFixed(1)}"
+        x2="${out.x.toFixed(1)}" y2="${out.y.toFixed(1)}"/>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'gauge-card' + (perc >= 100 ? ' meta-batida' : '');
+
+    card.innerHTML = `
       <div class="gauge-label">${nomeMes}</div>
-      <div class="gauge-container">
-        <svg class="gauge-svg" width="130" height="130" viewBox="0 0 130 130">
-          <circle class="gauge-circle-bg" cx="65" cy="65" r="55"></circle>
-          <circle class="gauge-circle-progress gauge-glow" cx="65" cy="65" r="55"
-            stroke-dasharray="${circ}" stroke-dashoffset="${circ}" id="vglow-${ano}-${i}"></circle>
-          <circle class="gauge-circle-progress" cx="65" cy="65" r="55"
-            stroke-dasharray="${circ}" stroke-dashoffset="${circ}" id="vgauge-${ano}-${i}"></circle>
+      <div class="speedo-wrap">
+        <svg class="speedo-svg" width="150" height="95" viewBox="0 0 150 95">
+          ${ticks}
+          <circle class="speedo-bg" cx="${CX}" cy="${CY}" r="${R}"
+            stroke-dasharray="${arcLen} ${circ}"
+            transform="rotate(${SD-90} ${CX} ${CY})"/>
+          <circle class="speedo-glow" id="vglow-${ano}-${i}" cx="${CX}" cy="${CY}" r="${R}"
+            stroke="${cor}" stroke-dasharray="${arcLen} ${circ}" stroke-dashoffset="${arcLen}"
+            transform="rotate(${SD-90} ${CX} ${CY})"/>
+          <circle class="speedo-progress" id="vprog-${ano}-${i}" cx="${CX}" cy="${CY}" r="${R}"
+            stroke="${cor}" stroke-dasharray="${arcLen} ${circ}" stroke-dashoffset="${arcLen}"
+            transform="rotate(${SD-90} ${CX} ${CY})"/>
+          <line id="vneedle-${ano}-${i}"
+            x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY}"
+            stroke="white" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
+          <circle cx="${CX}" cy="${CY}" r="4" fill="#1e293b" stroke="white" stroke-width="1.5"/>
+          <text x="${CX}" y="60" text-anchor="middle" fill="white"
+            font-size="15" font-weight="700" id="vtxt-${ano}-${i}">0%</text>
         </svg>
-        <div class="gauge-text" id="vgtext-${ano}-${i}">0%</div>
       </div>
       <div class="gauge-sublabel">${formatCurrency(fat)}</div>
       <div class="gauge-meta-info">Meta:
@@ -835,30 +895,62 @@ function generateGaugesViagem(ano) {
         </span>
       </div>
     `;
+
     container.appendChild(card);
-    setTimeout(()=>animateGauge(`vgauge-${ano}-${i}`,`vgtext-${ano}-${i}`,perc,circ),100);
+    setTimeout(() => {
+      animateGauge(`vprog-${ano}-${i}`, `vtxt-${ano}-${i}`,
+                   `vglow-${ano}-${i}`, `vneedle-${ano}-${i}`, perc, arcLen);
+    }, 100);
   });
 }
 
-function animateGauge(gaugeId,textId,perc,circ) {
-  const gauge=document.getElementById(gaugeId);
-  const glow =document.getElementById(gaugeId.replace("vgauge","vglow"));
-  const text =document.getElementById(textId);
-  if(!gauge||!text) return;
-  const pL=Math.min(perc,100);
-  const offset=circ-(pL/100)*circ;
-  const cor=perc<40?"#ff5252":perc<100?"#ffc107":"#00e676";
-  gauge.style.stroke=cor; if(glow) glow.style.stroke=cor;
-  gauge.style.transition="none"; gauge.style.strokeDashoffset=circ;
-  if(glow){glow.style.transition="none";glow.style.strokeDashoffset=circ;}
-  gauge.getBoundingClientRect();
-  gauge.style.transition="stroke-dashoffset 1s ease"; gauge.style.strokeDashoffset=offset;
-  if(glow){glow.style.transition="stroke-dashoffset 1s ease";glow.style.strokeDashoffset=offset;}
-  let cur=0; const tgt=Math.round(perc); const step=Math.max(tgt/30,1);
-  const timer=setInterval(()=>{
-    cur+=step; if(cur>=tgt){cur=tgt;clearInterval(timer);}
-    text.innerText=`${Math.round(cur)}%`;
-  },30);
+function animateGauge(progId, textId, glowId, needleId, perc, arcLen) {
+  const prog   = document.getElementById(progId);
+  const glow   = document.getElementById(glowId);
+  const needle = document.getElementById(needleId);
+  const text   = document.getElementById(textId);
+  if (!prog || !text) return;
+
+  const SD=210, TD=240;
+  const percVis = Math.min(perc, 100);
+  const offset  = arcLen - (percVis/100) * arcLen;
+  const cor     = perc<40 ? "#ff5252" : perc<70 ? "#ffc107" : perc<100 ? "#4ade80" : "#00e676";
+
+  prog.style.stroke = cor;
+  if (glow) glow.style.stroke = cor;
+  prog.style.transition = "none";
+  prog.style.strokeDashoffset = arcLen;
+  if (glow) { glow.style.transition="none"; glow.style.strokeDashoffset=arcLen; }
+  prog.getBoundingClientRect();
+  prog.style.transition = "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)";
+  prog.style.strokeDashoffset = offset;
+  if (glow) { glow.style.transition="stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)"; glow.style.strokeDashoffset=offset; }
+
+  if (needle) {
+    const SD2=210, TD2=240, CX2=75, CY2=75, R2=55;
+    const startTime = performance.now();
+    const duration  = 1200;
+    function animNeedle(now) {
+      const t    = Math.min((now - startTime) / duration, 1);
+      const ease = t < 0.5 ? 2*t*t : (4 - 2*t)*t - 1;
+      const p    = percVis * ease;
+      const deg  = SD2 + (p / 100) * TD2;
+      const rad  = (deg - 90) * Math.PI / 180;
+      const nx   = (CX2 + (R2 - 10) * Math.cos(rad)).toFixed(2);
+      const ny   = (CY2 + (R2 - 10) * Math.sin(rad)).toFixed(2);
+      needle.setAttribute('x2', nx);
+      needle.setAttribute('y2', ny);
+      if (t < 1) requestAnimationFrame(animNeedle);
+    }
+    requestAnimationFrame(animNeedle);
+  }
+
+  let cur=0; const tgt=Math.round(perc); const step=Math.max(tgt/40,0.5);
+  const timer = setInterval(() => {
+    cur += step;
+    if (cur >= tgt) { cur=tgt; clearInterval(timer); }
+    text.textContent = Math.round(cur) + "%";
+  }, 25);
 }
 
 // Edição inline de meta

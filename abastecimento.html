@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Abastecimento</title>
+<link rel="stylesheet" href="./style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  /* ── Resumo veículo ── */
+  .veiculo-banner {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px; margin-bottom: 14px;
+  }
+  .veiculo-banner .icon { font-size: 28px; }
+  .veiculo-banner .info { flex: 1; }
+  .veiculo-banner .nome { font-weight: 700; font-size: 16px; }
+  .veiculo-banner .sub  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* ── KPIs ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .kpi-valor { font-size: 18px; font-weight: 800; color: var(--text); margin-top: 4px; line-height: 1.1; }
+  .kpi-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Alerta de calibração ── */
+  .alerta-calibracao {
+    border-radius: 14px; padding: 14px; margin-bottom: 14px;
+    border: 1px solid;
+    animation: slideUp .3s ease;
+  }
+  .alerta-ok      { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.3);  }
+  .alerta-warn    { background: rgba(232,148,10,.08); border-color: rgba(232,148,10,.4); }
+  .alerta-danger  { background: rgba(229,83,75,.08);  border-color: rgba(229,83,75,.4);  }
+
+  .alerta-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .alerta-icon   { font-size: 22px; }
+  .alerta-titulo { font-weight: 700; font-size: 14px; }
+  .alerta-texto  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  .btn-calibrar {
+    width: 100%; margin-top: 10px;
+    background: var(--secondary); color: #fff;
+    border: none; border-radius: 10px;
+    padding: 10px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: filter .2s;
+  }
+  .btn-calibrar:hover { filter: brightness(1.1); }
+
+  /* ── Histórico ── */
+  .hist-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-icon { font-size: 22px; flex-shrink: 0; }
+  .hist-info { flex: 1; min-width: 0; }
+  .hist-data { font-size: 12px; color: var(--muted); }
+  .hist-vals { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 1px; }
+  .hist-consumo {
+    font-size: 13px; font-weight: 700;
+    padding: 3px 8px; border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .consumo-ok     { background: rgba(34,197,94,.15);  color: #22c55e; }
+  .consumo-warn   { background: rgba(232,148,10,.15); color: var(--secondary); }
+  .consumo-danger { background: rgba(229,83,75,.15);  color: var(--danger); }
+
+  /* ── Gráfico ── */
+  .chart-wrap { position: relative; height: 220px; margin-top: 10px; }
+
+  /* ── Tipo combustível pills ── */
+  .comb-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .comb-pill {
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--card2); color: var(--muted);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all .2s;
+  }
+  .comb-pill.active {
+    background: var(--primary); color: #fff;
+    border-color: var(--primary);
+  }
+
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <button onclick="window.location.href='index.html'" style="flex:0 0 auto;padding:10px 14px">← Início</button>
+  <span style="flex:1;text-align:center;font-weight:700;font-size:16px;color:var(--primary)">⛽ Abastecimento</span>
+</nav>
+
+<!-- Seletor de veículo -->
+<div style="padding:16px 16px 0">
+  <label>Veículo</label>
+  <select id="selVeiculo" onchange="onVeiculoChange()"></select>
+</div>
+
+<!-- Banner do veículo ativo -->
+<div style="padding:0 16px">
+  <div class="veiculo-banner" id="veiculoBanner">
+    <div class="icon">🚗</div>
+    <div class="info">
+      <div class="nome" id="bNome">—</div>
+      <div class="sub" id="bSub">Selecione um veículo</div>
+    </div>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div style="padding:0 16px">
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Consumo real</div>
+      <div class="kpi-valor" id="kpiConsumoReal">—</div>
+      <div class="kpi-sub">km/l média</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Custo real/km</div>
+      <div class="kpi-valor" id="kpiCustoKm">—</div>
+      <div class="kpi-sub">calculado</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Gasto no mês</div>
+      <div class="kpi-valor" id="kpiGastoMes">—</div>
+      <div class="kpi-sub" id="kpiGastoMesSub">estimado: —</div>
+    </div>
+  </div>
+</div>
+
+<!-- Alerta de calibração -->
+<div style="padding:0 16px" id="alertaWrap"></div>
+
+<!-- Formulário novo abastecimento -->
+<div style="padding:0 16px">
+  <div class="card">
+    <strong>➕ Registrar abastecimento</strong>
+
+    <div style="margin-top:12px">
+      <label>Data</label>
+      <input type="date" id="inpData">
+
+      <label>KM atual do odômetro</label>
+      <input type="number" id="inpKm" placeholder="Ex: 45320" oninput="atualizarPreviewAbast()">
+
+      <label>Litros abastecidos</label>
+      <input type="number" id="inpLitros" placeholder="Ex: 40.5" step="0.1" oninput="atualizarPreviewAbast()">
+
+      <label>Valor total pago (R$)</label>
+      <input type="number" id="inpValor" placeholder="Ex: 280.00" step="0.01" oninput="atualizarPreviewAbast()">
+
+      <label>Tipo de combustível</label>
+      <div class="comb-pills">
+        <div class="comb-pill active" onclick="setComb(this,'gasolina')">⛽ Gasolina</div>
+        <div class="comb-pill" onclick="setComb(this,'etanol')">🌿 Etanol</div>
+      </div>
+
+      <label>Posto (opcional)</label>
+      <input type="text" id="inpPosto" placeholder="Ex: Shell Centro">
+
+      <!-- Preview do abastecimento -->
+      <div id="previewAbast" style="display:none;background:var(--card2);border-radius:10px;padding:12px;margin-top:4px;font-size:13px">
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--muted)">Consumo calculado</span>
+          <strong id="prevConsumo" style="color:var(--primary)">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span style="color:var(--muted)">Custo por litro</span>
+          <strong id="prevCustLitro" style="color:var(--text)">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span style="color:var(--muted)">Custo por km</span>
+          <strong id="prevCustKm" style="color:var(--text)">—</strong>
+        </div>
+      </div>
+
+      <button onclick="salvarAbastecimento()" style="margin-top:12px">💾 Salvar abastecimento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico de consumo -->
+<div style="padding:0 16px">
+  <div class="card" id="chartCard" style="display:none">
+    <strong>📈 Evolução do consumo (km/l)</strong>
+    <div class="chart-wrap">
+      <canvas id="consumoChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Histórico -->
+<div style="padding:0 16px 20px">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <strong>🕒 Histórico</strong>
+      <span id="histCount" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div id="histLista"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" style="
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--card);color:var(--text);padding:14px 18px;border-radius:12px;
+  display:none;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:9999;
+  font-weight:500;border:1px solid var(--border);
+"></div>
+
+<!-- Modal confirmar calibração -->
+<div id="modalCalib" class="modal hidden">
+  <div class="modal-box">
+    <h2>🔧 Atualizar consumo?</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px" id="modalCalibTexto"></p>
+    <div style="background:var(--card2);border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">
+      <div style="font-size:12px;color:var(--muted)">Novo consumo sugerido</div>
+      <div id="modalCalibValor" style="font-size:28px;font-weight:800;color:var(--primary);margin-top:4px"></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+      Isso atualizará o cadastro do veículo e afetará os cálculos de custo por km em Entregas, Viagens e Cotação.
+    </p>
+    <div class="flex">
+      <button onclick="confirmarCalibracao()">✅ Atualizar</button>
+      <button class="danger" onclick="document.getElementById('modalCalib').classList.add('hidden')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Tema ──
+  (function() {
+    const saved = localStorage.getItem('kmTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+
+  // ── Storage ──
+  let kmApp = JSON.parse(localStorage.getItem('kmApp')) || { veiculos:[], ativo:null };
+  let abastApp = JSON.parse(localStorage.getItem('abastecimentoApp')) || { registros:[] };
+
+  function saveAbast() { localStorage.setItem('abastecimentoApp', JSON.stringify(abastApp)); }
+  function saveKm()    { localStorage.setItem('kmApp', JSON.stringify(kmApp)); }
+
+  // ── State ──
+  let veiculoAtualId = null;
+  let combAtual      = 'gasolina';
+  let chartInstance  = null;
+  let novaConsumMedia = null; // para calibração
+
+  // ── Helpers ──
+  function formatCurrency(v) {
+    return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  }
+
+  function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    const c = {success:'#22c55e', error:'#e5534b', info:'#2ea8a0'};
+    t.textContent = msg;
+    t.style.borderLeft = `4px solid ${c[type]||c.success}`;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display='none', 2800);
+  }
+
+  function getVeiculo(id) { return kmApp.veiculos.find(v=>v.id===id); }
+
+  function calcularCustoPorKm(v) {
+    if (!v||v.consumo<=0) return 0;
+    const cComb  = v.custos.comb / v.consumo;
+    const fixo   = (v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0);
+    const kmMens = Number(v.kmMensal)||900;
+    return cComb + fixo/kmMens;
+  }
+
+  // ── Init ──
+  function init() {
+    // Seta data de hoje
+    document.getElementById('inpData').value = new Date().toISOString().slice(0,10);
+
+    // Popula select de veículos
+    const sel = document.getElementById('selVeiculo');
+    sel.innerHTML = '<option value="">— Selecione —</option>';
+    kmApp.veiculos.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = v.nome;
+      if (v.id === kmApp.ativo) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    if (kmApp.ativo) {
+      veiculoAtualId = kmApp.ativo;
+      renderTudo();
+    }
+  }
+
+  function onVeiculoChange() {
+    const sel = document.getElementById('selVeiculo');
+    veiculoAtualId = Number(sel.value) || null;
+    renderTudo();
+  }
+
+  function setComb(el, tipo) {
+    document.querySelectorAll('.comb-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    combAtual = tipo;
+    atualizarPreviewAbast();
+  }
+
+  // ── Render principal ──
+  function renderTudo() {
+    renderBanner();
+    renderKPIs();
+    renderAlerta();
+    renderHistorico();
+    renderGrafico();
+  }
+
+  function renderBanner() {
+    const v = getVeiculo(veiculoAtualId);
+    if (!v) {
+      document.getElementById('bNome').textContent = 'Nenhum veículo';
+      document.getElementById('bSub').textContent  = 'Selecione acima';
+      return;
+    }
+    document.getElementById('bNome').textContent = v.nome;
+    document.getElementById('bSub').textContent  =
+      `Consumo cadastrado: ${v.consumo} km/l · Custo/km: R$ ${calcularCustoPorKm(v).toFixed(3)}`;
+  }
+
+  function getRegistrosVeiculo() {
+    return abastApp.registros
+      .filter(r => r.veiculoId === veiculoAtualId)
+      .sort((a,b) => new Date(a.data) - new Date(b.data));
+  }
+
+  // Calcula consumo entre dois registros consecutivos
+  function calcularConsumos(registros) {
+    const result = [];
+    for (let i=1; i<registros.length; i++) {
+      const ant = registros[i-1];
+      const cur = registros[i];
+      const kmPercorrido = cur.km - ant.km;
+      if (kmPercorrido > 0 && cur.litros > 0) {
+        result.push({
+          idx: i,
+          data: cur.data,
+          consumo: kmPercorrido / cur.litros,
+          custoPorLitro: cur.valor / cur.litros,
+          custoPorKm: cur.valor / kmPercorrido,
+          kmPercorrido,
+          litros: cur.litros,
+          valor: cur.valor,
+          posto: cur.posto,
+          combustivel: cur.combustivel,
+          km: cur.km
+        });
+      }
+    }
+    return result;
+  }
+
+  function renderKPIs() {
+    const v = getVeiculo(veiculoAtualId);
+    const regs = getRegistrosVeiculo();
+    const consumos = calcularConsumos(regs);
+
+    if (!v || consumos.length === 0) {
+      document.getElementById('kpiConsumoReal').textContent = '—';
+      document.getElementById('kpiCustoKm').textContent     = '—';
+      document.getElementById('kpiGastoMes').textContent    = '—';
+      document.getElementById('kpiGastoMesSub').textContent = 'estimado: —';
+      return;
+    }
+
+    // Média dos últimos 5 ou todos
+    const ultimos = consumos.slice(-5);
+    const mediaConsumo = ultimos.reduce((s,c)=>s+c.consumo,0) / ultimos.length;
+    const mediaCustoKm = ultimos.reduce((s,c)=>s+c.custoPorKm,0) / ultimos.length;
+    novaConsumMedia = mediaConsumo;
+
+    document.getElementById('kpiConsumoReal').textContent = mediaConsumo.toFixed(1) + ' km/l';
+    document.getElementById('kpiCustoKm').textContent     = 'R$ ' + mediaCustoKm.toFixed(3);
+
+    // Gasto real no mês atual
+    const agora = new Date();
+    const gastoMes = regs
+      .filter(r => {
+        const d = new Date(r.data);
+        return d.getFullYear()===agora.getFullYear() && d.getMonth()===agora.getMonth();
+      })
+      .reduce((s,r)=>s+r.valor,0);
+
+    document.getElementById('kpiGastoMes').textContent    = formatCurrency(gastoMes);
+    document.getElementById('kpiGastoMesSub').textContent = `estimado: ${formatCurrency(v.custos?.comb||0)}`;
+  }
+
+  function renderAlerta() {
+    const v = getVeiculo(veiculoAtualId);
+    const regs = getRegistrosVeiculo();
+    const consumos = calcularConsumos(regs);
+    const wrap = document.getElementById('alertaWrap');
+
+    if (!v || consumos.length < 2) {
+      wrap.innerHTML = consumos.length === 1
+        ? `<div class="alerta-calibracao alerta-ok">
+             <div class="alerta-header"><div class="alerta-icon">ℹ️</div><div class="alerta-titulo">Primeiro intervalo registrado</div></div>
+             <div class="alerta-texto">Registre mais um abastecimento para calcular o consumo real e comparar com o cadastrado.</div>
+           </div>`
+        : '';
+      return;
+    }
+
+    const ultimos = consumos.slice(-5);
+    const mediaReal = ultimos.reduce((s,c)=>s+c.consumo,0) / ultimos.length;
+    const consumoCadastrado = v.consumo;
+    const diff = ((mediaReal - consumoCadastrado) / consumoCadastrado) * 100;
+    const absDiff = Math.abs(diff);
+
+    let classe, icone, titulo, texto;
+
+    if (absDiff <= 10) {
+      classe = 'alerta-ok';
+      icone  = '✅';
+      titulo = 'Consumo dentro do esperado';
+      texto  = `Consumo real médio: <strong>${mediaReal.toFixed(1)} km/l</strong> · Cadastrado: <strong>${consumoCadastrado} km/l</strong>. Diferença de ${absDiff.toFixed(1)}% — tudo ok!`;
+    } else if (absDiff <= 20) {
+      classe = 'alerta-warn';
+      icone  = '⚠️';
+      titulo = 'Consumo ligeiramente diferente';
+      texto  = `Consumo real médio: <strong>${mediaReal.toFixed(1)} km/l</strong> · Cadastrado: <strong>${consumoCadastrado} km/l</strong>. Diferença de ${absDiff.toFixed(1)}% — considere atualizar.`;
+    } else {
+      classe = 'alerta-danger';
+      icone  = '🔴';
+      titulo = diff > 0 ? 'Consumo melhor que o cadastrado' : 'Consumo pior que o cadastrado';
+      texto  = `Consumo real médio: <strong>${mediaReal.toFixed(1)} km/l</strong> · Cadastrado: <strong>${consumoCadastrado} km/l</strong>. Diferença de ${absDiff.toFixed(1)}% — recomendamos atualizar o cadastro.`;
+    }
+
+    wrap.innerHTML = `
+      <div class="alerta-calibracao ${classe}">
+        <div class="alerta-header">
+          <div class="alerta-icon">${icone}</div>
+          <div class="alerta-titulo">${titulo}</div>
+        </div>
+        <div class="alerta-texto">${texto}</div>
+        ${absDiff > 10 ? `<button class="btn-calibrar" onclick="abrirModalCalibracao(${mediaReal.toFixed(2)}, ${consumoCadastrado})">🔧 Atualizar consumo para ${mediaReal.toFixed(1)} km/l</button>` : ''}
+      </div>`;
+  }
+
+  function renderHistorico() {
+    const regs = getRegistrosVeiculo();
+    const consumos = calcularConsumos(regs);
+    const lista = document.getElementById('histLista');
+    const count = document.getElementById('histCount');
+
+    count.textContent = regs.length + ' registro(s)';
+
+    if (regs.length === 0) {
+      lista.innerHTML = '<small style="color:var(--muted)">Nenhum abastecimento registrado.</small>';
+      return;
+    }
+
+    // Monta mapa de consumo por índice
+    const consumoMap = {};
+    consumos.forEach(c => consumoMap[c.idx] = c);
+
+    const v = getVeiculo(veiculoAtualId);
+    const regsDesc = [...regs].reverse();
+
+    lista.innerHTML = regsDesc.map((r, i) => {
+      const idxOriginal = regs.length - 1 - i;
+      const cons = consumoMap[idxOriginal];
+      const d    = new Date(r.data);
+      const dataStr = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'});
+      const combIcon = {gasolina:'⛽',etanol:'🌿'}[r.combustivel]||'⛽';
+
+      let consumoHtml = '';
+      if (cons) {
+        const diff = cons.consumo - (v?.consumo||0);
+        const cls = Math.abs(diff/(v?.consumo||1)) <= 0.1
+          ? 'consumo-ok'
+          : diff < 0 ? 'consumo-danger' : 'consumo-warn';
+        consumoHtml = `<div class="hist-consumo ${cls}">${cons.consumo.toFixed(1)} km/l</div>`;
+      } else {
+        consumoHtml = `<div class="hist-consumo" style="color:var(--muted);background:var(--card2)">1º reg.</div>`;
+      }
+
+      return `
+        <div class="hist-item">
+          <div class="hist-icon">${combIcon}</div>
+          <div class="hist-info">
+            <div class="hist-data">${dataStr} · ${r.km.toLocaleString('pt-BR')} km ${r.posto ? '· '+r.posto : ''}</div>
+            <div class="hist-vals">${r.litros.toFixed(1)}L · ${formatCurrency(r.valor)} · R$ ${(r.valor/r.litros).toFixed(2)}/L</div>
+          </div>
+          ${consumoHtml}
+        </div>`;
+    }).join('');
+  }
+
+  function renderGrafico() {
+    const regs     = getRegistrosVeiculo();
+    const consumos = calcularConsumos(regs);
+    const card     = document.getElementById('chartCard');
+
+    if (consumos.length < 2) { card.style.display='none'; return; }
+    card.style.display = '';
+
+    const labels = consumos.map(c => new Date(c.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    const vals   = consumos.map(c => parseFloat(c.consumo.toFixed(2)));
+    const v      = getVeiculo(veiculoAtualId);
+    const estimado = v?.consumo || null;
+
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const gridColor  = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.08)';
+    const textColor  = isDark ? '#768390' : '#57636d';
+    const lineColor  = '#2ea8a0';
+
+    if (chartInstance) chartInstance.destroy();
+
+    const ctx = document.getElementById('consumoChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Consumo real (km/l)',
+            data: vals,
+            borderColor: lineColor,
+            backgroundColor: isDark ? 'rgba(46,168,160,.1)' : 'rgba(26,122,114,.1)',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointBackgroundColor: lineColor,
+            tension: 0.3,
+            fill: true
+          },
+          ...(estimado ? [{
+            label: 'Consumo cadastrado',
+            data: Array(vals.length).fill(estimado),
+            borderColor: isDark ? 'rgba(232,148,10,.6)' : 'rgba(196,122,0,.6)',
+            borderWidth: 1.5,
+            borderDash: [6,4],
+            pointRadius: 0,
+            fill: false
+          }] : [])
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: textColor, font:{size:11}, boxWidth:12 }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} km/l`
+            }
+          }
+        },
+        scales: {
+          x: { grid:{color:gridColor}, ticks:{color:textColor, font:{size:11}} },
+          y: {
+            grid:{color:gridColor},
+            ticks:{color:textColor, font:{size:11}, callback: v => v+' km/l'},
+            beginAtZero: false
+          }
+        }
+      }
+    });
+  }
+
+  // ── Preview ao digitar ──
+  function atualizarPreviewAbast() {
+    const km     = Number(document.getElementById('inpKm').value);
+    const litros = Number(document.getElementById('inpLitros').value);
+    const valor  = Number(document.getElementById('inpValor').value);
+    const prev   = document.getElementById('previewAbast');
+
+    const regs = getRegistrosVeiculo();
+    const ultimoKm = regs.length > 0 ? regs[regs.length-1].km : null;
+
+    if (litros > 0 && valor > 0) {
+      prev.style.display = '';
+      const custLitro = valor / litros;
+      document.getElementById('prevCustLitro').textContent = `R$ ${custLitro.toFixed(2)}/L`;
+
+      if (ultimoKm && km > ultimoKm) {
+        const kmPerc = km - ultimoKm;
+        const consumo = kmPerc / litros;
+        const custKm  = valor / kmPerc;
+        document.getElementById('prevConsumo').textContent  = `${consumo.toFixed(1)} km/l`;
+        document.getElementById('prevCustKm').textContent   = `R$ ${custKm.toFixed(3)}/km`;
+      } else {
+        document.getElementById('prevConsumo').textContent = '— (primeiro ou inválido)';
+        document.getElementById('prevCustKm').textContent  = '—';
+      }
+    } else {
+      prev.style.display = 'none';
+    }
+  }
+
+  // ── Salvar ──
+  function salvarAbastecimento() {
+    const veiculoId = veiculoAtualId;
+    const dataVal   = document.getElementById('inpData').value;
+    const km        = Number(document.getElementById('inpKm').value);
+    const litros    = Number(document.getElementById('inpLitros').value);
+    const valor     = Number(document.getElementById('inpValor').value);
+    const posto     = document.getElementById('inpPosto').value.trim();
+
+    if (!veiculoId) { showToast('Selecione um veículo','info'); return; }
+    if (!dataVal)   { showToast('Informe a data','info'); return; }
+    if (!km||km<=0) { showToast('Informe o KM do odômetro','info'); return; }
+    if (!litros||litros<=0) { showToast('Informe os litros','info'); return; }
+    if (!valor||valor<=0)   { showToast('Informe o valor pago','info'); return; }
+
+    // Verifica se KM é maior que o último registrado
+    const regs = getRegistrosVeiculo();
+    if (regs.length > 0 && km <= regs[regs.length-1].km) {
+      showToast('KM deve ser maior que o último registro (' + regs[regs.length-1].km.toLocaleString('pt-BR') + ' km)', 'error');
+      return;
+    }
+
+    abastApp.registros.push({
+      id:         Date.now(),
+      veiculoId,
+      data:       new Date(dataVal + 'T12:00:00').toISOString(),
+      km,
+      litros,
+      valor,
+      combustivel: combAtual,
+      posto
+    });
+
+    saveAbast();
+
+    // Limpa form
+    document.getElementById('inpKm').value     = '';
+    document.getElementById('inpLitros').value = '';
+    document.getElementById('inpValor').value  = '';
+    document.getElementById('inpPosto').value  = '';
+    document.getElementById('previewAbast').style.display = 'none';
+    document.getElementById('inpData').value   = new Date().toISOString().slice(0,10);
+
+    showToast('Abastecimento salvo ✅','success');
+    renderTudo();
+  }
+
+  // ── Calibração ──
+  function abrirModalCalibracao(mediaReal, cadastrado) {
+    const v = getVeiculo(veiculoAtualId);
+    if (!v) return;
+    novaConsumMedia = mediaReal;
+
+    document.getElementById('modalCalibTexto').textContent =
+      `O consumo médio real de "${v.nome}" nos últimos abastecimentos foi de ${mediaReal.toFixed(1)} km/l, diferente do cadastrado (${cadastrado} km/l).`;
+    document.getElementById('modalCalibValor').textContent = mediaReal.toFixed(1) + ' km/l';
+    document.getElementById('modalCalib').classList.remove('hidden');
+  }
+
+  function confirmarCalibracao() {
+    const v = getVeiculo(veiculoAtualId);
+    if (!v || !novaConsumMedia) return;
+
+    v.consumo = parseFloat(novaConsumMedia.toFixed(1));
+    saveKm();
+
+    document.getElementById('modalCalib').classList.add('hidden');
+    showToast(`Consumo de "${v.nome}" atualizado para ${v.consumo} km/l ✅ — válido em todos os módulos.`, 'success');
+    renderTudo();
+  }
+
+  // ── Init ──
+  init();
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>

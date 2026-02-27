@@ -482,15 +482,17 @@
 
   // ======= BACKUP =======
   function exportarBackup() {
-    const kmApp     = JSON.parse(localStorage.getItem('kmApp'))     || {};
-    const viagensApp= JSON.parse(localStorage.getItem('viagensApp'))|| {};
-    const tema      = localStorage.getItem('kmTheme') || 'dark';
+    const kmApp            = JSON.parse(localStorage.getItem('kmApp'))             || {};
+    const viagensApp       = JSON.parse(localStorage.getItem('viagensApp'))        || {};
+    const abastecimentoApp = JSON.parse(localStorage.getItem('abastecimentoApp'))  || {};
+    const tema             = localStorage.getItem('kmTheme') || 'dark';
 
     const payload = {
-      versao:    '1.0',
+      versao:      '1.1',
       exportadoEm: new Date().toISOString(),
       kmApp,
       viagensApp,
+      abastecimentoApp,
       kmTheme: tema
     };
 
@@ -530,9 +532,10 @@
           return;
         }
 
-        if (payload.kmApp)      localStorage.setItem('kmApp',      JSON.stringify(payload.kmApp));
-        if (payload.viagensApp) localStorage.setItem('viagensApp', JSON.stringify(payload.viagensApp));
-        if (payload.kmTheme)    localStorage.setItem('kmTheme',    payload.kmTheme);
+        if (payload.kmApp)             localStorage.setItem('kmApp',             JSON.stringify(payload.kmApp));
+        if (payload.viagensApp)        localStorage.setItem('viagensApp',        JSON.stringify(payload.viagensApp));
+        if (payload.abastecimentoApp)  localStorage.setItem('abastecimentoApp',  JSON.stringify(payload.abastecimentoApp));
+        if (payload.kmTheme)           localStorage.setItem('kmTheme',           payload.kmTheme);
 
         status.textContent = '✅ Dados restaurados com sucesso! Recarregando...';
         status.style.color = 'var(--accent)';
@@ -547,33 +550,36 @@
   }
 
   function renderBackupStats() {
-    const kmApp      = JSON.parse(localStorage.getItem('kmApp'))     || {};
-    const viagensApp = JSON.parse(localStorage.getItem('viagensApp'))|| {};
+    const kmApp            = JSON.parse(localStorage.getItem('kmApp'))             || {};
+    const viagensApp       = JSON.parse(localStorage.getItem('viagensApp'))        || {};
+    const abastecimentoApp = JSON.parse(localStorage.getItem('abastecimentoApp'))  || {};
 
-    const veiculos    = (kmApp.veiculos||[]).length;
-    const entregas    = (kmApp.lancamentos||[]).filter(l=>l.tipo==='entrega').length;
-    const viagensCont = (viagensApp.viagens||[]).length;
-    const clientesE   = (kmApp.veiculos||[]).length; // clientes em entregas ficam no kmApp
-    const clientesV   = (viagensApp.clientes||[]).length;
-    const anosE       = Object.keys(kmApp.financeiro?.anos||{}).length;
-    const anosV       = Object.keys(viagensApp.financeiro?.anos||{}).length;
+    const veiculos       = (kmApp.veiculos||[]).length;
+    const entregas       = (kmApp.lancamentos||[]).filter(l=>l.tipo==='entrega').length;
+    const viagensCont    = (viagensApp.viagens||[]).length;
+    const clientesV      = (viagensApp.clientes||[]).length;
+    const abastecimentos = (abastecimentoApp.registros||[]).length;
+    const anosE          = Object.keys(kmApp.financeiro?.anos||{}).length;
+    const anosV          = Object.keys(viagensApp.financeiro?.anos||{}).length;
 
     // Tamanho estimado
     const size = new Blob([
-      localStorage.getItem('kmApp')||'',
-      localStorage.getItem('viagensApp')||''
+      localStorage.getItem('kmApp')            || '',
+      localStorage.getItem('viagensApp')       || '',
+      localStorage.getItem('abastecimentoApp') || ''
     ]).size;
     const sizeStr = size > 1024 ? (size/1024).toFixed(1)+' KB' : size+' bytes';
 
     document.getElementById('backupStats').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${[
-          ['🚗 Veículos',    veiculos],
-          ['📦 Entregas',    entregas],
-          ['🚕 Viagens',     viagensCont],
-          ['👥 Clientes',    clientesV],
-          ['📅 Anos de dado',Math.max(anosE, anosV)],
-          ['💿 Tamanho',     sizeStr],
+          ['🚗 Veículos',       veiculos],
+          ['📦 Entregas',       entregas],
+          ['🚕 Viagens',        viagensCont],
+          ['👥 Clientes',       clientesV],
+          ['⛽ Abastecimentos', abastecimentos],
+          ['📅 Anos de dado',   Math.max(anosE, anosV)],
+          ['💿 Tamanho',        sizeStr],
         ].map(([label, val]) => `
           <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
             <div style="font-size:12px;color:var(--muted)">${label}</div>
@@ -912,6 +918,11 @@
     <div class="fab-option" onclick="window.location.href='entregas.html'">
       <div class="fab-option-label">Nova Entrega</div>
       <button class="fab-option-btn fab-opt-entrega">📦</button>
+    </div>
+
+    <div class="fab-option" onclick="window.location.href='abastecimento.html'">
+      <div class="fab-option-label">Novo Abastecimento</div>
+      <button class="fab-option-btn fab-opt-abastecimento">📦</button>
     </div>
 
   </div>

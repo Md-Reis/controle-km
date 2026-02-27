@@ -251,6 +251,43 @@
   </div>
 </div>
 
+<!-- Modal Editar abastecimento -->
+<div id="modalEdit" class="modal hidden">
+  <div class="modal-box">
+    <h2>✏️ Editar abastecimento</h2>
+    <input type="hidden" id="editId">
+    <label>Data</label>
+    <input type="date" id="editData">
+    <label>KM do odômetro</label>
+    <input type="number" id="editKm">
+    <label>Litros</label>
+    <input type="number" id="editLitros" step="0.1">
+    <label>Valor total (R$)</label>
+    <input type="number" id="editValor" step="0.01">
+    <label>Posto (opcional)</label>
+    <input type="text" id="editPosto">
+    <div class="flex" style="margin-top:4px">
+      <button onclick="salvarEdicaoAbast()">💾 Salvar</button>
+      <button class="danger" onclick="document.getElementById('modalEdit').classList.add('hidden')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmar exclusão -->
+<div id="modalDel" class="modal hidden">
+  <div class="modal-box">
+    <h2>🗑️ Excluir registro?</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px" id="modalDelTexto"></p>
+    <p style="font-size:12px;color:var(--danger);margin-bottom:16px">
+      ⚠️ Isso afetará o cálculo de consumo dos intervalos adjacentes.
+    </p>
+    <div class="flex">
+      <button class="danger" onclick="confirmarDelAbast()">🗑️ Excluir</button>
+      <button class="secondary-btn" onclick="document.getElementById('modalDel').classList.add('hidden')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── Tema ──
   (function() {
@@ -516,6 +553,10 @@
             <div class="hist-vals">${r.litros.toFixed(1)}L · ${formatCurrency(r.valor)} · R$ ${(r.valor/r.litros).toFixed(2)}/L</div>
           </div>
           ${consumoHtml}
+          <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
+            <button onclick="abrirEdicaoAbast(${r.id})" style="width:32px;height:32px;padding:0;font-size:15px;background:var(--card2);border:1px solid var(--border);border-radius:8px">✏️</button>
+            <button onclick="abrirDelAbast(${r.id})" style="width:32px;height:32px;padding:0;font-size:15px;background:var(--card2);border:1px solid var(--border);border-radius:8px">🗑️</button>
+          </div>
         </div>`;
     }).join('');
   }
@@ -694,12 +735,64 @@
     renderTudo();
   }
 
+  // ── Editar ──
+  let editandoId  = null;
+  let deletandoId = null;
+
+  function abrirEdicaoAbast(id) {
+    const r = abastApp.registros.find(r => r.id === id);
+    if (!r) return;
+    editandoId = id;
+    document.getElementById('editData').value   = r.data.slice(0,10);
+    document.getElementById('editKm').value     = r.km;
+    document.getElementById('editLitros').value = r.litros;
+    document.getElementById('editValor').value  = r.valor;
+    document.getElementById('editPosto').value  = r.posto || '';
+    document.getElementById('modalEdit').classList.remove('hidden');
+  }
+
+  function salvarEdicaoAbast() {
+    const r = abastApp.registros.find(r => r.id === editandoId);
+    if (!r) return;
+    const novoKm     = Number(document.getElementById('editKm').value);
+    const novoLitros = Number(document.getElementById('editLitros').value);
+    const novoValor  = Number(document.getElementById('editValor').value);
+    const novaData   = document.getElementById('editData').value;
+    if (!novoKm||!novoLitros||!novoValor) { showToast('Preencha todos os campos','info'); return; }
+    r.km     = novoKm;
+    r.litros = novoLitros;
+    r.valor  = novoValor;
+    r.data   = new Date(novaData + 'T12:00:00').toISOString();
+    r.posto  = document.getElementById('editPosto').value.trim();
+    saveAbast();
+    document.getElementById('modalEdit').classList.add('hidden');
+    showToast('Registro atualizado ✅','success');
+    renderTudo();
+  }
+
+  // ── Excluir ──
+  function abrirDelAbast(id) {
+    const r = abastApp.registros.find(r => r.id === id);
+    if (!r) return;
+    deletandoId = id;
+    const d = new Date(r.data).toLocaleDateString('pt-BR');
+    document.getElementById('modalDelTexto').textContent =
+      `Excluir o abastecimento de ${d} — ${r.litros.toFixed(1)}L por ${formatCurrency(r.valor)}?`;
+    document.getElementById('modalDel').classList.remove('hidden');
+  }
+
+  function confirmarDelAbast() {
+    abastApp.registros = abastApp.registros.filter(r => r.id !== deletandoId);
+    saveAbast();
+    document.getElementById('modalDel').classList.add('hidden');
+    showToast('Registro excluído','info');
+    renderTudo();
+  }
+
   // ── Init ──
   init();
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 </body>
-
 </html>
-

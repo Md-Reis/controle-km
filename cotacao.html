@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="var(--card)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Cotação</title>
@@ -21,7 +21,7 @@
     padding: 14px 10px;
     border-radius: 14px;
     border: 2px solid rgba(199,183,255,.1);
-    background: #0b1020;
+    background: var(--bg);
     color: var(--muted);
     font-size: 14px;
     font-weight: 600;
@@ -40,7 +40,7 @@
 
   /* ── Resultado único ── */
   .result-unica {
-    background: linear-gradient(135deg, #0f172a, #1a1040);
+    background: linear-gradient(135deg, var(--card), var(--bg2));
     border: 1px solid rgba(199,183,255,.15);
     border-radius: 18px;
     padding: 20px;
@@ -129,7 +129,7 @@
     flex: 1;
     padding: 9px;
     border-radius: 10px;
-    background: #020617;
+    background: var(--input-bg);
     color: var(--muted);
     font-size: 13px;
     width: auto;
@@ -314,7 +314,7 @@
 
     <!-- Cliente cadastrado -->
     <div id="wrapClienteCad">
-      <select id="selectCliente" style="width:100%;padding:10px;border-radius:10px;border:none;background:#020617;color:var(--text);margin-bottom:8px">
+      <select id="selectCliente" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--input-bg);color:var(--text);margin-bottom:8px">
         <option value="">— Selecione um cliente —</option>
       </select>
     </div>
@@ -333,7 +333,7 @@
 <!-- Toast -->
 <div id="toast" style="
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  background:#020617;color:white;padding:14px 18px;border-radius:12px;
+  background:var(--input-bg);color:white;padding:14px 18px;border-radius:12px;
   display:none;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:9999;font-weight:500;
 "></div>
 

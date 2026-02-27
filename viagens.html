@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="var(--card)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Viagens</title>
@@ -46,7 +46,7 @@
   }
   .detalhe-overlay.hidden { display: none; }
   .detalhe-sheet {
-    background: #0b1020;
+    background: var(--bg);
     border-radius: 20px 20px 0 0;
     max-height: 92vh;
     overflow-y: auto;
@@ -64,9 +64,9 @@
   }
   .detalhe-tabs button {
     flex: 1; padding: 9px; border-radius: 8px;
-    background: #020617; color: var(--muted); font-size: 13px; width: auto;
+    background: var(--input-bg); color: var(--muted); font-size: 13px; width: auto;
   }
-  .detalhe-tabs button.active { background: var(--primary); color: #000; }
+  .detalhe-tabs button.active { background: var(--primary); color: #fff; }
 
   .passageiro-row {
     display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
@@ -75,7 +75,7 @@
   .passageiro-row button { width: auto; padding: 10px 14px; background: #ef4444; flex-shrink: 0; }
 
   .hist-item {
-    background: #111827;
+    background: var(--card);
     border-radius: 12px;
     padding: 12px;
     margin-bottom: 10px;
@@ -87,7 +87,7 @@
 
   .vselect {
     width: 100%; padding: 10px; border-radius: 10px;
-    border: none; background: #020617; color: var(--text); margin-bottom: 10px;
+    border: none; background: var(--input-bg); color: var(--text); margin-bottom: 10px;
   }
 
   .filter-row { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -294,7 +294,7 @@
 
 <div id="toast" style="
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  background:#020617;color:white;padding:14px 18px;border-radius:12px;
+  background:var(--input-bg);color:white;padding:14px 18px;border-radius:12px;
   display:none;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:9999;font-weight:500;
 "></div>
 
@@ -882,9 +882,9 @@ function generateGaugesViagem(ano) {
             transform="rotate(${SD-90} ${CX} ${CY})"/>
           <line id="vneedle-${ano}-${i}"
             x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY}"
-            stroke="white" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
-          <circle cx="${CX}" cy="${CY}" r="4" fill="#1e293b" stroke="white" stroke-width="1.5"/>
-          <text x="${CX}" y="60" text-anchor="middle" fill="white"
+            stroke="var(--text)" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
+          <circle cx="${CX}" cy="${CY}" r="4" fill="var(--card2)" stroke="white" stroke-width="1.5"/>
+          <text x="${CX}" y="60" text-anchor="middle" fill="var(--text)"
             font-size="15" font-weight="700" id="vtxt-${ano}-${i}">0%</text>
         </svg>
       </div>

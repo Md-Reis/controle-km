@@ -7,7 +7,7 @@
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="var(--card)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -127,7 +127,7 @@
     <input type="number" id="editKm" disabled>
     <label>Receita (R$)</label>
     <input type="number" id="editReceita" step="0.01">
-    <div style="background:#020617;padding:10px;border-radius:10px;font-size:14px;color:#9ca3af;margin-top:8px;margin-bottom:8px">
+    <div style="background:var(--input-bg);padding:10px;border-radius:10px;font-size:14px;color:var(--muted);margin-top:8px;margin-bottom:8px">
       💸 O custo e o lucro serão recalculados com base nos KM e custos do veículo
     </div>
     <div class="modal-actions">
@@ -154,7 +154,7 @@
   bottom:20px;
   left:50%;
   transform:translateX(-50%);
-  background:#020617;
+  background:var(--input-bg);
   color:white;
   padding:14px 18px;
   border-radius:12px;
@@ -678,9 +678,9 @@
               transform="rotate(${SD-90} ${CX} ${CY})"/>
             <line id="sneedle-${ano}-${mesIndex}"
               x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY}"
-              stroke="white" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
-            <circle cx="${CX}" cy="${CY}" r="4" fill="#1e293b" stroke="white" stroke-width="1.5"/>
-            <text x="${CX}" y="60" text-anchor="middle" fill="white"
+              stroke="var(--text)" stroke-width="2.5" stroke-linecap="round" opacity=".95"/>
+            <circle cx="${CX}" cy="${CY}" r="4" fill="var(--card2)" stroke="white" stroke-width="1.5"/>
+            <text x="${CX}" y="60" text-anchor="middle" fill="var(--text)"
               font-size="15" font-weight="700" id="stxt-${ano}-${mesIndex}">0%</text>
           </svg>
         </div>

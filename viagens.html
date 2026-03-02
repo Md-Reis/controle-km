@@ -268,6 +268,31 @@
 
 
 <!-- Modal limpeza viagem -->
+
+<!-- Modal Editar Viagem -->
+<div id="modalEditViagem" class="modal hidden">
+  <div class="modal-box">
+    <h3>✏️ Editar Viagem</h3>
+    <label>Data</label>
+    <input type="date" id="editVData">
+    <label>KM inicial</label>
+    <input type="number" id="editVKmInicial" oninput="recalcularKmEdicaoViagem()">
+    <label>KM final</label>
+    <input type="number" id="editVKmFinal" oninput="recalcularKmEdicaoViagem()">
+    <label>KM rodados</label>
+    <input type="number" id="editVKm" disabled>
+    <label>Valor recebido (R$)</label>
+    <input type="number" id="editVValor" step="0.01">
+    <div style="background:var(--input-bg);padding:10px;border-radius:10px;font-size:14px;color:var(--muted);margin-top:8px;margin-bottom:8px">
+      💸 O custo e lucro serão recalculados com base nos KM e custos do veículo
+    </div>
+    <div class="modal-actions">
+      <button onclick="fecharModalEditViagem()">Cancelar</button>
+      <button onclick="salvarEdicaoViagem()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modalLimpezaViagem" class="modal hidden">
   <div class="modal-box confirmar-box">
     <h3>Limpar viagem?</h3>
@@ -748,6 +773,7 @@ function renderHistoricoViagens() {
       <hr>
       <h2 style="color:${cor}">💰 Lucro: R$ ${v.lucro.toFixed(2)}</h2>
       <div class="flex" style="margin-top:8px">
+        <button onclick="abrirEditarViagem(${v.id})">✏️ Editar</button>
         <button class="danger" onclick="delViagem(${v.id})">🗑️ Excluir</button>
       </div>
     `;
@@ -969,6 +995,75 @@ document.addEventListener("click",function(e){
   inp.addEventListener("keydown",ev=>{if(ev.key==="Enter")inp.blur();});
 });
 
+
+// ===== EDITAR VIAGEM =====
+let viagemEditandoId = null;
+
+function abrirEditarViagem(id) {
+  const v = vData.viagens.find(v => v.id === id);
+  if (!v) return;
+  viagemEditandoId = id;
+  const dataLocal = new Date(v.data).toLocaleDateString('pt-BR').split('/').reverse().join('-');
+  document.getElementById('editVData').value      = dataLocal;
+  document.getElementById('editVKmInicial').value = v.kmInicial || 0;
+  document.getElementById('editVKmFinal').value   = v.kmFinal || 0;
+  document.getElementById('editVKm').value        = v.km;
+  document.getElementById('editVValor').value     = v.valor;
+  document.getElementById('modalEditViagem').classList.remove('hidden');
+}
+
+function fecharModalEditViagem() {
+  document.getElementById('modalEditViagem').classList.add('hidden');
+  viagemEditandoId = null;
+}
+
+function recalcularKmEdicaoViagem() {
+  const ini = Number(document.getElementById('editVKmInicial').value);
+  const fim = Number(document.getElementById('editVKmFinal').value);
+  if (ini > 0 && fim > ini) {
+    document.getElementById('editVKm').value = fim - ini;
+  }
+}
+
+function salvarEdicaoViagem() {
+  if (!viagemEditandoId) return;
+  const v   = getAtivo();
+  const vg  = vData.viagens.find(v => v.id === viagemEditandoId);
+  if (!vg) return;
+
+  const ini   = Number(document.getElementById('editVKmInicial').value);
+  const fim   = Number(document.getElementById('editVKmFinal').value);
+  const valor = Number(document.getElementById('editVValor').value);
+  const dataInput = document.getElementById('editVData').value;
+
+  if (!ini || !fim || fim <= ini) { showToast('KM inicial/final inválidos', 'info'); return; }
+  if (!valor || valor <= 0)       { showToast('Informe o valor recebido', 'info'); return; }
+
+  const km         = fim - ini;
+  const custoTotal = v ? km * calcularCustoPorKm(v) : vg.custoTotal;
+  const lucro      = valor - custoTotal;
+  const novaData   = dataInput ? new Date(dataInput + 'T12:00:00').toISOString() : vg.data;
+
+  // Atualiza em vData.viagens
+  vg.kmInicial = ini; vg.kmFinal = fim; vg.km = km;
+  vg.valor = valor; vg.custoTotal = custoTotal; vg.lucro = lucro;
+  vg.data = novaData;
+
+  // Atualiza em kmApp.lancamentos (espelho)
+  const lanc = data.lancamentos.find(l => l.id === viagemEditandoId);
+  if (lanc) {
+    lanc.km = km; lanc.valor = valor; lanc.custoTotal = custoTotal;
+    lanc.lucro = lucro; lanc.data = novaData;
+  }
+
+  recalcularFinanceiroViagem();
+  recalcularFinanceiroGeral();
+  vSave(); save();
+  fecharModalEditViagem();
+  renderHistoricoViagens();
+  showToast('Viagem atualizada ✅', 'success');
+}
+
 // ===== CSV =====
 function exportCSVViagens() {
   if(vData.viagens.length===0){showToast("Nenhuma viagem para exportar","info");return;}
@@ -1011,6 +1106,11 @@ if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
     <div class="fab-option" onclick="window.location.href='entregas.html'">
       <div class="fab-option-label">Nova Entrega</div>
       <button class="fab-option-btn fab-opt-entrega">📦</button>
+    </div>
+
+    <div class="fab-option" onclick="window.location.href='abastecimento.html'">
+      <div class="fab-option-label">Novo Abastecimento</div>
+      <button class="fab-option-btn fab-opt-abastecimento">⛽</button>
     </div>
 
   </div>

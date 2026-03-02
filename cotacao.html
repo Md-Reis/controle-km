@@ -238,7 +238,7 @@
 
 <nav>
   <button onclick="window.location.href='index.html'" >← Início</button>
-  <span style="margin-top:10px;flex:1;text-align:center;font-weight:700;font-size:16px;color:var(--primary)">💰 Cotação</span>
+  <span style="margin-top:10px; flex:1;text-align:center;font-weight:700;font-size:16px;color:var(--primary)">💰 Cotação</span>
 </nav>
 
 <!-- ── Veículo ativo ── -->
@@ -272,6 +272,19 @@
     <div class="margem-badge" id="margemBadge">50%</div>
   </div>
   <small style="color:var(--muted)">Valor cobrado = custo × (1 + margem)</small>
+
+  <!-- Mão de obra -->
+  <div style="margin-top:12px">
+    <label>🧑‍🔧 Mão de obra</label>
+    <div class="margem-row">
+      <input type="range" id="maoObraSlider" min="0" max="100" value="10" step="1" oninput="atualizarMaoObra()">
+      <div class="margem-badge" id="maoObraBadge" style="color:var(--secondary)">10%</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+      <small style="color:var(--muted)">Percentual sobre o valor da corrida</small>
+      <small id="maoObraValor" style="color:var(--secondary);font-weight:600"></small>
+    </div>
+  </div>
 
   <!-- Desconto por viagem (só constante) -->
   <div id="descontoWrap" class="hidden" style="margin-top:12px">
@@ -417,6 +430,11 @@ function atualizarDesconto() {
   document.getElementById('descontoBadge').innerText = v+'%';
   calcular();
 }
+function atualizarMaoObra() {
+  const v = document.getElementById('maoObraSlider').value;
+  document.getElementById('maoObraBadge').innerText = v+'%';
+  calcular();
+}
 
 // ── Cálculo principal ──
 function calcular() {
@@ -432,23 +450,33 @@ function calcular() {
   const custoKm    = calcularCustoPorKm(veiculo);
   const custoTotal = km * custoKm;
   const margem     = Number(document.getElementById('margemSlider').value) / 100;
-  const valorBase  = custoTotal * (1 + margem);
+  const maoObra    = Number(document.getElementById('maoObraSlider').value) / 100;
+  const valorBase  = custoTotal * (1 + margem + maoObra);
+
+  // Atualiza valor da mão de obra em R$
+  const maoObraReais = custoTotal * maoObra;
+  const moEl = document.getElementById('maoObraValor');
+  if (moEl) moEl.innerText = maoObra > 0 ? '+ ' + formatCurrency(maoObraReais) : '';
 
   if (tipoViagem === 'unica') {
-    calcularUnica(custoTotal, valorBase, margem);
+    calcularUnica(custoTotal, valorBase, margem, maoObra);
   } else {
-    calcularConstante(custoTotal, valorBase);
+    calcularConstante(custoTotal, valorBase, maoObra);
   }
 
   document.getElementById('wppSection').classList.remove('hidden');
 }
 
-function calcularUnica(custoTotal, valorBase, margem) {
+function calcularUnica(custoTotal, valorBase, margem, maoObra) {
   const lucro = valorBase - custoTotal;
+  const maoObraReais = custoTotal * (maoObra||0);
 
   document.getElementById('valorUnico').innerText = formatCurrency(valorBase);
-  document.getElementById('custoUnico').innerText =
-    `Custo da viagem: ${formatCurrency(custoTotal)}`;
+  let custoInfo = `Custo da viagem: ${formatCurrency(custoTotal)}`;
+  if (maoObraReais > 0) {
+    custoInfo += ` · Mão de obra: ${formatCurrency(maoObraReais)} (${Math.round((maoObra||0)*100)}%)`;
+  }
+  document.getElementById('custoUnico').innerText = custoInfo;
 
   const lucroEl = document.getElementById('lucroUnico');
   lucroEl.innerText = `💰 Lucro estimado: ${formatCurrency(lucro)}`;
@@ -510,7 +538,8 @@ function montarMensagem() {
   const custoKm = calcularCustoPorKm(veiculo);
   const custo   = km * custoKm;
   const margem  = Number(document.getElementById('margemSlider').value) / 100;
-  const valorBase = custo * (1 + margem);
+  const maoObra = Number(document.getElementById('maoObraSlider').value) / 100;
+  const valorBase = custo * (1 + margem + maoObra);
 
   if (tipoViagem === 'unica') {
     return `Olá! Segue o orçamento para sua viagem:\n\n` +
@@ -596,6 +625,11 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
       <button class="fab-option-btn fab-opt-entrega">📦</button>
     </div>
 
+    <div class="fab-option" onclick="window.location.href='abastecimento.html'">
+      <div class="fab-option-label">Novo Abastecimento</div>
+      <button class="fab-option-btn fab-opt-abastecimento">⛽</button>
+    </div>
+
   </div>
 
   <!-- Botão principal -->
@@ -640,5 +674,3 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
 </body>
 </html>
-
-

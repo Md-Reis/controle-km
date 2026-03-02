@@ -127,7 +127,11 @@
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <strong>📅 Progresso do mês</strong>
-      <span id="dashMesNome" style="font-size:13px;color:var(--muted)"></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="dashNavMes(-1)" style="width:28px;height:28px;padding:0;font-size:14px;border-radius:8px;background:var(--card2);color:var(--text)">&#8249;</button>
+        <span id="dashMesNome" style="font-size:13px;color:var(--muted);min-width:90px;text-align:center"></span>
+        <button onclick="dashNavMes(1)" style="width:28px;height:28px;padding:0;font-size:14px;border-radius:8px;background:var(--card2);color:var(--text)">&#8250;</button>
+      </div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
       <span style="color:var(--muted)">Faturado</span>
@@ -161,7 +165,7 @@
   <!-- Últimas corridas -->
   <div class="card">
     <strong>🕒 Últimas corridas</strong>
-    <div id="dashUltimas" style="margin-top:10px"></div>
+    <div id="dashUltimas" style="margin-top:10px;max-height:320px;overflow-y:auto"></div>
   </div>
 </section>
 
@@ -378,11 +382,37 @@
 
 
   // ======= DASHBOARD =======
+  let dashMesOffset = 0; // 0 = mês atual, -1 = mês anterior, etc.
+
+  function dashNavMes(delta) {
+    dashMesOffset += delta;
+    renderDashboard();
+  }
+
+  function getAllLancamentos() {
+    // Mescla entregas (kmApp.lancamentos tipo entrega) com viagens (viagensApp.viagens)
+    const kmData = JSON.parse(localStorage.getItem('kmApp')) || {};
+    const vAppData = JSON.parse(localStorage.getItem('viagensApp')) || {};
+    const entregas = (kmData.lancamentos || []).filter(l => l.tipo === 'entrega');
+    const viagens  = (vAppData.viagens || []).map(v => ({
+      id: v.id, veiculoId: v.veiculoId, data: v.data,
+      km: v.km, valor: v.valor, custoTotal: v.custoTotal, lucro: v.lucro, tipo: 'viagem'
+    }));
+    // Merge avoiding duplicates (viagem ids may exist in kmApp.lancamentos too)
+    const entregaIds = new Set(entregas.map(e => e.id));
+    const allViagens = viagens.filter(v => !entregaIds.has(v.id));
+    return [...entregas, ...allViagens];
+  }
+
   function renderDashboard() {
     const agora    = new Date();
     const hojeStr  = agora.toISOString().slice(0,10);
-    const mes      = agora.getMonth();
-    const ano      = agora.getFullYear();
+
+    // Mês navegável
+    const refDate = new Date(agora.getFullYear(), agora.getMonth() + dashMesOffset, 1);
+    const mes     = refDate.getMonth();
+    const ano     = refDate.getFullYear();
+    const ehMesAtual = (mes === agora.getMonth() && ano === agora.getFullYear());
 
     // Saudação
     const h = agora.getHours();
@@ -394,21 +424,22 @@
       agora.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
     document.getElementById('dashMesNome').textContent = meses[mes] + ' ' + ano;
 
-    // Lançamentos de hoje (entregas + viagens espelhadas em kmApp.lancamentos)
-    const todos = data.lancamentos || [];
-    const hoje  = todos.filter(l => l.data && l.data.slice(0,10) === hojeStr);
+    // Todos os lançamentos mesclados
+    const todos = getAllLancamentos();
 
+    // KPIs do dia (sempre hoje, independente do mês navegado)
+    const hoje  = todos.filter(l => l.data && l.data.slice(0,10) === hojeStr);
     const fatHoje     = hoje.reduce((s,l) => s + (l.valor||0), 0);
     const lucroHoje   = hoje.reduce((s,l) => s + (l.lucro||0), 0);
     const kmHoje      = hoje.reduce((s,l) => s + (l.km||0), 0);
     const corridasHoje = hoje.length;
 
-    document.getElementById('dashFatHoje').textContent     = formatCurrency(fatHoje);
-    document.getElementById('dashLucroHoje').textContent   = formatCurrency(lucroHoje);
-    document.getElementById('dashKmHoje').textContent      = kmHoje.toFixed(0) + ' km';
+    document.getElementById('dashFatHoje').textContent      = formatCurrency(fatHoje);
+    document.getElementById('dashLucroHoje').textContent    = formatCurrency(lucroHoje);
+    document.getElementById('dashKmHoje').textContent       = kmHoje.toFixed(0) + ' km';
     document.getElementById('dashCorridasHoje').textContent = corridasHoje;
 
-    // Faturamento do mês atual
+    // Faturamento do mês selecionado
     const doMes = todos.filter(l => {
       if (!l.data) return false;
       const d = new Date(l.data);
@@ -417,11 +448,10 @@
     const fatMes = doMes.reduce((s,l) => s + (l.valor||0), 0);
 
     // Meta do mês (soma entregas + viagens)
-    const anoFinE = data.financeiro?.anos?.[ano];
-    const metaE   = anoFinE?.metas?.[mes] || 0;
-    const vData2  = JSON.parse(localStorage.getItem('viagensApp')) || {};
-    const anoFinV = vData2.financeiro?.anos?.[ano];
-    const metaV   = anoFinV?.metas?.[mes] || 0;
+    const kmAppData = JSON.parse(localStorage.getItem('kmApp')) || {};
+    const vAppData2 = JSON.parse(localStorage.getItem('viagensApp')) || {};
+    const metaE = kmAppData.financeiro?.anos?.[ano]?.metas?.[mes] || 0;
+    const metaV = vAppData2.financeiro?.anos?.[ano]?.metas?.[mes] || 0;
     const metaMes = metaE + metaV;
 
     document.getElementById('dashFatMes').textContent  = formatCurrency(fatMes);
@@ -437,17 +467,16 @@
     document.getElementById('dashFaltaMes').textContent =
       metaMes > 0 ? (falta > 0 ? 'Falta ' + formatCurrency(falta) : '✅ Meta batida!') : '';
 
-    // Meta diária necessária
-    const diasNoMes    = new Date(ano, mes+1, 0).getDate();
-    const diasPassados = agora.getDate();
-    const diasRestantes = diasNoMes - diasPassados + 1; // inclui hoje
+    // Meta diária necessária (só mostra no mês atual)
     const card = document.getElementById('dashMetaDiariaCard');
-    if (metaMes > 0 && falta > 0 && diasRestantes > 0) {
+    if (ehMesAtual && metaMes > 0 && falta > 0) {
+      const diasNoMes     = new Date(ano, mes+1, 0).getDate();
+      const diasRestantes = diasNoMes - agora.getDate() + 1;
       const porDia = falta / diasRestantes;
       document.getElementById('dashMetaDiaria').textContent = formatCurrency(porDia) + '/dia';
-      document.getElementById('dashMetaDiaria').nextElementSibling;
+      document.getElementById('dashMetaDiaria').style.color = 'var(--secondary)';
       card.style.display = '';
-    } else if (metaMes > 0 && falta <= 0) {
+    } else if (ehMesAtual && metaMes > 0 && falta <= 0) {
       document.getElementById('dashMetaDiaria').textContent = '✅ Meta atingida!';
       document.getElementById('dashMetaDiaria').style.color = 'var(--accent)';
       card.style.display = '';
@@ -455,14 +484,14 @@
       card.style.display = 'none';
     }
 
-    // Últimas 5 corridas
-    const ultimas = [...todos].sort((a,b) => new Date(b.data) - new Date(a.data)).slice(0,5);
+    // Últimas corridas - TODAS ordenadas, mas exibe todas (scroll)
     const ul = document.getElementById('dashUltimas');
-    if (ultimas.length === 0) {
+    const todasOrdenadas = [...todos].sort((a,b) => new Date(b.data) - new Date(a.data));
+    if (todasOrdenadas.length === 0) {
       ul.innerHTML = '<small style="color:var(--muted)">Nenhuma corrida registrada ainda.</small>';
       return;
     }
-    ul.innerHTML = ultimas.map(l => {
+    ul.innerHTML = todasOrdenadas.map(l => {
       const d   = new Date(l.data);
       const dia = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
       const hora= d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
@@ -739,9 +768,10 @@
   function renderMetasTotal() {
     const ano = Number(document.getElementById("metaAnoTotal").value);
 
-    // Calcula faturamento total (entregas + viagens) por mês
+    // Calcula faturamento total (entregas + viagens) por mês — usa getAllLancamentos para pegar ambos
+    const todos = getAllLancamentos();
     const fatTotal = new Array(12).fill(0);
-    data.lancamentos.forEach(l => {
+    todos.forEach(l => {
       const d = new Date(l.data);
       if (d.getFullYear() === ano) {
         fatTotal[d.getMonth()] += Number(l.valor) || 0;
@@ -750,7 +780,7 @@
 
     // Resumo do ano
     const totalAno = fatTotal.reduce((a, b) => a + b, 0);
-    const lucroTotal = data.lancamentos
+    const lucroTotal = todos
       .filter(l => new Date(l.data).getFullYear() === ano)
       .reduce((acc, l) => acc + (l.lucro || 0), 0);
 
@@ -969,4 +999,3 @@
 
 </body>
 <footer></footer>
-

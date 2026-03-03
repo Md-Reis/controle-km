@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Agenda</title>
+<link rel="stylesheet" href="./style.css">
+<style>
+/* ── Navegação de data ── */
+.date-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;
+}
+.date-nav-btn {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card2); color: var(--text); font-size: 18px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .2s; padding: 0; width: auto; padding: 0 10px;
+}
+.date-nav-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.date-nav-center { text-align: center; cursor: pointer; }
+.date-nav-dia { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+.date-nav-mes { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: .3px; }
+.date-nav-hoje { font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 2px; }
+
+/* ── Mini calendário horizontal ── */
+.mini-cal {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+  margin-bottom: 16px; scrollbar-width: none;
+}
+.mini-cal::-webkit-scrollbar { display: none; }
+.mini-dia {
+  flex-shrink: 0; width: 44px; text-align: center; padding: 8px 4px;
+  border-radius: 12px; cursor: pointer; border: 1px solid transparent;
+  transition: all .2s;
+}
+.mini-dia .md-sem { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+.mini-dia .md-num { font-size: 16px; font-weight: 700; color: var(--text); margin-top: 2px; }
+.mini-dia .md-dot { width: 5px; height: 5px; border-radius: 50%; margin: 3px auto 0; }
+.mini-dia.selecionado { background: var(--primary); border-color: var(--primary); }
+.mini-dia.selecionado .md-sem,
+.mini-dia.selecionado .md-num { color: #fff; }
+.mini-dia.hoje .md-num { color: var(--primary); }
+.mini-dia.hoje.selecionado .md-num { color: #fff; }
+.mini-dia:hover:not(.selecionado) { background: var(--card2); border-color: var(--border); }
+
+/* ── Linha do tempo ── */
+.timeline { position: relative; padding-left: 20px; }
+.timeline::before {
+  content: ''; position: absolute; left: 6px; top: 0; bottom: 0;
+  width: 2px; background: var(--border); border-radius: 1px;
+}
+
+.ag-slot { position: relative; margin-bottom: 12px; }
+.ag-slot-hora {
+  font-size: 11px; color: var(--muted); font-weight: 600;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.ag-slot-hora::before {
+  content: ''; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--card2); border: 2px solid var(--border);
+  flex-shrink: 0; margin-left: -25px;
+}
+
+/* ── Card de agendamento ── */
+.ag-card {
+  border-radius: 14px; padding: 14px 16px;
+  border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+  transition: transform .2s, box-shadow .2s;
+  margin-bottom: 8px;
+}
+.ag-card:hover { transform: translateY(-1px); box-shadow: 0 4px 20px var(--shadow); }
+.ag-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; border-radius: 4px 0 0 4px;
+}
+
+.ag-card.pendente   { background: var(--card); }
+.ag-card.pendente::before   { background: var(--secondary); }
+.ag-card.confirmado { background: rgba(46,168,160,.05); border-color: rgba(46,168,160,.25); }
+.ag-card.confirmado::before { background: var(--primary); }
+.ag-card.concluido  { background: rgba(34,197,94,.04); border-color: rgba(34,197,94,.2); opacity:.85; }
+.ag-card.concluido::before  { background: #22c55e; }
+.ag-card.cancelado  { background: var(--card); opacity: .5; }
+.ag-card.cancelado::before  { background: var(--danger); }
+
+.ag-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.ag-cliente { font-weight: 700; font-size: 15px; color: var(--text); }
+.ag-passageiro { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.ag-valor { font-size: 16px; font-weight: 800; color: var(--primary); white-space: nowrap; }
+
+.ag-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.ag-meta span { display: flex; align-items: center; gap: 4px; }
+
+.ag-obs { font-size: 12px; color: var(--muted); font-style: italic; margin-bottom: 10px; padding: 6px 8px; background: var(--card2); border-radius: 8px; }
+
+.ag-status-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+}
+.badge-pendente   { background: rgba(232,148,10,.15); color: var(--secondary); }
+.badge-confirmado { background: rgba(46,168,160,.15);  color: var(--primary); }
+.badge-concluido  { background: rgba(34,197,94,.15);   color: #22c55e; }
+.badge-cancelado  { background: rgba(229,83,75,.15);   color: var(--danger); }
+
+.ag-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+.ag-btn {
+  flex: 1; padding: 7px 8px; border-radius: 9px; font-size: 12px;
+  font-weight: 600; border: 1px solid var(--border);
+  background: var(--card2); color: var(--text);
+  cursor: pointer; transition: all .2s; min-width: 0;
+  white-space: nowrap;
+}
+.ag-btn:hover { filter: brightness(1.15); }
+.ag-btn.verde { background: #25d366; color: #fff; border-color: #25d366; }
+.ag-btn.teal  { background: var(--primary); color: #fff; border-color: var(--primary); }
+.ag-btn.red   { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+/* ── Vazio ── */
+.dia-vazio {
+  text-align: center; padding: 48px 20px;
+  color: var(--muted); font-size: 14px;
+}
+.dia-vazio .icon { font-size: 48px; margin-bottom: 12px; }
+
+/* ── Alerta de conflito ── */
+.conflito-alert {
+  background: rgba(229,83,75,.1); border: 1px solid rgba(229,83,75,.4);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+  font-size: 13px; color: var(--danger); display: none;
+}
+.conflito-alert.visivel { display: block; }
+
+/* ── Modal form ── */
+.modal-scroll { max-height: 88vh; overflow-y: auto; }
+
+/* ── Resumo do dia ── */
+.resumo-dia {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px;
+}
+.resumo-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 8px; text-align: center;
+}
+.resumo-item .rv { font-size: 16px; font-weight: 800; color: var(--text); margin-top: 2px; }
+.resumo-item .rl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:none; }
+}
+.anim { animation: slideUp .25s ease; }
+</style>
+</head>
+<body>
+
+<nav>
+  <button onclick="window.location.href='index.html'">← Início</button>
+  <span style="margin-top:10px;flex:1;text-align:center;font-weight:700;font-size:16px;color:var(--primary)">📅 Agenda</span>
+</nav>
+
+<div style="padding:16px 16px 0">
+
+  <!-- Mini calendário -->
+  <div class="mini-cal" id="miniCal"></div>
+
+  <!-- Navegação de data -->
+  <div class="date-nav">
+    <button class="date-nav-btn" onclick="navDia(-1)">‹</button>
+    <div class="date-nav-center" onclick="irParaHoje()">
+      <div class="date-nav-dia" id="navDiaNum"></div>
+      <div class="date-nav-mes" id="navMesAno"></div>
+      <div class="date-nav-hoje" id="navHojeLabel"></div>
+    </div>
+    <button class="date-nav-btn" onclick="navDia(1)">›</button>
+  </div>
+
+  <!-- Resumo do dia -->
+  <div class="resumo-dia" id="resumoDia"></div>
+
+  <!-- Lista de agendamentos -->
+  <div id="listaAg" class="anim"></div>
+
+</div>
+
+<!-- FAB para novo agendamento -->
+<div id="fab-container">
+  <div class="fab-options" id="fab-options">
+    <div class="fab-option" onclick="abrirModalNovoAg()">
+      <div class="fab-option-label">Novo Agendamento</div>
+      <button class="fab-option-btn" style="background:#2ea8a0;color:#fff">📅</button>
+    </div>
+    <div class="fab-option" onclick="window.location.href='viagens.html'">
+      <div class="fab-option-label">Nova Viagem</div>
+      <button class="fab-option-btn fab-opt-viagem">🚕</button>
+    </div>
+    <div class="fab-option" onclick="window.location.href='entregas.html'">
+      <div class="fab-option-label">Nova Entrega</div>
+      <button class="fab-option-btn fab-opt-entrega">📦</button>
+    </div>
+    <div class="fab-option" onclick="window.location.href='abastecimento.html'">
+      <div class="fab-option-label">Novo Abastecimento</div>
+      <button class="fab-option-btn fab-opt-abastecimento">⛽</button>
+    </div>
+  </div>
+  <button id="fab-main" onclick="toggleFab()">+</button>
+</div>
+<div id="fab-backdrop" onclick="closeFab()"></div>
+
+<!-- Toast -->
+<div id="toast" style="
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:var(--card);color:var(--text);padding:14px 18px;border-radius:12px;
+  display:none;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:9999;
+  font-weight:500;border:1px solid var(--border);max-width:90vw;text-align:center;
+"></div>
+
+<!-- ═══ MODAL: Novo / Editar Agendamento ═══ -->
+<div id="modalAg" class="modal hidden">
+  <div class="modal-box modal-scroll">
+    <h2 id="modalAgTitulo">📅 Novo Agendamento</h2>
+
+    <!-- Alerta conflito -->
+    <div class="conflito-alert" id="conflitoAlert">
+      ⚠️ <span id="conflitoTexto">Conflito de horário detectado!</span>
+    </div>
+
+    <label>Cliente</label>
+    <select id="agCliente" onchange="onAgClienteChange()">
+      <option value="">— Selecione um cliente —</option>
+    </select>
+
+    <div id="agPassWrap" style="display:none">
+      <label>Passageiro</label>
+      <select id="agPassageiro"></select>
+    </div>
+
+    <label>Data</label>
+    <input type="date" id="agData" oninput="verificarConflito()">
+
+    <label>Horário</label>
+    <input type="time" id="agHora" oninput="verificarConflito()">
+
+    <label>Duração estimada</label>
+    <select id="agDuracao">
+      <option value="30">30 minutos</option>
+      <option value="60" selected>1 hora</option>
+      <option value="90">1h30</option>
+      <option value="120">2 horas</option>
+      <option value="180">3 horas</option>
+      <option value="240">4 horas</option>
+    </select>
+
+    <label>Valor estimado (R$)</label>
+    <input type="number" id="agValor" placeholder="Ex: 150.00" step="0.01">
+
+    <label>Observação (opcional)</label>
+    <input type="text" id="agObs" placeholder="Ex: Buscar em casa, levar à clínica...">
+
+    <div class="modal-actions">
+      <button onclick="fecharModalAg()">Cancelar</button>
+      <button onclick="salvarAgendamento()" style="background:var(--primary)">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Confirmar exclusão ═══ -->
+<div id="modalDelAg" class="modal hidden">
+  <div class="modal-box" style="max-width:320px">
+    <h3>🗑️ Excluir agendamento?</h3>
+    <p style="color:var(--muted);font-size:14px">Esta ação não pode ser desfeita.</p>
+    <div class="modal-actions">
+      <button onclick="document.getElementById('modalDelAg').classList.add('hidden')">Cancelar</button>
+      <button class="danger" onclick="confirmarDelAg()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Converter em viagem ═══ -->
+<div id="modalConverter" class="modal hidden">
+  <div class="modal-box" style="max-width:340px">
+    <h3>🚕 Converter em viagem?</h3>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+      Isso abrirá o módulo de viagens com os dados pré-preenchidos. O agendamento será marcado como <strong>concluído</strong>.
+    </p>
+    <label>KM inicial</label>
+    <input type="number" id="convKmInicial" placeholder="KM atual do odômetro">
+    <label>KM final</label>
+    <input type="number" id="convKmFinal" placeholder="KM ao final da viagem">
+    <label>Valor recebido (R$)</label>
+    <input type="number" id="convValor" placeholder="Valor recebido" step="0.01">
+    <div class="modal-actions">
+      <button onclick="document.getElementById('modalConverter').classList.add('hidden')">Cancelar</button>
+      <button onclick="confirmarConverter()" style="background:#2ea8a0;color:#fff">✅ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════ TEMA ════════
+(function(){
+  const s = localStorage.getItem('kmTheme')||'dark';
+  document.documentElement.setAttribute('data-theme', s);
+  const b = document.getElementById('theme-toggle');
+  if (b) b.textContent = s==='dark'?'🌙':'☀️';
+})();
+
+// ════════ STORAGE ════════
+let kmApp   = JSON.parse(localStorage.getItem('kmApp'))    || { veiculos:[], ativo:null };
+let vData   = JSON.parse(localStorage.getItem('viagensApp'))|| { clientes:[], viagens:[] };
+let agData  = JSON.parse(localStorage.getItem('agendaApp'))|| { agendamentos:[] };
+
+if (!agData.agendamentos) agData.agendamentos = [];
+if (!vData.clientes)      vData.clientes = [];
+if (!vData.viagens)       vData.viagens  = [];
+if (!kmApp.lancamentos)   kmApp.lancamentos = [];
+
+function saveAg()  { localStorage.setItem('agendaApp', JSON.stringify(agData)); }
+function saveVD()  { localStorage.setItem('viagensApp', JSON.stringify(vData)); }
+function saveKm()  { localStorage.setItem('kmApp', JSON.stringify(kmApp)); }
+
+// ════════ STATE ════════
+let dataAtual    = new Date();
+let editandoId   = null;
+let deletandoId  = null;
+let convertendoId= null;
+
+// Helpers
+function fmt(v) { return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function toDateStr(d) { return d.toISOString().slice(0,10); }
+function dataAtualStr() { return toDateStr(dataAtual); }
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  const c = {success:'#22c55e',error:'#e5534b',info:'#2ea8a0'};
+  t.textContent = msg;
+  t.style.borderLeft = `4px solid ${c[type]||c.success}`;
+  t.style.display = 'block';
+  setTimeout(()=>t.style.display='none', 2800);
+}
+
+const DIAS_SEM  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MESES     = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_ABR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// ════════ NAVEGAÇÃO DE DATA ════════
+function navDia(delta) {
+  dataAtual.setDate(dataAtual.getDate() + delta);
+  render();
+}
+function irParaHoje() {
+  dataAtual = new Date();
+  render();
+}
+
+// ════════ MINI CALENDÁRIO ════════
+function renderMiniCal() {
+  const cal  = document.getElementById('miniCal');
+  const hoje = new Date();
+  const ativo= dataAtualStr();
+  cal.innerHTML = '';
+
+  // Mostra 14 dias: 3 antes até 10 depois da data selecionada
+  for (let i=-3; i<=10; i++) {
+    const d = new Date(dataAtual);
+    d.setDate(dataAtual.getDate() + i);
+    const ds = toDateStr(d);
+
+    // Verifica se tem agendamento
+    const temAg = agData.agendamentos.some(a => a.data === ds && a.status !== 'cancelado');
+    const ehHoje = ds === toDateStr(hoje);
+    const selecionado = ds === ativo;
+
+    const div = document.createElement('div');
+    div.className = 'mini-dia' + (selecionado?' selecionado':'') + (ehHoje&&!selecionado?' hoje':'');
+    div.onclick = () => { dataAtual = d; render(); };
+    div.innerHTML = `
+      <div class="md-sem">${DIAS_SEM[d.getDay()]}</div>
+      <div class="md-num">${d.getDate()}</div>
+      <div class="md-dot" style="background:${temAg?(selecionado?'rgba(255,255,255,.7)':'var(--primary)'):'transparent'}"></div>
+    `;
+    cal.appendChild(div);
+  }
+
+  // Scroll para o dia selecionado
+  const sel = cal.querySelector('.selecionado');
+  if (sel) sel.scrollIntoView({block:'nearest',inline:'center'});
+}
+
+// ════════ HEADER DE DATA ════════
+function renderHeader() {
+  const hoje = new Date();
+  const ds   = dataAtualStr();
+  document.getElementById('navDiaNum').textContent =
+    DIAS_SEM[dataAtual.getDay()] + ', ' + dataAtual.getDate();
+  document.getElementById('navMesAno').textContent =
+    MESES[dataAtual.getMonth()] + ' de ' + dataAtual.getFullYear();
+  document.getElementById('navHojeLabel').textContent =
+    ds === toDateStr(hoje) ? 'Hoje' : '';
+}
+
+// ════════ RESUMO DO DIA ════════
+function renderResumoDia() {
+  const ds = dataAtualStr();
+  const ags = agData.agendamentos.filter(a => a.data === ds && a.status !== 'cancelado');
+  const total   = ags.length;
+  const confirm = ags.filter(a=>a.status==='confirmado'||a.status==='concluido').length;
+  const valorEst= ags.reduce((s,a)=>s+(a.valor||0),0);
+
+  document.getElementById('resumoDia').innerHTML = `
+    <div class="resumo-item">
+      <div class="rl">Agendados</div>
+      <div class="rv" style="color:var(--text)">${total}</div>
+    </div>
+    <div class="resumo-item">
+      <div class="rl">Confirmados</div>
+      <div class="rv" style="color:var(--primary)">${confirm}</div>
+    </div>
+    <div class="resumo-item">
+      <div class="rl">Previsto</div>
+      <div class="rv" style="color:var(--accent);font-size:13px">${fmt(valorEst)}</div>
+    </div>
+  `;
+}
+
+// ════════ LISTA DO DIA ════════
+function renderLista() {
+  const ds  = dataAtualStr();
+  const ags = agData.agendamentos
+    .filter(a => a.data === ds)
+    .sort((a,b) => (a.hora||'').localeCompare(b.hora||''));
+
+  const lista = document.getElementById('listaAg');
+
+  if (ags.length === 0) {
+    lista.innerHTML = `
+      <div class="dia-vazio">
+        <div class="icon">📅</div>
+        <div>Nenhum agendamento para este dia</div>
+        <div style="font-size:12px;margin-top:6px;color:var(--muted)">
+          Toque no <strong style="color:var(--secondary)">+</strong> para adicionar
+        </div>
+      </div>`;
+    return;
+  }
+
+  lista.innerHTML = '';
+
+  // Agrupa por bloco de hora
+  const grupos = {};
+  ags.forEach(a => {
+    const h = a.hora ? a.hora.slice(0,2)+'h' : 'Hora indefinida';
+    if (!grupos[h]) grupos[h] = [];
+    grupos[h].push(a);
+  });
+
+  Object.entries(grupos).forEach(([hora, items]) => {
+    const slot = document.createElement('div');
+    slot.className = 'ag-slot';
+    slot.innerHTML = `<div class="ag-slot-hora">${hora}</div>`;
+
+    items.forEach(ag => {
+      const cliente  = vData.clientes.find(c=>c.id===ag.clienteId);
+      const nomeC    = cliente?.nome || 'Cliente removido';
+      const nomeP    = ag.passageiro || nomeC;
+      const statusLabel = {pendente:'Pendente',confirmado:'Confirmado',concluido:'Concluído',cancelado:'Cancelado'}[ag.status]||'Pendente';
+      const badgeCls = 'badge-'+ag.status;
+      const tel      = cliente?.telefone?.replace(/\D/g,'') || '';
+
+      const card = document.createElement('div');
+      card.className = `ag-card ${ag.status||'pendente'} anim`;
+
+      // Botões de ação conforme status
+      let acoes = '';
+      if (ag.status !== 'concluido' && ag.status !== 'cancelado') {
+        if (ag.status === 'pendente') {
+          acoes += `<button class="ag-btn teal" onclick="mudarStatus(${ag.id},'confirmado')">✅ Confirmar</button>`;
+        }
+        if (tel) {
+          acoes += `<button class="ag-btn verde" onclick="enviarConfirmWpp(${ag.id})">📲 WhatsApp</button>`;
+        }
+        acoes += `<button class="ag-btn teal" onclick="abrirConverter(${ag.id})">🚕 Converter</button>`;
+        acoes += `<button class="ag-btn" onclick="abrirEditarAg(${ag.id})">✏️</button>`;
+        acoes += `<button class="ag-btn red" onclick="abrirDelAg(${ag.id})">🗑️</button>`;
+      } else if (ag.status === 'confirmado') {
+        acoes += `<button class="ag-btn teal" onclick="abrirConverter(${ag.id})">🚕 Converter</button>`;
+        acoes += `<button class="ag-btn" onclick="abrirEditarAg(${ag.id})">✏️</button>`;
+        acoes += `<button class="ag-btn red" onclick="mudarStatus(${ag.id},'cancelado')">✖ Cancelar</button>`;
+      } else {
+        acoes += `<button class="ag-btn" onclick="abrirEditarAg(${ag.id})">✏️ Editar</button>`;
+        acoes += `<button class="ag-btn red" onclick="abrirDelAg(${ag.id})">🗑️ Excluir</button>`;
+      }
+
+      card.innerHTML = `
+        <div class="ag-header">
+          <div>
+            <div class="ag-cliente">${nomeC}</div>
+            ${nomeP !== nomeC ? `<div class="ag-passageiro">👤 ${nomeP}</div>` : ''}
+          </div>
+          <div style="text-align:right">
+            ${ag.valor ? `<div class="ag-valor">${fmt(ag.valor)}</div>` : ''}
+            <span class="ag-status-badge ${badgeCls}" style="margin-top:4px;display:inline-block">${statusLabel}</span>
+          </div>
+        </div>
+        <div class="ag-meta">
+          ${ag.hora ? `<span>🕐 ${ag.hora}</span>` : ''}
+          ${ag.duracao ? `<span>⏱ ${ag.duracao}min</span>` : ''}
+        </div>
+        ${ag.obs ? `<div class="ag-obs">💬 ${ag.obs}</div>` : ''}
+        <div class="ag-acoes">${acoes}</div>
+      `;
+      slot.appendChild(card);
+    });
+
+    lista.appendChild(slot);
+  });
+}
+
+// ════════ RENDER PRINCIPAL ════════
+function render() {
+  renderMiniCal();
+  renderHeader();
+  renderResumoDia();
+  renderLista();
+}
+
+// ════════ MODAL NOVO/EDITAR ════════
+function popularClientes() {
+  const sel = document.getElementById('agCliente');
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— Selecione um cliente —</option>';
+  vData.clientes.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.nome;
+    sel.appendChild(opt);
+  });
+  if (val) sel.value = val;
+}
+
+function onAgClienteChange() {
+  const id  = Number(document.getElementById('agCliente').value);
+  const wrap= document.getElementById('agPassWrap');
+  const sel = document.getElementById('agPassageiro');
+  if (!id) { wrap.style.display='none'; return; }
+
+  const c = vData.clientes.find(c=>c.id===id);
+  const passageiros = c?.passageiros||[];
+
+  sel.innerHTML = '';
+  if (passageiros.length <= 1) {
+    wrap.style.display = 'none';
+    if (passageiros.length === 1) {
+      sel.innerHTML = `<option value="${passageiros[0].nome}">${passageiros[0].nome}</option>`;
+    }
+  } else {
+    passageiros.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.nome; opt.textContent = p.nome;
+      sel.appendChild(opt);
+    });
+    wrap.style.display = 'block';
+  }
+  verificarConflito();
+}
+
+function verificarConflito() {
+  const data = document.getElementById('agData').value;
+  const hora = document.getElementById('agHora').value;
+  const dur  = Number(document.getElementById('agDuracao').value) || 60;
+  const alerta = document.getElementById('conflitoAlert');
+
+  if (!data || !hora) { alerta.classList.remove('visivel'); return; }
+
+  const [h,m]     = hora.split(':').map(Number);
+  const inicioMin = h*60+m;
+  const fimMin    = inicioMin+dur;
+
+  const conflitos = agData.agendamentos.filter(a => {
+    if (a.data !== data) return false;
+    if (a.id === editandoId) return false;
+    if (a.status === 'cancelado') return false;
+    if (!a.hora) return false;
+    const [ah,am] = a.hora.split(':').map(Number);
+    const aIni = ah*60+am;
+    const aFim = aIni+(a.duracao||60);
+    return inicioMin < aFim && fimMin > aIni;
+  });
+
+  if (conflitos.length > 0) {
+    const c   = conflitos[0];
+    const cli = vData.clientes.find(cl=>cl.id===c.clienteId);
+    document.getElementById('conflitoTexto').textContent =
+      `⚠️ Conflito com ${cli?.nome||'outro agendamento'} às ${c.hora} (${c.duracao||60}min). Verifique o horário.`;
+    alerta.classList.add('visivel');
+  } else {
+    alerta.classList.remove('visivel');
+  }
+}
+
+function abrirModalNovoAg() {
+  closeFab();
+  editandoId = null;
+  document.getElementById('modalAgTitulo').textContent = '📅 Novo Agendamento';
+  popularClientes();
+  document.getElementById('agCliente').value   = '';
+  document.getElementById('agPassWrap').style.display = 'none';
+  document.getElementById('agData').value      = dataAtualStr();
+  document.getElementById('agHora').value      = '';
+  document.getElementById('agDuracao').value   = '60';
+  document.getElementById('agValor').value     = '';
+  document.getElementById('agObs').value       = '';
+  document.getElementById('conflitoAlert').classList.remove('visivel');
+  document.getElementById('modalAg').classList.remove('hidden');
+}
+
+function abrirEditarAg(id) {
+  const ag = agData.agendamentos.find(a=>a.id===id);
+  if (!ag) return;
+  editandoId = id;
+  document.getElementById('modalAgTitulo').textContent = '✏️ Editar Agendamento';
+  popularClientes();
+  document.getElementById('agCliente').value   = ag.clienteId || '';
+  onAgClienteChange();
+  document.getElementById('agPassageiro').value= ag.passageiro || '';
+  document.getElementById('agData').value      = ag.data || '';
+  document.getElementById('agHora').value      = ag.hora || '';
+  document.getElementById('agDuracao').value   = ag.duracao || '60';
+  document.getElementById('agValor').value     = ag.valor || '';
+  document.getElementById('agObs').value       = ag.obs || '';
+  verificarConflito();
+  document.getElementById('modalAg').classList.remove('hidden');
+}
+
+function fecharModalAg() {
+  document.getElementById('modalAg').classList.add('hidden');
+  editandoId = null;
+}
+
+function salvarAgendamento() {
+  const clienteId  = Number(document.getElementById('agCliente').value);
+  const passageiro = document.getElementById('agPassageiro').value.trim();
+  const data       = document.getElementById('agData').value;
+  const hora       = document.getElementById('agHora').value;
+  const duracao    = Number(document.getElementById('agDuracao').value)||60;
+  const valor      = Number(document.getElementById('agValor').value)||0;
+  const obs        = document.getElementById('agObs').value.trim();
+
+  if (!clienteId)  { showToast('Selecione um cliente','info'); return; }
+  if (!data)       { showToast('Informe a data','info'); return; }
+
+  if (editandoId !== null) {
+    const ag = agData.agendamentos.find(a=>a.id===editandoId);
+    if (!ag) return;
+    ag.clienteId=clienteId; ag.passageiro=passageiro;
+    ag.data=data; ag.hora=hora; ag.duracao=duracao;
+    ag.valor=valor; ag.obs=obs;
+    showToast('Agendamento atualizado ✅','success');
+  } else {
+    agData.agendamentos.push({
+      id: Date.now(), clienteId, passageiro, data, hora,
+      duracao, valor, obs, status:'pendente'
+    });
+    showToast('Agendamento salvo ✅','success');
+  }
+
+  saveAg();
+  fecharModalAg();
+  // Navega para o dia salvo
+  const [y,m,d2] = data.split('-').map(Number);
+  dataAtual = new Date(y, m-1, d2);
+  render();
+}
+
+// ════════ AÇÕES DOS CARDS ════════
+function mudarStatus(id, novoStatus) {
+  const ag = agData.agendamentos.find(a=>a.id===id);
+  if (!ag) return;
+  ag.status = novoStatus;
+  saveAg();
+  render();
+  const labels = {confirmado:'Confirmado ✅',cancelado:'Cancelado ✖',concluido:'Concluído 🎉'};
+  showToast(labels[novoStatus]||'Atualizado','success');
+}
+
+function abrirDelAg(id) {
+  deletandoId = id;
+  document.getElementById('modalDelAg').classList.remove('hidden');
+}
+function confirmarDelAg() {
+  agData.agendamentos = agData.agendamentos.filter(a=>a.id!==deletandoId);
+  saveAg();
+  document.getElementById('modalDelAg').classList.add('hidden');
+  showToast('Agendamento excluído','info');
+  render();
+}
+
+// ════════ WHATSAPP ════════
+function enviarConfirmWpp(id) {
+  const ag  = agData.agendamentos.find(a=>a.id===id);
+  if (!ag) return;
+  const cli = vData.clientes.find(c=>c.id===ag.clienteId);
+  if (!cli?.telefone) { showToast('Cliente sem telefone','info'); return; }
+  const tel  = cli.telefone.replace(/\D/g,'');
+  const nome = ag.passageiro || cli.nome;
+  const dataFmt = new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  const hora = ag.hora ? ` às ${ag.hora}` : '';
+  const val  = ag.valor ? `\n💵 Valor estimado: ${fmt(ag.valor)}` : '';
+  const msg  = `Olá, ${cli.nome}! 😊\n\nConfirmando seu agendamento:\n\n👤 Passageiro: ${nome}\n📅 ${dataFmt}${hora}${val}\n\nQualquer dúvida estou à disposição! 🚗`;
+  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+// ════════ CONVERTER EM VIAGEM ════════
+function abrirConverter(id) {
+  convertendoId = id;
+  const ag = agData.agendamentos.find(a=>a.id===id);
+  if (ag) document.getElementById('convValor').value = ag.valor || '';
+  document.getElementById('convKmInicial').value = '';
+  document.getElementById('convKmFinal').value   = '';
+  document.getElementById('modalConverter').classList.remove('hidden');
+}
+
+function confirmarConverter() {
+  const ag      = agData.agendamentos.find(a=>a.id===convertendoId);
+  if (!ag) return;
+
+  const ini   = Number(document.getElementById('convKmInicial').value);
+  const fim   = Number(document.getElementById('convKmFinal').value);
+  const valor = Number(document.getElementById('convValor').value);
+
+  if (!ini||!fim||fim<=ini) { showToast('KM inicial/final inválidos','info'); return; }
+  if (!valor||valor<=0)     { showToast('Informe o valor recebido','info'); return; }
+
+  const v = kmApp.veiculos.find(v=>v.id===kmApp.ativo);
+  if (!v) { showToast('Nenhum veículo ativo','error'); return; }
+
+  const km = fim-ini;
+  const cKm = calcCustoKm(v);
+  const custoTotal = km*cKm;
+  const lucro = valor-custoTotal;
+  const agora = new Date();
+
+  // Salva em viagensApp
+  const viagem = {
+    id: Date.now(), clienteId:ag.clienteId, veiculoId:v.id,
+    passageiroNome: ag.passageiro||'',
+    data: agora.toISOString(),
+    kmInicial:ini, kmFinal:fim, km, valor, custoTotal, lucro, tipo:'viagem'
+  };
+  vData.viagens.push(viagem);
+  // Faturamento viagem
+  const ano = agora.getFullYear(), mes = agora.getMonth();
+  if (!vData.financeiro) vData.financeiro={anos:{}};
+  if (!vData.financeiro.anos[ano]) vData.financeiro.anos[ano]={metas:{},faturamento:{}};
+  vData.financeiro.anos[ano].faturamento[mes] =
+    (vData.financeiro.anos[ano].faturamento[mes]||0) + valor;
+  saveVD();
+
+  // Espelha em kmApp
+  kmApp.lancamentos.push({
+    id:viagem.id, veiculoId:v.id, data:agora.toISOString(),
+    km, valor, custoTotal, lucro, tipo:'viagem'
+  });
+  saveKm();
+
+  // Marca agendamento como concluído
+  ag.status = 'concluido';
+  saveAg();
+
+  document.getElementById('modalConverter').classList.add('hidden');
+  showToast(`Viagem salva! Lucro: ${fmt(lucro)} 🎉`,'success');
+  render();
+}
+
+function calcCustoKm(v) {
+  if (!v||v.consumo<=0) return 0;
+  const cC = v.custos.comb/v.consumo;
+  const fx = (v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0);
+  return cC + fx/(Number(v.kmMensal)||2000);
+}
+
+// ════════ FAB ════════
+function toggleFab() {
+  const o=document.getElementById('fab-options');
+  const m=document.getElementById('fab-main');
+  const b=document.getElementById('fab-backdrop');
+  const open=o.classList.toggle('visible');
+  m.classList.toggle('open',open);
+  b.classList.toggle('visible',open);
+}
+function closeFab() {
+  document.getElementById('fab-options').classList.remove('visible');
+  document.getElementById('fab-main').classList.remove('open');
+  document.getElementById('fab-backdrop').classList.remove('visible');
+}
+
+// ════════ INIT ════════
+render();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>

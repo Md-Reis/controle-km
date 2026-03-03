@@ -12,221 +12,205 @@
 <style>
   /* ── Tipo de viagem ── */
   .tipo-selector {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
   }
   .tipo-btn {
-    padding: 14px 10px;
-    border-radius: 14px;
+    padding: 14px 10px; border-radius: 14px;
     border: 2px solid rgba(199,183,255,.1);
-    background: var(--bg);
-    color: var(--muted);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: center;
-    transition: all .2s ease;
-    line-height: 1.4;
+    background: var(--bg); color: var(--muted);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    text-align: center; transition: all .2s ease; line-height: 1.4;
   }
   .tipo-btn span { display:block; font-size:24px; margin-bottom:4px; }
   .tipo-btn.active {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: rgba(199,183,255,.06);
-    box-shadow: 0 0 20px rgba(124,106,230,.2);
+    border-color: var(--primary); color: var(--primary);
+    background: rgba(46,168,160,.06);
+    box-shadow: 0 0 20px rgba(46,168,160,.15);
   }
+
+  /* ── Busca de rota ── */
+  .rota-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .rota-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--muted); margin-bottom: 6px;
+  }
+  .rota-input-wrap {
+    position: relative;
+  }
+  .rota-input-wrap input {
+    padding-right: 40px;
+    margin-bottom: 0;
+  }
+  .rota-clear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--muted); font-size: 16px;
+    cursor: pointer; padding: 4px; width: auto; line-height: 1;
+    display: none;
+  }
+  .rota-clear.visible { display: block; }
+
+  .rota-divider {
+    display: flex; align-items: center; gap: 10px; margin: 8px 0;
+  }
+  .rota-divider::before, .rota-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .rota-divider span {
+    font-size: 18px; color: var(--muted);
+  }
+
+  /* Autocomplete dropdown */
+  .autocomplete-list {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 12px; z-index: 200; overflow: hidden;
+    box-shadow: 0 8px 24px var(--shadow);
+    max-height: 220px; overflow-y: auto;
+  }
+  .autocomplete-list.hidden { display: none; }
+  .ac-item {
+    padding: 11px 14px; font-size: 13px; color: var(--text);
+    cursor: pointer; border-bottom: 1px solid var(--border);
+    transition: background .15s; display: flex; align-items: flex-start; gap: 8px;
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover { background: rgba(46,168,160,.1); }
+  .ac-item-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; color: var(--primary); }
+  .ac-item-text { flex: 1; line-height: 1.4; }
+  .ac-item-main { font-weight: 600; }
+  .ac-item-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Resultado da rota */
+  .rota-resultado {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(46,168,160,.08); border: 1px solid rgba(46,168,160,.25);
+    border-radius: 12px; padding: 12px 14px; margin-top: 10px;
+    animation: slideUp .3s ease;
+  }
+  .rota-resultado.hidden { display: none; }
+  .rota-resultado-icon { font-size: 22px; }
+  .rota-resultado-info { flex: 1; }
+  .rota-resultado-km   { font-size: 20px; font-weight: 800; color: var(--primary); }
+  .rota-resultado-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .rota-resultado-tempo { font-size: 13px; font-weight: 600; color: var(--secondary); }
+
+  /* Loading spinner */
+  .rota-loading {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; color: var(--muted); font-size: 13px;
+  }
+  .rota-loading.hidden { display: none; }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--border);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin .7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Modo manual toggle */
+  .modo-toggle {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted);
+    margin-top: 8px; cursor: pointer;
+  }
+  .modo-toggle span { color: var(--primary); font-weight: 600; text-decoration: underline; }
 
   /* ── Resultado único ── */
   .result-unica {
     background: linear-gradient(135deg, var(--card), var(--bg2));
     border: 1px solid rgba(199,183,255,.15);
-    border-radius: 18px;
-    padding: 20px;
-    text-align: center;
-    margin-top: 12px;
+    border-radius: 18px; padding: 20px;
+    text-align: center; margin-top: 12px;
   }
   .result-unica .valor-grande {
-    font-size: 42px;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1;
-    margin: 8px 0;
-    letter-spacing: -1px;
+    font-size: 42px; font-weight: 800; color: var(--primary);
+    line-height: 1; margin: 8px 0; letter-spacing: -1px;
   }
-  .result-unica .custo-info {
-    font-size: 13px;
-    color: var(--muted);
-    margin-top: 6px;
-  }
+  .result-unica .custo-info { font-size: 13px; color: var(--muted); margin-top: 6px; }
   .result-unica .lucro-info {
-    font-size: 15px;
-    font-weight: 600;
-    margin-top: 8px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255,255,255,.06);
+    font-size: 15px; font-weight: 600; margin-top: 8px;
+    padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06);
   }
 
   /* ── Tabela constante ── */
   .tabela-constante {
-    margin-top: 12px;
-    border-radius: 14px;
-    overflow: hidden;
+    margin-top: 12px; border-radius: 14px; overflow: hidden;
     border: 1px solid rgba(199,183,255,.08);
   }
   .tabela-header {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr 1fr;
-    background: rgba(124,106,230,.15);
-    padding: 10px 14px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: .5px;
+    display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr;
+    background: rgba(46,168,160,.12); padding: 10px 14px;
+    font-size: 12px; font-weight: 700; color: var(--primary);
+    text-transform: uppercase; letter-spacing: .5px;
   }
   .tabela-row {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr 1fr;
-    padding: 11px 14px;
-    font-size: 13px;
+    display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr;
+    padding: 11px 14px; font-size: 13px;
     border-bottom: 1px solid rgba(255,255,255,.04);
-    align-items: center;
-    transition: background .15s;
+    align-items: center; transition: background .15s;
   }
   .tabela-row:last-child { border-bottom: none; }
   .tabela-row:nth-child(even) { background: rgba(255,255,255,.02); }
-  .tabela-row:hover { background: rgba(124,106,230,.07); }
-  .tabela-row .col-qtd {
-    font-weight: 700;
-    color: var(--text);
-  }
-  .tabela-row .col-valor {
-    font-weight: 700;
-    color: var(--primary);
-  }
-  .tabela-row .col-desc {
-    font-size: 12px;
-    color: #22c55e;
-    font-weight: 600;
-  }
-  .tabela-row .col-total {
-    font-weight: 700;
-    color: var(--accent);
-  }
+  .tabela-row:hover { background: rgba(46,168,160,.07); }
+  .tabela-row .col-qtd   { font-weight: 700; color: var(--text); }
+  .tabela-row .col-valor { font-weight: 700; color: var(--primary); }
+  .tabela-row .col-desc  { font-size: 12px; color: #22c55e; font-weight: 600; }
+  .tabela-row .col-total { font-weight: 700; color: var(--accent); }
 
-  /* ── Destino WhatsApp ── */
-  .wpp-section {
-    margin-top: 16px;
-  }
-  .wpp-toggle {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
+  /* ── WhatsApp ── */
+  .wpp-section { margin-top: 16px; }
+  .wpp-toggle { display: flex; gap: 8px; margin-bottom: 10px; }
   .wpp-toggle button {
-    flex: 1;
-    padding: 9px;
-    border-radius: 10px;
-    background: var(--input-bg);
-    color: var(--muted);
-    font-size: 13px;
-    width: auto;
-    border: 1px solid rgba(199,183,255,.08);
-    transition: all .2s;
+    flex: 1; padding: 9px; border-radius: 10px;
+    background: var(--input-bg); color: var(--muted);
+    font-size: 13px; width: auto;
+    border: 1px solid rgba(199,183,255,.08); transition: all .2s;
   }
-  .wpp-toggle button.active {
-    background: #25d366;
-    color: #fff;
-    border-color: #25d366;
-  }
+  .wpp-toggle button.active { background: #25d366; color: #fff; border-color: #25d366; }
   .btn-wpp {
-    background: #25d366 !important;
-    color: #fff !important;
-    font-size: 16px !important;
-    font-weight: 700 !important;
-    margin-top: 10px;
-    border-radius: 14px !important;
-    padding: 16px !important;
-    letter-spacing: .3px;
-    box-shadow: 0 4px 20px rgba(37,211,102,.3);
+    background: #25d366 !important; color: #fff !important;
+    font-size: 16px !important; font-weight: 700 !important;
+    margin-top: 10px; border-radius: 14px !important; padding: 16px !important;
+    letter-spacing: .3px; box-shadow: 0 4px 20px rgba(37,211,102,.3);
   }
-  .btn-wpp:active { transform: scale(0.98); }
+  .btn-wpp:active { transform: scale(.98); }
 
   /* ── Veículo banner ── */
   .veiculo-banner {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: rgba(124,106,230,.08);
-    border: 1px solid rgba(124,106,230,.2);
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(46,168,160,.08); border: 1px solid rgba(46,168,160,.2);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
   }
   .veiculo-banner .icon { font-size: 24px; }
   .veiculo-banner .info { flex:1; }
   .veiculo-banner .nome { font-weight: 700; font-size: 15px; }
   .veiculo-banner .custo { font-size: 12px; color: var(--secondary); margin-top: 2px; }
 
-  /* ── Margem slider ── */
-  .margem-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 4px;
+  /* ── Sliders ── */
+  .margem-row, .desc-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
   }
   .margem-row input[type=range] {
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(199,183,255,.15);
-    outline: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    cursor: pointer;
-    accent-color: var(--primary);
-  }
-  .margem-badge {
-    min-width: 48px;
-    text-align: center;
-    font-weight: 700;
-    color: var(--primary);
-    font-size: 15px;
-  }
-
-  /* ── Desconto badge ── */
-  .desc-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 4px;
+    flex: 1; height: 6px; border-radius: 3px;
+    background: rgba(199,183,255,.15); outline: none; border: none;
+    padding: 0; margin: 0; cursor: pointer; accent-color: var(--primary);
   }
   .desc-row input[type=range] {
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(199,183,255,.15);
-    outline: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    cursor: pointer;
-    accent-color: #22c55e;
+    flex: 1; height: 6px; border-radius: 3px;
+    background: rgba(199,183,255,.15); outline: none; border: none;
+    padding: 0; margin: 0; cursor: pointer; accent-color: #22c55e;
   }
-  .desc-badge {
-    min-width: 48px;
-    text-align: center;
-    font-weight: 700;
-    color: #22c55e;
-    font-size: 15px;
-  }
+  .margem-badge { min-width:48px; text-align:center; font-weight:700; color:var(--primary); font-size:15px; }
+  .desc-badge   { min-width:48px; text-align:center; font-weight:700; color:#22c55e; font-size:15px; }
 
   .hidden { display: none !important; }
-
-  /* ── Animação entrada ── */
   @keyframes slideUp {
     from { opacity:0; transform:translateY(16px); }
     to   { opacity:1; transform:translateY(0); }
@@ -234,12 +218,9 @@
   .anim-in { animation: slideUp .3s ease forwards; }
 </style>
 </head>
-<body>
+<body class="has-global-nav">
 
-<nav>
-  <button onclick="window.location.href='index.html'" >← Início</button>
-  <span style="margin-top:10px; flex:1;text-align:center;font-weight:700;font-size:16px;color:var(--primary)">💰 Cotação</span>
-</nav>
+<div style="padding:16px 16px 0">
 
 <!-- ── Veículo ativo ── -->
 <div id="veiculoBanner" class="veiculo-banner">
@@ -260,13 +241,71 @@
   </div>
 </div>
 
-<!-- ── Formulário ── -->
-<div class="card">
-  <label>KM a percorrer</label>
-  <input id="kmInput" type="number" placeholder="Ex: 25" oninput="calcular()">
+<!-- ── CARD DE ROTA ── -->
+<div class="rota-card">
+  <div class="rota-label">📍 Calcular distância</div>
 
+  <!-- Origem -->
+  <div style="position:relative">
+    <div class="rota-label" style="margin-bottom:4px">Origem</div>
+    <div class="rota-input-wrap">
+      <input id="inputOrigem" type="text" placeholder="Ex: Av. Paulista, São Paulo"
+             autocomplete="off" oninput="onRotaInput('origem')" onfocus="onRotaFocus('origem')">
+      <button class="rota-clear" id="clearOrigem" onclick="limparCampo('origem')">✕</button>
+    </div>
+    <div class="autocomplete-list hidden" id="acOrigem"></div>
+  </div>
+
+  <div class="rota-divider"><span>↓</span></div>
+
+  <!-- Destino -->
+  <div style="position:relative">
+    <div class="rota-label" style="margin-bottom:4px">Destino</div>
+    <div class="rota-input-wrap">
+      <input id="inputDestino" type="text" placeholder="Ex: Guarulhos, São Paulo"
+             autocomplete="off" oninput="onRotaInput('destino')" onfocus="onRotaFocus('destino')">
+      <button class="rota-clear" id="clearDestino" onclick="limparCampo('destino')">✕</button>
+    </div>
+    <div class="autocomplete-list hidden" id="acDestino"></div>
+  </div>
+
+  <!-- Loading -->
+  <div class="rota-loading hidden" id="rotaLoading">
+    <div class="spinner"></div>
+    <span>Calculando rota...</span>
+  </div>
+
+  <!-- Resultado da rota -->
+  <div class="rota-resultado hidden" id="rotaResultado">
+    <div class="rota-resultado-icon">🗺️</div>
+    <div class="rota-resultado-info">
+      <div class="rota-resultado-km" id="rotaKm">—</div>
+      <div class="rota-resultado-sub">
+        <span class="rota-resultado-tempo" id="rotaTempo"></span>
+        <span id="rotaEndereco" style="margin-left:6px"></span>
+      </div>
+    </div>
+    <button onclick="limparRota()" style="width:auto;padding:6px 10px;background:var(--card2);color:var(--muted);font-size:12px;border:1px solid var(--border)">
+      Limpar
+    </button>
+  </div>
+
+  <!-- Modo manual -->
+  <div class="modo-toggle" onclick="toggleModoManual()">
+    ✏️ <span id="modoToggleLabel">Preferir inserir KM manualmente</span>
+  </div>
+</div>
+
+<!-- ── KM manual (oculto por padrão) ── -->
+<div id="kmManualWrap" class="card hidden" style="margin-bottom:14px">
+  <label>KM a percorrer (manual)</label>
+  <input id="kmInput" type="number" placeholder="Ex: 25" oninput="calcular()">
+</div>
+
+<!-- ── Parâmetros ── -->
+<div class="card">
   <!-- Margem de lucro -->
-  <label style="margin-top:12px">Margem de lucro</label>
+  <label>Margem de lucro</label>
   <div class="margem-row">
     <input type="range" id="margemSlider" min="0" max="200" value="50" oninput="atualizarMargem()">
     <div class="margem-badge" id="margemBadge">50%</div>
@@ -319,46 +358,51 @@
 <div id="wppSection" class="wpp-section hidden">
   <div class="card">
     <label>📲 Enviar orçamento por WhatsApp</label>
-
     <div class="wpp-toggle">
       <button id="btnClienteCad" class="active" onclick="setDestinatario('cadastrado')">👥 Cliente cadastrado</button>
       <button id="btnNumAvulso" onclick="setDestinatario('avulso')">📱 Número avulso</button>
     </div>
-
-    <!-- Cliente cadastrado -->
     <div id="wrapClienteCad">
       <select id="selectCliente" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--input-bg);color:var(--text);margin-bottom:8px">
         <option value="">— Selecione um cliente —</option>
       </select>
     </div>
-
-    <!-- Número avulso -->
     <div id="wrapNumAvulso" class="hidden">
       <input id="numAvulso" type="tel" placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15" oninput="mascaraTel(this)">
     </div>
-
-    <button class="btn-wpp" onclick="enviarWhatsApp()">
-      📤 Enviar pelo WhatsApp
-    </button>
+    <button class="btn-wpp" onclick="enviarWhatsApp()">📤 Enviar pelo WhatsApp</button>
   </div>
 </div>
 
+<div style="height:20px"></div>
+</div><!-- end padding wrapper -->
+
 <!-- Toast -->
 <div id="toast" style="
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
   background:var(--input-bg);color:white;padding:14px 18px;border-radius:12px;
   display:none;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:9999;font-weight:500;
 "></div>
 
 <script>
 // ── Storage ──
-const data   = JSON.parse(localStorage.getItem('kmApp'))    || { veiculos:[], ativo:null };
-const vData  = JSON.parse(localStorage.getItem('viagensApp')) || { clientes:[] };
+const data  = JSON.parse(localStorage.getItem('kmApp'))     || { veiculos:[], ativo:null };
+const vData = JSON.parse(localStorage.getItem('viagensApp')) || { clientes:[] };
 
-let tipoViagem   = 'unica';      // 'unica' | 'constante'
-let destinatario = 'cadastrado'; // 'cadastrado' | 'avulso'
+let tipoViagem   = 'unica';
+let destinatario = 'cadastrado';
+let modoManual   = false;
 
-// ── Funções utilitárias ──
+// Coordenadas selecionadas
+let coordOrigem  = null; // { lat, lon, label }
+let coordDestino = null;
+let kmRota       = 0;    // km calculado pela rota
+
+// Timers de debounce
+let timerOrigem  = null;
+let timerDestino = null;
+
+// ── Utilitários ──
 function formatCurrency(v) {
   return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 }
@@ -368,7 +412,7 @@ function showToast(msg, type='success') {
   t.innerText = msg;
   t.style.borderLeft = `6px solid ${c[type]||c.success}`;
   t.style.display = 'block';
-  setTimeout(()=>t.style.display='none', 2500);
+  setTimeout(()=>t.style.display='none', 2800);
 }
 function mascaraTel(input) {
   let v = input.value.replace(/\D/g,'');
@@ -381,16 +425,14 @@ function mascaraTel(input) {
 function getAtivo() { return data.veiculos.find(v=>v.id===data.ativo); }
 function calcularCustoPorKm(v) {
   if (!v||v.consumo<=0) return 0;
-  const cComb    = v.custos.comb / v.consumo;
-  const fixo     = (v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0);
-  const kmMensal = Number(v.kmMensal) || 2000;
-  return cComb + fixo / kmMensal;
+  const cComb = v.custos.comb / v.consumo;
+  const fixo  = (v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0);
+  return cComb + fixo / (Number(v.kmMensal)||2000);
 }
-
 function initBanner() {
   const v = getAtivo();
   if (!v) return;
-  document.getElementById('bNome').innerText  = v.nome;
+  document.getElementById('bNome').innerText = v.nome;
   const cKm = calcularCustoPorKm(v);
   document.getElementById('bCusto').innerText = cKm>0
     ? `Custo por km: R$ ${cKm.toFixed(3)}`
@@ -420,101 +462,263 @@ function setTipo(tipo) {
   calcular();
 }
 
-function atualizarMargem() {
-  const v = document.getElementById('margemSlider').value;
-  document.getElementById('margemBadge').innerText = v+'%';
-  calcular();
+// ── Sliders ──
+function atualizarMargem()  { document.getElementById('margemBadge').innerText  = document.getElementById('margemSlider').value+'%'; calcular(); }
+function atualizarDesconto(){ document.getElementById('descontoBadge').innerText= document.getElementById('descontoSlider').value+'%'; calcular(); }
+function atualizarMaoObra() { document.getElementById('maoObraBadge').innerText  = document.getElementById('maoObraSlider').value+'%'; calcular(); }
+
+// ════════════════════════════════════════
+// BUSCA DE ENDEREÇO — Nominatim (OSM)
+// ════════════════════════════════════════
+function onRotaInput(campo) {
+  const input = document.getElementById(campo==='origem' ? 'inputOrigem' : 'inputDestino');
+  const btn   = document.getElementById(campo==='origem' ? 'clearOrigem' : 'clearDestino');
+  btn.classList.toggle('visible', input.value.length > 0);
+
+  // Reset coordenada ao digitar
+  if (campo==='origem')  { coordOrigem  = null; kmRota = 0; }
+  else                   { coordDestino = null; kmRota = 0; }
+  esconderResultadoRota();
+
+  clearTimeout(campo==='origem' ? timerOrigem : timerDestino);
+  const timer = setTimeout(() => buscarEnderecos(campo, input.value), 450);
+  if (campo==='origem') timerOrigem = timer; else timerDestino = timer;
 }
-function atualizarDesconto() {
-  const v = document.getElementById('descontoSlider').value;
-  document.getElementById('descontoBadge').innerText = v+'%';
-  calcular();
+
+function onRotaFocus(campo) {
+  const input = document.getElementById(campo==='origem' ? 'inputOrigem' : 'inputDestino');
+  if (input.value.length >= 3) buscarEnderecos(campo, input.value);
 }
-function atualizarMaoObra() {
-  const v = document.getElementById('maoObraSlider').value;
-  document.getElementById('maoObraBadge').innerText = v+'%';
-  calcular();
+
+async function buscarEnderecos(campo, texto) {
+  const listId = campo==='origem' ? 'acOrigem' : 'acDestino';
+  const list   = document.getElementById(listId);
+
+  if (!texto || texto.trim().length < 3) { list.classList.add('hidden'); return; }
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto)}&countrycodes=br&limit=5&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+    const results = await res.json();
+
+    list.innerHTML = '';
+    if (!results.length) {
+      list.innerHTML = '<div class="ac-item"><span class="ac-item-icon">🔍</span><div class="ac-item-text"><div class="ac-item-main">Nenhum resultado</div></div></div>';
+      list.classList.remove('hidden');
+      return;
+    }
+
+    results.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      const nome   = r.address?.road || r.address?.suburb || r.name || r.display_name.split(',')[0];
+      const sub    = r.display_name.split(',').slice(1,3).join(',').trim();
+      item.innerHTML = `
+        <span class="ac-item-icon">📍</span>
+        <div class="ac-item-text">
+          <div class="ac-item-main">${nome}</div>
+          <div class="ac-item-sub">${sub}</div>
+        </div>`;
+      item.addEventListener('click', () => selecionarLocal(campo, r, nome + (sub ? ', '+sub : '')));
+      list.appendChild(item);
+    });
+
+    list.classList.remove('hidden');
+  } catch(e) {
+    console.warn('Nominatim error:', e);
+  }
+}
+
+function selecionarLocal(campo, resultado, labelCurto) {
+  const inputId = campo==='origem' ? 'inputOrigem' : 'inputDestino';
+  const listId  = campo==='origem' ? 'acOrigem'    : 'acDestino';
+  const clearId = campo==='origem' ? 'clearOrigem' : 'clearDestino';
+
+  document.getElementById(inputId).value = labelCurto;
+  document.getElementById(listId).classList.add('hidden');
+  document.getElementById(clearId).classList.add('visible');
+
+  const coord = { lat: parseFloat(resultado.lat), lon: parseFloat(resultado.lon), label: labelCurto };
+  if (campo==='origem')  coordOrigem  = coord;
+  else                   coordDestino = coord;
+
+  // Se ambos selecionados, calcular rota
+  if (coordOrigem && coordDestino) calcularRota();
+}
+
+// ════════════════════════════════════════
+// CALCULAR ROTA — OSRM (gratuito)
+// ════════════════════════════════════════
+async function calcularRota() {
+  if (!coordOrigem || !coordDestino) return;
+
+  document.getElementById('rotaLoading').classList.remove('hidden');
+  esconderResultadoRota();
+
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/` +
+                `${coordOrigem.lon},${coordOrigem.lat};${coordDestino.lon},${coordDestino.lat}` +
+                `?overview=false`;
+    const res  = await fetch(url);
+    const json = await res.json();
+
+    if (json.code !== 'Ok' || !json.routes?.length) {
+      showToast('Não foi possível calcular a rota. Tente endereços mais específicos.', 'error');
+      document.getElementById('rotaLoading').classList.add('hidden');
+      return;
+    }
+
+    const distM  = json.routes[0].distance;   // metros
+    const durS   = json.routes[0].duration;   // segundos
+    kmRota       = Math.round(distM / 100) / 10; // 1 casa decimal
+
+    const horas  = Math.floor(durS / 3600);
+    const mins   = Math.round((durS % 3600) / 60);
+    const tempo  = horas > 0 ? `${horas}h ${mins}min` : `${mins} min`;
+
+    document.getElementById('rotaKm').innerText    = `${kmRota} km`;
+    document.getElementById('rotaTempo').innerText = `⏱ ${tempo}`;
+    document.getElementById('rotaEndereco').innerText = '';
+    document.getElementById('rotaResultado').classList.remove('hidden');
+
+    // Sincronizar com campo manual se estiver visível
+    if (modoManual) document.getElementById('kmInput').value = kmRota;
+
+    calcular();
+  } catch(e) {
+    showToast('Erro de conexão ao calcular rota.', 'error');
+    console.warn(e);
+  } finally {
+    document.getElementById('rotaLoading').classList.add('hidden');
+  }
+}
+
+function esconderResultadoRota() {
+  document.getElementById('rotaResultado').classList.add('hidden');
+  kmRota = 0;
+  if (modoManual && !document.getElementById('kmInput').value) {
+    document.getElementById('kmInput').value = '';
+  }
+  document.getElementById('resultUnica').classList.add('hidden');
+  document.getElementById('resultConstante').classList.add('hidden');
+  document.getElementById('wppSection').classList.add('hidden');
+}
+
+function limparRota() {
+  coordOrigem = coordDestino = null;
+  kmRota = 0;
+  document.getElementById('inputOrigem').value  = '';
+  document.getElementById('inputDestino').value = '';
+  document.getElementById('clearOrigem').classList.remove('visible');
+  document.getElementById('clearDestino').classList.remove('visible');
+  document.getElementById('acOrigem').classList.add('hidden');
+  document.getElementById('acDestino').classList.add('hidden');
+  esconderResultadoRota();
+}
+
+function limparCampo(campo) {
+  if (campo==='origem') {
+    document.getElementById('inputOrigem').value = '';
+    document.getElementById('clearOrigem').classList.remove('visible');
+    document.getElementById('acOrigem').classList.add('hidden');
+    coordOrigem = null;
+  } else {
+    document.getElementById('inputDestino').value = '';
+    document.getElementById('clearDestino').classList.remove('visible');
+    document.getElementById('acDestino').classList.add('hidden');
+    coordDestino = null;
+  }
+  kmRota = 0;
+  esconderResultadoRota();
+}
+
+// Fechar autocomplete ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('.rota-card')) {
+    document.getElementById('acOrigem').classList.add('hidden');
+    document.getElementById('acDestino').classList.add('hidden');
+  }
+});
+
+// ── Modo manual ──
+function toggleModoManual() {
+  modoManual = !modoManual;
+  document.getElementById('kmManualWrap').classList.toggle('hidden', !modoManual);
+  document.getElementById('modoToggleLabel').innerText = modoManual
+    ? 'Usar cálculo automático de distância'
+    : 'Preferir inserir KM manualmente';
+  if (!modoManual) { document.getElementById('kmInput').value = ''; calcular(); }
+  else if (kmRota) { document.getElementById('kmInput').value = kmRota; calcular(); }
 }
 
 // ── Cálculo principal ──
+function getKmAtual() {
+  if (modoManual) return Number(document.getElementById('kmInput').value) || 0;
+  return kmRota;
+}
+
 function calcular() {
   const veiculo = getAtivo();
-  const km      = Number(document.getElementById('kmInput').value);
-  if (!veiculo || !km || km<=0) {
+  const km      = getKmAtual();
+
+  if (!veiculo || !km || km <= 0) {
     document.getElementById('resultUnica').classList.add('hidden');
     document.getElementById('resultConstante').classList.add('hidden');
     document.getElementById('wppSection').classList.add('hidden');
     return;
   }
 
-  const custoKm    = calcularCustoPorKm(veiculo);
+  const custoKm   = calcularCustoPorKm(veiculo);
   const custoTotal = km * custoKm;
-  const margem     = Number(document.getElementById('margemSlider').value) / 100;
-  const maoObra    = Number(document.getElementById('maoObraSlider').value) / 100;
-  const valorBase  = custoTotal * (1 + margem + maoObra);
+  const margem    = Number(document.getElementById('margemSlider').value) / 100;
+  const maoObra   = Number(document.getElementById('maoObraSlider').value) / 100;
+  const valorBase = custoTotal * (1 + margem + maoObra);
 
-  // Atualiza valor da mão de obra em R$
-  const maoObraReais = custoTotal * maoObra;
   const moEl = document.getElementById('maoObraValor');
-  if (moEl) moEl.innerText = maoObra > 0 ? '+ ' + formatCurrency(maoObraReais) : '';
+  if (moEl) moEl.innerText = maoObra > 0 ? '+ ' + formatCurrency(custoTotal * maoObra) : '';
 
-  if (tipoViagem === 'unica') {
-    calcularUnica(custoTotal, valorBase, margem, maoObra);
-  } else {
-    calcularConstante(custoTotal, valorBase, maoObra);
-  }
+  if (tipoViagem === 'unica') calcularUnica(custoTotal, valorBase, margem, maoObra);
+  else                        calcularConstante(custoTotal, valorBase);
 
   document.getElementById('wppSection').classList.remove('hidden');
 }
 
 function calcularUnica(custoTotal, valorBase, margem, maoObra) {
   const lucro = valorBase - custoTotal;
-  const maoObraReais = custoTotal * (maoObra||0);
+  const moReais = custoTotal * (maoObra||0);
 
   document.getElementById('valorUnico').innerText = formatCurrency(valorBase);
-  let custoInfo = `Custo da viagem: ${formatCurrency(custoTotal)}`;
-  if (maoObraReais > 0) {
-    custoInfo += ` · Mão de obra: ${formatCurrency(maoObraReais)} (${Math.round((maoObra||0)*100)}%)`;
-  }
-  document.getElementById('custoUnico').innerText = custoInfo;
+  let ci = `Custo da viagem: ${formatCurrency(custoTotal)}`;
+  if (moReais > 0) ci += ` · Mão de obra: ${formatCurrency(moReais)} (${Math.round((maoObra||0)*100)}%)`;
+  document.getElementById('custoUnico').innerText = ci;
 
-  const lucroEl = document.getElementById('lucroUnico');
-  lucroEl.innerText = `💰 Lucro estimado: ${formatCurrency(lucro)}`;
-  lucroEl.style.color = lucro>=0 ? '#22c55e' : '#ef4444';
+  const lEl = document.getElementById('lucroUnico');
+  lEl.innerText = `💰 Lucro estimado: ${formatCurrency(lucro)}`;
+  lEl.style.color = lucro >= 0 ? '#22c55e' : '#ef4444';
 
   document.getElementById('resultUnica').classList.remove('hidden');
   document.getElementById('resultConstante').classList.add('hidden');
 }
 
 function calcularConstante(custoTotal, valorBase) {
-  const max      = Math.max(2, Math.min(30, Number(document.getElementById('maxViagens').value)||5));
-  const descPct  = Number(document.getElementById('descontoSlider').value) / 100;
+  const max     = Math.max(2, Math.min(30, Number(document.getElementById('maxViagens').value)||5));
+  const descPct = Number(document.getElementById('descontoSlider').value) / 100;
+  const tabela  = document.getElementById('tabelaConstante');
 
-  const tabela = document.getElementById('tabelaConstante');
-  tabela.innerHTML = `
-    <div class="tabela-header">
-      <div>Qtd</div>
-      <div>Valor/Viagem</div>
-      <div>Desconto</div>
-      <div>Total</div>
-    </div>
-  `;
+  tabela.innerHTML = `<div class="tabela-header"><div>Qtd</div><div>Valor/Viagem</div><div>Desconto</div><div>Total</div></div>`;
 
   for (let i=1; i<=max; i++) {
-    // 1ª viagem: sem desconto. A partir da 2ª: desconto acumulativo
-    const descAcum  = i===1 ? 0 : (i-1) * descPct;
-    const descFinal = Math.min(descAcum, 0.6); // máx 60% de desconto
-    const valorViagem = valorBase * (1 - descFinal);
-    const totalPacote = valorViagem * i;
-
+    const descAcum  = i===1 ? 0 : (i-1)*descPct;
+    const descFinal = Math.min(descAcum, 0.6);
+    const vViagem   = valorBase * (1-descFinal);
+    const total     = vViagem * i;
     const row = document.createElement('div');
     row.className = 'tabela-row';
     row.innerHTML = `
       <div class="col-qtd">${i}x ${i===1?'🎯':i<=3?'⭐':'🔥'}</div>
-      <div class="col-valor">${formatCurrency(valorViagem)}</div>
-      <div class="col-desc">${i===1 ? '—' : '-'+Math.round(descFinal*100)+'%'}</div>
-      <div class="col-total">${formatCurrency(totalPacote)}</div>
-    `;
+      <div class="col-valor">${formatCurrency(vViagem)}</div>
+      <div class="col-desc">${i===1?'—':'-'+Math.round(descFinal*100)+'%'}</div>
+      <div class="col-total">${formatCurrency(total)}</div>`;
     tabela.appendChild(row);
   }
 
@@ -522,7 +726,7 @@ function calcularConstante(custoTotal, valorBase) {
   document.getElementById('resultUnica').classList.add('hidden');
 }
 
-// ── Destinatário WhatsApp ──
+// ── WhatsApp ──
 function setDestinatario(tipo) {
   destinatario = tipo;
   document.getElementById('btnClienteCad').classList.toggle('active', tipo==='cadastrado');
@@ -531,9 +735,8 @@ function setDestinatario(tipo) {
   document.getElementById('wrapNumAvulso').classList.toggle('hidden', tipo==='cadastrado');
 }
 
-// ── Montar mensagem ──
 function montarMensagem() {
-  const km      = Number(document.getElementById('kmInput').value);
+  const km      = getKmAtual();
   const veiculo = getAtivo();
   const custoKm = calcularCustoPorKm(veiculo);
   const custo   = km * custoKm;
@@ -541,55 +744,45 @@ function montarMensagem() {
   const maoObra = Number(document.getElementById('maoObraSlider').value) / 100;
   const valorBase = custo * (1 + margem + maoObra);
 
+  const origem  = coordOrigem?.label  || '—';
+  const destino = coordDestino?.label || '—';
+  const rotaInfo = (coordOrigem && coordDestino)
+    ? `📍 De: ${origem}\n📍 Para: ${destino}\n📏 Distância: ${km} km\n`
+    : `📏 Distância: ${km} km\n`;
+
   if (tipoViagem === 'unica') {
-    return `Olá! Segue o orçamento para sua viagem:\n\n` +
-           `📍 Distância: ${km} km\n` +
-           `💵 Valor da corrida: ${formatCurrency(valorBase)}\n\n` +
-           `Estamos à disposição! Entre em contato para confirmar. 🚗`;
+    return `Olá! Segue o orçamento para sua viagem:\n\n${rotaInfo}💵 Valor da corrida: ${formatCurrency(valorBase)}\n\nEstamos à disposição! Entre em contato para confirmar. 🚗`;
   } else {
     const max     = Math.max(2, Math.min(30, Number(document.getElementById('maxViagens').value)||5));
     const descPct = Number(document.getElementById('descontoSlider').value) / 100;
-
     let linhas = '';
     for (let i=1; i<=max; i++) {
-      const descAcum  = i===1 ? 0 : (i-1)*descPct;
-      const descFinal = Math.min(descAcum, 0.6);
-      const valorViagem = valorBase*(1-descFinal);
-      const totalPacote = valorViagem*i;
-      linhas += `  • ${i}x viagem${i>1?'s':''}: ${formatCurrency(valorViagem)}/viagem = ${formatCurrency(totalPacote)} total${i===1?'':` (-${Math.round(descFinal*100)}%)`}\n`;
+      const d = Math.min(i===1?0:(i-1)*descPct, 0.6);
+      const v = valorBase*(1-d);
+      linhas += `  • ${i}x: ${formatCurrency(v)}/viagem = ${formatCurrency(v*i)} total${i===1?'':` (-${Math.round(d*100)}%)`}\n`;
     }
-
-    return `Olá! Segue o orçamento para viagens frequentes:\n\n` +
-           `📍 Distância por viagem: ${km} km\n\n` +
-           `📋 Tabela de valores:\n${linhas}\n` +
-           `Quanto mais viagens, maior o desconto! 🚗\n` +
-           `Entre em contato para confirmar.`;
+    return `Olá! Segue o orçamento para viagens frequentes:\n\n${rotaInfo}\n📋 Tabela de valores:\n${linhas}\nQuanto mais viagens, maior o desconto! 🚗\nEntre em contato para confirmar.`;
   }
 }
 
-// ── Enviar WhatsApp ──
 function enviarWhatsApp() {
-  const veiculo = getAtivo();
-  const km      = Number(document.getElementById('kmInput').value);
-
-  if (!veiculo)   { showToast('Nenhum veículo configurado','error'); return; }
-  if (!km||km<=0) { showToast('Informe o KM a percorrer','info'); return; }
+  const km = getKmAtual();
+  if (!getAtivo())   { showToast('Nenhum veículo configurado','error'); return; }
+  if (!km || km<=0)  { showToast('Calcule a rota ou informe o KM','info'); return; }
 
   let tel = '';
-
   if (destinatario === 'cadastrado') {
-    const clienteId = Number(document.getElementById('selectCliente').value);
-    if (!clienteId) { showToast('Selecione um cliente','info'); return; }
-    const cliente = (vData.clientes||[]).find(c=>c.id===clienteId);
-    if (!cliente?.telefone) { showToast('Cliente sem telefone cadastrado','info'); return; }
-    tel = cliente.telefone.replace(/\D/g,'');
+    const cId = Number(document.getElementById('selectCliente').value);
+    if (!cId) { showToast('Selecione um cliente','info'); return; }
+    const cli = (vData.clientes||[]).find(c=>c.id===cId);
+    if (!cli?.telefone) { showToast('Cliente sem telefone cadastrado','info'); return; }
+    tel = cli.telefone.replace(/\D/g,'');
   } else {
     tel = document.getElementById('numAvulso').value.replace(/\D/g,'');
     if (!tel||tel.length<10) { showToast('Informe um número válido','info'); return; }
   }
 
-  const msg = montarMensagem();
-  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(montarMensagem())}`, '_blank');
 }
 
 // ── Init ──
@@ -598,79 +791,73 @@ popularClientes();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 
-<!-- Toggle Tema (Sol/Lua) -->
+<!-- Toggle Tema -->
 <button id="theme-toggle" title="Alternar tema" onclick="toggleTheme()">🌙</button>
 
-<!-- FAB backdrop -->
+<!-- ═══ FAB ═══ -->
 <div id="fab-backdrop" onclick="closeFab()"></div>
-
-<!-- FAB Container -->
 <div id="fab-container">
-
-  <!-- Opções (aparecem ao abrir) -->
   <div class="fab-options" id="fab-options">
-
-    <div class="fab-option" onclick="window.location.href='cotacao.html'">
-      <div class="fab-option-label">Cotação</div>
-      <button class="fab-option-btn fab-opt-cotacao">💰</button>
-    </div>
-
-    <div class="fab-option" onclick="window.location.href='viagens.html'">
-      <div class="fab-option-label">Nova Viagem</div>
-      <button class="fab-option-btn fab-opt-viagem">🚕</button>
-    </div>
-
-    <div class="fab-option" onclick="window.location.href='entregas.html'">
-      <div class="fab-option-label">Nova Entrega</div>
-      <button class="fab-option-btn fab-opt-entrega">📦</button>
-    </div>
-
-    <div class="fab-option" onclick="window.location.href='abastecimento.html'">
+    <div class="fab-option" onclick="fabAcao('abastecimento')">
       <div class="fab-option-label">Novo Abastecimento</div>
       <button class="fab-option-btn fab-opt-abastecimento">⛽</button>
     </div>
-
+    <div class="fab-option" onclick="fabAcao('cotacao')">
+      <div class="fab-option-label">Cotação de Viagem</div>
+      <button class="fab-option-btn fab-opt-cotacao">💰</button>
+    </div>
+    <div class="fab-option" onclick="fabAcao('viagens')">
+      <div class="fab-option-label">Nova Viagem</div>
+      <button class="fab-option-btn fab-opt-viagem">🚕</button>
+    </div>
+    <div class="fab-option" onclick="fabAcao('entregas')">
+      <div class="fab-option-label">Nova Entrega</div>
+      <button class="fab-option-btn fab-opt-entrega">📦</button>
+    </div>
   </div>
-
-  <!-- Botão principal -->
   <button id="fab-main" onclick="toggleFab()">+</button>
-
 </div>
 
 <script>
-  /* ── TEMA ── */
-  (function() {
-    const saved = localStorage.getItem('kmTheme') || 'dark';
-    document.documentElement.setAttribute('data-theme', saved);
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
-  })();
-
-  function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('kmTheme', next);
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
-  }
-
-  /* ── FAB ── */
-  function toggleFab() {
-    const opts     = document.getElementById('fab-options');
-    const main     = document.getElementById('fab-main');
-    const backdrop = document.getElementById('fab-backdrop');
-    const open = opts.classList.toggle('visible');
-    main.classList.toggle('open', open);
-    backdrop.classList.toggle('visible', open);
-  }
-
-  function closeFab() {
-    document.getElementById('fab-options').classList.remove('visible');
-    document.getElementById('fab-main').classList.remove('open');
-    document.getElementById('fab-backdrop').classList.remove('visible');
-  }
+(function(){
+  const s = localStorage.getItem('kmTheme')||'dark';
+  document.documentElement.setAttribute('data-theme', s);
+  const b = document.getElementById('theme-toggle');
+  if(b) b.textContent = s==='dark'?'🌙':'☀️';
+})();
+function toggleTheme(){
+  const c = document.documentElement.getAttribute('data-theme')||'dark';
+  const n = c==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('kmTheme',n);
+  const b=document.getElementById('theme-toggle');
+  if(b) b.textContent=n==='dark'?'🌙':'☀️';
+}
+function fabAcao(acao){
+  closeFab();
+  window.location.href={entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[acao]||'#';
+}
+function toggleFab(){
+  const o=document.getElementById('fab-options'),m=document.getElementById('fab-main'),b=document.getElementById('fab-backdrop');
+  const open=o.classList.toggle('visible');
+  m.classList.toggle('open',open); b.classList.toggle('visible',open);
+}
+function closeFab(){
+  document.getElementById('fab-options').classList.remove('visible');
+  document.getElementById('fab-main').classList.remove('open');
+  document.getElementById('fab-backdrop').classList.remove('visible');
+}
 </script>
+
+<!-- ═══ GLOBAL NAV ═══ -->
+<nav id="global-nav">
+  <a class="gnav-item " href="index.html"><span class="gnav-icon">🚗</span><span class="gnav-label">Início</span></a>
+  <a class="gnav-item " href="agenda.html"><span class="gnav-icon">📅</span><span class="gnav-label">Agenda</span></a>
+  <a class="gnav-item " href="entregas.html"><span class="gnav-icon">📦</span><span class="gnav-label">Entregas</span></a>
+  <a class="gnav-item " href="viagens.html"><span class="gnav-icon">🚕</span><span class="gnav-label">Viagens</span></a>
+  <a class="gnav-item " href="abastecimento.html"><span class="gnav-icon">⛽</span><span class="gnav-label">Abaste.</span></a>
+  <a class="gnav-item active" href="cotacao.html"><span class="gnav-icon">💰</span><span class="gnav-label">Cotação</span></a>
+</nav>
 
 </body>
 </html>

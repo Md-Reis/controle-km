@@ -23,6 +23,7 @@
 <title>Controle KM</title>
 
 <link rel="stylesheet" href="./style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
 </head>
 
@@ -36,6 +37,7 @@
 <nav>
   <button onclick="showPage('veiculos')" class="active">🚗</button>
   <button onclick="showPage('dashboard')">📊</button>
+  <button onclick="window.location.href='agenda.html'">📅</button>
   <button onclick="showPage('metas')">🎯</button>
   <button onclick="showPage('backup')">💾</button>
 </nav>
@@ -162,12 +164,32 @@
     </div>
   </div>
 
+  <!-- Gráfico comparativo -->
+  <div class="card" id="dashChartCard" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <strong>📈 Evolução do mês</strong>
+      <div style="display:flex;gap:8px;font-size:11px;color:var(--muted);align-items:center">
+        <span style="display:flex;align-items:center;gap:4px">
+          <span style="width:10px;height:3px;background:#2ea8a0;border-radius:2px;display:inline-block"></span>Atual
+        </span>
+        <span style="display:flex;align-items:center;gap:4px">
+          <span style="width:10px;height:3px;background:#e8940a;border-radius:2px;display:inline-block;opacity:.7"></span>Anterior
+        </span>
+      </div>
+    </div>
+    <div style="position:relative;height:190px">
+      <canvas id="dashChart"></canvas>
+    </div>
+    <div id="dashChartEmpty" style="display:none;text-align:center;padding:40px 0;color:var(--muted);font-size:13px">
+      Nenhum dado suficiente para o gráfico ainda.
+    </div>
+  </div>
+
   <!-- Últimas corridas -->
   <div class="card">
     <strong>🕒 Últimas corridas</strong>
     <div id="dashUltimas" style="margin-top:10px;max-height:320px;overflow-y:auto"></div>
   </div>
-</section>
 
 
 <!-- BACKUP -->
@@ -404,6 +426,118 @@
     return [...entregas, ...allViagens];
   }
 
+  let dashChartInstance = null;
+
+  function renderDashboardChart(todos) {
+    const agora    = new Date();
+    const anoAtual = agora.getFullYear();
+    const mesAtual = agora.getMonth();
+    const mesAnt   = mesAtual === 0 ? 11 : mesAtual - 1;
+    const anoAnt   = mesAtual === 0 ? anoAtual - 1 : anoAtual;
+    const diasAtual= new Date(anoAtual, mesAtual+1, 0).getDate();
+    const diasAnt  = new Date(anoAnt, mesAnt+1, 0).getDate();
+
+    const porDiaAtual = new Array(diasAtual).fill(0);
+    const porDiaAnt   = new Array(diasAnt).fill(0);
+
+    todos.forEach(l => {
+      if (!l.data) return;
+      const d = new Date(l.data);
+      if (d.getFullYear()===anoAtual && d.getMonth()===mesAtual)
+        porDiaAtual[d.getDate()-1] += l.valor||0;
+      if (d.getFullYear()===anoAnt && d.getMonth()===mesAnt)
+        porDiaAnt[d.getDate()-1] += l.valor||0;
+    });
+
+    const acumAtual = porDiaAtual.map((_,i,a)=>a.slice(0,i+1).reduce((s,v)=>s+v,0));
+    const acumAnt   = porDiaAnt.map((_,i,a)=>a.slice(0,i+1).reduce((s,v)=>s+v,0));
+    const hoje      = agora.getDate();
+    const dataAtual = acumAtual.slice(0, hoje);
+    const temDados  = dataAtual.some(v=>v>0) || acumAnt.some(v=>v>0);
+
+    const canvas = document.getElementById('dashChart');
+    const empty  = document.getElementById('dashChartEmpty');
+    if (!canvas) return;
+
+    if (!temDados) {
+      canvas.style.display='none';
+      if (empty) empty.style.display='';
+      return;
+    }
+    canvas.style.display='';
+    if (empty) empty.style.display='none';
+
+    const isDark    = document.documentElement.getAttribute('data-theme')!=='light';
+    const gridColor = isDark?'rgba(255,255,255,.05)':'rgba(0,0,0,.06)';
+    const textColor = isDark?'#768390':'#57636d';
+    const maxDias   = Math.max(diasAtual, diasAnt);
+    const labels    = Array.from({length:maxDias},(_,i)=>String(i+1));
+    const pad = (arr,len) => [...arr,...new Array(Math.max(0,len-arr.length)).fill(null)];
+
+    const ctx = canvas.getContext('2d');
+    const gradAtual = ctx.createLinearGradient(0,0,0,190);
+    gradAtual.addColorStop(0,isDark?'rgba(46,168,160,.35)':'rgba(26,122,114,.25)');
+    gradAtual.addColorStop(1,'rgba(46,168,160,0)');
+    const gradAnt = ctx.createLinearGradient(0,0,0,190);
+    gradAnt.addColorStop(0,isDark?'rgba(232,148,10,.2)':'rgba(196,122,0,.15)');
+    gradAnt.addColorStop(1,'rgba(232,148,10,0)');
+
+    const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    if (dashChartInstance) dashChartInstance.destroy();
+
+    dashChartInstance = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {
+            label: MESES[mesAtual],
+            data: pad(dataAtual, maxDias),
+            borderColor:'#2ea8a0', backgroundColor:gradAtual,
+            borderWidth:2.5,
+            pointRadius: (c)=>c.dataIndex===dataAtual.length-1?5:0,
+            pointHoverRadius:6, pointBackgroundColor:'#2ea8a0',
+            pointBorderColor:isDark?'#161b22':'#fff', pointBorderWidth:2,
+            tension:0.4, fill:true, spanGaps:false
+          },
+          {
+            label: MESES[mesAnt],
+            data: pad(acumAnt, maxDias),
+            borderColor:'rgba(232,148,10,.7)', backgroundColor:gradAnt,
+            borderWidth:1.8, borderDash:[5,4],
+            pointRadius:0, pointHoverRadius:5,
+            pointBackgroundColor:'#e8940a',
+            tension:0.4, fill:true, spanGaps:false
+          }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:isDark?'#1c2128':'#fff',
+            borderColor:isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.1)',
+            borderWidth:1,
+            titleColor:isDark?'#cdd9e5':'#1c2128',
+            bodyColor:isDark?'#768390':'#57636d',
+            padding:10, cornerRadius:10,
+            callbacks:{
+              title:items=>`Dia ${items[0].label}`,
+              label:c=>{const v=c.parsed.y;if(v===null)return null;return ` ${c.dataset.label}: ${Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}`;}
+            }
+          }
+        },
+        scales:{
+          x:{grid:{color:gridColor,drawTicks:false},border:{display:false},ticks:{color:textColor,font:{size:10},maxTicksLimit:10,maxRotation:0}},
+          y:{grid:{color:gridColor,drawTicks:false},border:{display:false},ticks:{color:textColor,font:{size:10},callback:v=>'R$'+(v>=1000?(v/1000).toFixed(1)+'k':v)},beginAtZero:true}
+        },
+        animation:{duration:900,easing:'easeInOutQuart'}
+      }
+    });
+  }
+
   function renderDashboard() {
     const agora    = new Date();
     const hojeStr  = agora.toISOString().slice(0,10);
@@ -507,6 +641,8 @@
           <div style="font-size:13px;font-weight:700;color:${cor}">${formatCurrency(l.lucro)}</div>
         </div>`;
     }).join('');
+    // Gráfico comparativo
+    renderDashboardChart(todasOrdenadas);
   }
 
   // ======= BACKUP =======

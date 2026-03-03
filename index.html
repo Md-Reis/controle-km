@@ -27,20 +27,22 @@
 
 </head>
 
-<body>
-
-<!-- Splash Screen -->
-<div id="splash">
-  <img src="assets/logo.webp" alt="Sheyla Toyota">
-</div>
-
-<nav>
+<body class="has-global-nav">
+<nav id="internal-nav">
   <button onclick="showPage('veiculos')" class="active">🚗</button>
   <button onclick="showPage('dashboard')">📊</button>
   <button onclick="window.location.href='agenda.html'">📅</button>
   <button onclick="showPage('metas')">🎯</button>
   <button onclick="showPage('backup')">💾</button>
 </nav>
+
+
+<!-- Splash Screen -->
+<div id="splash">
+  <img src="assets/logo.webp" alt="Sheyla Toyota">
+</div>
+
+
 
 <!-- VEÍCULOS -->
 <section id="veiculos" class="page active">
@@ -92,8 +94,6 @@
 </div>
 <div style="height:80px"></div>
 </section>
-
-<!-- CUSTOS -->
 
 <!-- DASHBOARD -->
 <section id="dashboard" class="page">
@@ -1060,79 +1060,92 @@
 </script>
 
 <!-- Toggle Tema (Sol/Lua) -->
-<button id="theme-toggle" title="Alternar tema" onclick="toggleTheme()">🌙</button>
+<button style="margin-top: 60px" id="theme-toggle" title="Alternar tema" onclick="toggleTheme()">🌙</button>
 
-<!-- FAB backdrop -->
+<!-- ═══ FAB ═══ -->
 <div id="fab-backdrop" onclick="closeFab()"></div>
-
-<!-- FAB Container -->
 <div id="fab-container">
-
-  <!-- Opções (aparecem ao abrir) -->
   <div class="fab-options" id="fab-options">
-
-    <div class="fab-option" onclick="window.location.href='cotacao.html'">
-      <div class="fab-option-label">Cotação</div>
-      <button class="fab-option-btn fab-opt-cotacao">💰</button>
-    </div>
-
-    <div class="fab-option" onclick="window.location.href='viagens.html'">
-      <div class="fab-option-label">Nova Viagem</div>
-      <button class="fab-option-btn fab-opt-viagem">🚕</button>
-    </div>
-
-    <div class="fab-option" onclick="window.location.href='entregas.html'">
-      <div class="fab-option-label">Nova Entrega</div>
-      <button class="fab-option-btn fab-opt-entrega">📦</button>
-    </div>
-
-    <div class="fab-option" onclick="window.location.href='abastecimento.html'">
+    <div class="fab-option" onclick="fabAcao('abastecimento')">
       <div class="fab-option-label">Novo Abastecimento</div>
       <button class="fab-option-btn fab-opt-abastecimento">⛽</button>
     </div>
-
+    <div class="fab-option" onclick="fabAcao('cotacao')">
+      <div class="fab-option-label">Cotação de Viagem</div>
+      <button class="fab-option-btn fab-opt-cotacao">💰</button>
+    </div>
+    <div class="fab-option" onclick="fabAcao('viagens')">
+      <div class="fab-option-label">Nova Viagem</div>
+      <button class="fab-option-btn fab-opt-viagem">🚕</button>
+    </div>
+    <div class="fab-option" onclick="fabAcao('entregas')">
+      <div class="fab-option-label">Nova Entrega</div>
+      <button class="fab-option-btn fab-opt-entrega">📦</button>
+    </div>
   </div>
-
-  <!-- Botão principal -->
   <button id="fab-main" onclick="toggleFab()">+</button>
-
 </div>
-
 <script>
-  /* ── TEMA ── */
-  (function() {
-    const saved = localStorage.getItem('kmTheme') || 'dark';
-    document.documentElement.setAttribute('data-theme', saved);
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
-  })();
-
-  function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('kmTheme', next);
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
-  }
-
-  /* ── FAB ── */
-  function toggleFab() {
-    const opts     = document.getElementById('fab-options');
-    const main     = document.getElementById('fab-main');
-    const backdrop = document.getElementById('fab-backdrop');
-    const open = opts.classList.toggle('visible');
-    main.classList.toggle('open', open);
-    backdrop.classList.toggle('visible', open);
-  }
-
-  function closeFab() {
-    document.getElementById('fab-options').classList.remove('visible');
-    document.getElementById('fab-main').classList.remove('open');
-    document.getElementById('fab-backdrop').classList.remove('visible');
-  }
+/* ── TEMA ── */
+(function(){
+  const s = localStorage.getItem('kmTheme')||'dark';
+  document.documentElement.setAttribute('data-theme', s);
+  const b = document.getElementById('theme-toggle');
+  if(b) b.textContent = s==='dark'?'🌙':'☀️';
+})();
+function toggleTheme(){
+  const c = document.documentElement.getAttribute('data-theme')||'dark';
+  const n = c==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('kmTheme',n);
+  const b=document.getElementById('theme-toggle');
+  if(b) b.textContent=n==='dark'?'🌙':'☀️';
+}
+/* ── FAB ── */
+function fabAcao(acao){
+  closeFab();
+  window.location.href = {entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[acao] || '#';
+}
+function toggleFab(){
+  const o=document.getElementById('fab-options');
+  const m=document.getElementById('fab-main');
+  const b=document.getElementById('fab-backdrop');
+  const open=o.classList.toggle('visible');
+  m.classList.toggle('open',open);
+  b.classList.toggle('visible',open);
+}
+function closeFab(){
+  document.getElementById('fab-options').classList.remove('visible');
+  document.getElementById('fab-main').classList.remove('open');
+  document.getElementById('fab-backdrop').classList.remove('visible');
+}
 </script>
-
+<!-- ═══ GLOBAL NAV ═══ -->
+<nav id="global-nav">
+  <a class="gnav-item active" href="index.html">
+    <span class="gnav-icon">🚗</span>
+    <span class="gnav-label">Início</span>
+  </a>
+  <a class="gnav-item " href="agenda.html">
+    <span class="gnav-icon">📅</span>
+    <span class="gnav-label">Agenda</span>
+  </a>
+  <a class="gnav-item " href="entregas.html">
+    <span class="gnav-icon">📦</span>
+    <span class="gnav-label">Entregas</span>
+  </a>
+  <a class="gnav-item " href="viagens.html">
+    <span class="gnav-icon">🚕</span>
+    <span class="gnav-label">Viagens</span>
+  </a>
+  <a class="gnav-item " href="abastecimento.html">
+    <span class="gnav-icon">⛽</span>
+    <span class="gnav-label">Abaste.</span>
+  </a>
+  <a class="gnav-item " href="cotacao.html">
+    <span class="gnav-icon">💰</span>
+    <span class="gnav-label">Cotação</span>
+  </a>
+</nav>
 </body>
 <footer></footer>
-

@@ -10,12 +10,11 @@
 <title>Cotação</title>
 <link rel="stylesheet" href="./style.css">
 <style>
-  /* ── Tipo de viagem ── */
   .tipo-selector { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
   .tipo-btn {
     padding:14px 10px; border-radius:14px; border:2px solid rgba(46,168,160,.15);
     background:var(--bg); color:var(--muted); font-size:14px; font-weight:600;
-    cursor:pointer; text-align:center; transition:all .2s ease; line-height:1.4;
+    cursor:pointer; text-align:center; transition:all .2s; line-height:1.4;
   }
   .tipo-btn span { display:block; font-size:24px; margin-bottom:4px; }
   .tipo-btn.active {
@@ -23,172 +22,176 @@
     background:rgba(46,168,160,.08); box-shadow:0 0 20px rgba(46,168,160,.15);
   }
 
-  /* ── Card de rota ── */
-  .rota-card {
-    background:var(--card); border:1px solid var(--border);
-    border-radius:16px; overflow:hidden; margin-bottom:14px;
-  }
-  .rota-card-header {
-    padding:14px 14px 0; display:flex; justify-content:space-between; align-items:center;
-  }
-  .rota-card-title { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  /* ── Card Rota ── */
+  .rota-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-bottom:14px; }
+  .rota-card-header { padding:14px 14px 10px; display:flex; justify-content:space-between; align-items:center; }
+  .rota-card-title  { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
 
-  /* Campos de endereço */
-  .rota-fields { padding:12px 14px; }
-  .rota-field { margin-bottom:8px; position:relative; }
-  .rota-field-label {
-    font-size:11px; font-weight:700; text-transform:uppercase;
-    letter-spacing:.5px; color:var(--muted); margin-bottom:4px; display:flex; align-items:center; gap:6px;
+  /* Paradas */
+  .paradas-list { padding:0 14px; }
+  .parada-item {
+    display:flex; align-items:center; gap:8px; margin-bottom:8px;
+    animation: slideUp .25s ease;
   }
-  .rota-field-dot {
-    width:10px; height:10px; border-radius:50%; flex-shrink:0;
+  .parada-dot-wrap {
+    display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:20px;
   }
+  .parada-dot {
+    width:12px; height:12px; border-radius:50%; flex-shrink:0; border:2px solid #fff;
+  }
+  .parada-line { width:2px; height:8px; background:var(--border); margin-top:2px; }
   .dot-origem  { background:#22c55e; }
+  .dot-meio    { background:#f59e0b; }
   .dot-destino { background:#ef4444; }
 
-  .rota-field input {
-    margin-bottom:0; padding-right:42px;
-    border-radius:10px; font-size:14px;
+  .parada-input-wrap { flex:1; position:relative; }
+  .parada-input-wrap input { margin-bottom:0; padding-right:38px; font-size:14px; border-radius:10px; }
+  .parada-clear {
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    background:none; border:none; color:var(--muted); font-size:14px;
+    cursor:pointer; padding:4px; width:auto; line-height:1; opacity:0; pointer-events:none; transition:opacity .2s;
   }
-  .rota-field input:focus { border-color:var(--primary); }
+  .parada-clear.show { opacity:1; pointer-events:all; }
 
-  .rota-field-clear {
-    position:absolute; right:10px; bottom:11px;
-    background:none; border:none; color:var(--muted);
-    font-size:15px; cursor:pointer; padding:4px; width:auto; line-height:1;
-    opacity:0; pointer-events:none; transition:opacity .2s;
+  .parada-remove {
+    background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.2);
+    color:#ef4444; border-radius:8px; width:32px; height:32px;
+    font-size:14px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    padding:0; transition:all .2s;
   }
-  .rota-field-clear.show { opacity:1; pointer-events:all; }
+  .parada-remove:hover { background:rgba(239,68,68,.25); }
 
-  .rota-connector {
-    display:flex; align-items:center; gap:8px; padding:2px 14px;
+  .rota-actions { display:flex; gap:8px; padding:8px 14px 12px; }
+  .btn-add-parada {
+    flex:1; padding:9px; border-radius:10px; background:rgba(46,168,160,.1);
+    border:1px dashed rgba(46,168,160,.4); color:var(--primary);
+    font-size:13px; font-weight:600; cursor:pointer; width:auto; transition:all .2s;
   }
-  .rota-connector-line {
-    width:2px; height:20px; background:var(--border);
-    border-radius:1px; margin-left:4px;
-  }
+  .btn-add-parada:hover { background:rgba(46,168,160,.18); }
   .rota-swap {
-    margin-left:auto; background:var(--card2); border:1px solid var(--border);
-    border-radius:8px; width:auto; padding:5px 10px; color:var(--muted);
-    font-size:13px; cursor:pointer; transition:all .2s;
+    padding:9px 12px; border-radius:10px; background:var(--card2);
+    border:1px solid var(--border); color:var(--muted);
+    font-size:13px; cursor:pointer; width:auto; transition:all .2s;
   }
   .rota-swap:hover { color:var(--primary); border-color:var(--primary); }
 
   /* Mapa */
-  .mapa-wrap {
-    height:220px; position:relative; background:var(--card2);
-    border-top:1px solid var(--border);
-    display:none;
-  }
+  .mapa-wrap { height:240px; position:relative; background:var(--card2); border-top:1px solid var(--border); display:none; }
   .mapa-wrap.show { display:block; }
   #map { width:100%; height:100%; }
-
   .mapa-overlay-btn {
-    position:absolute; bottom:10px; right:10px;
-    background:var(--card); border:1px solid var(--border);
-    border-radius:10px; padding:7px 12px; font-size:12px; font-weight:600;
-    color:var(--text); cursor:pointer; width:auto;
-    box-shadow:0 2px 8px var(--shadow); z-index:10;
-    transition:all .2s;
+    position:absolute; bottom:10px; right:10px; background:var(--card);
+    border:1px solid var(--border); border-radius:10px; padding:7px 12px;
+    font-size:12px; font-weight:600; color:var(--text); cursor:pointer; width:auto;
+    box-shadow:0 2px 8px var(--shadow); z-index:10; transition:all .2s;
   }
   .mapa-overlay-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
 
-  /* Resultado da rota */
-  .rota-resultado {
-    margin:0 14px 14px; padding:12px 14px;
-    background:rgba(46,168,160,.08); border:1px solid rgba(46,168,160,.25);
-    border-radius:12px; display:none; animation:slideUp .3s ease;
-  }
-  .rota-resultado.show { display:flex; align-items:center; gap:10px; }
-  .rota-resultado-km   { font-size:22px; font-weight:800; color:var(--primary); }
-  .rota-resultado-meta { flex:1; }
-  .rota-resultado-sub  { font-size:12px; color:var(--muted); margin-top:2px; }
-  .rota-limpar { background:transparent; border:1px solid var(--border); color:var(--muted); width:auto; padding:5px 10px; font-size:12px; border-radius:8px; }
-
-  /* Loading */
+  /* Loading + Resultado rota */
   .rota-loading { padding:10px 14px 14px; display:none; align-items:center; gap:10px; color:var(--muted); font-size:13px; }
   .rota-loading.show { display:flex; }
-  .spinner { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+  .spinner { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
+  .rota-resultado { margin:0 14px 14px; padding:12px 14px; background:rgba(46,168,160,.08); border:1px solid rgba(46,168,160,.25); border-radius:12px; display:none; }
+  .rota-resultado.show { display:flex; align-items:center; gap:10px; }
+  .rota-resultado-km  { font-size:20px; font-weight:800; color:var(--primary); }
+  .rota-resultado-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  .rota-limpar { background:transparent; border:1px solid var(--border); color:var(--muted); width:auto; padding:5px 10px; font-size:12px; border-radius:8px; flex-shrink:0; }
+
+  /* Paradas resumo */
+  .paradas-resumo { font-size:11px; color:var(--muted); margin-top:4px; }
+  .paradas-resumo span { color:var(--primary); font-weight:600; }
+
   /* Modo manual */
-  .modo-manual-btn {
-    display:flex; align-items:center; gap:6px; padding:8px 14px 12px;
-    font-size:12px; color:var(--muted); cursor:pointer; background:none; border:none; width:100%; text-align:left;
-  }
+  .modo-manual-btn { display:flex; align-items:center; gap:6px; padding:6px 14px 12px; font-size:12px; color:var(--muted); cursor:pointer; background:none; border:none; width:100%; text-align:left; }
   .modo-manual-btn span { color:var(--primary); font-weight:600; }
 
-  /* ── Parâmetros ── */
+  /* ── Histórico de Rotas ── */
+  .historico-section { margin-bottom:14px; }
+  .historico-header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 14px; background:var(--card); border:1px solid var(--border);
+    border-radius:12px; cursor:pointer; transition:background .2s;
+  }
+  .historico-header:hover { background:var(--card2); }
+  .historico-header-left { display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; }
+  .historico-count { background:var(--primary); color:#fff; border-radius:20px; padding:2px 8px; font-size:11px; font-weight:700; }
+  .historico-chevron { color:var(--muted); font-size:12px; transition:transform .2s; }
+  .historico-chevron.open { transform:rotate(180deg); }
+
+  .historico-list { margin-top:8px; display:none; }
+  .historico-list.show { display:flex; flex-direction:column; gap:8px; }
+
+  .historico-item {
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:12px 14px; cursor:pointer; transition:all .2s; position:relative;
+  }
+  .historico-item:hover { border-color:var(--primary); background:rgba(46,168,160,.05); }
+  .historico-item-nome { font-weight:700; font-size:14px; margin-bottom:4px; }
+  .historico-item-paradas { font-size:12px; color:var(--muted); line-height:1.6; }
+  .historico-item-meta { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .historico-item-km { font-size:13px; font-weight:700; color:var(--primary); }
+  .historico-item-data { font-size:11px; color:var(--muted); margin-left:auto; }
+  .historico-item-del {
+    position:absolute; top:10px; right:10px;
+    background:rgba(239,68,68,.1); border:none; border-radius:6px;
+    color:#ef4444; font-size:13px; padding:4px 7px; cursor:pointer; width:auto;
+    opacity:0; transition:opacity .2s;
+  }
+  .historico-item:hover .historico-item-del { opacity:1; }
+
+  .btn-salvar-rota {
+    width:100%; padding:10px; border-radius:10px; margin:8px 0 0;
+    background:rgba(46,168,160,.1); border:1px solid rgba(46,168,160,.3);
+    color:var(--primary); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .btn-salvar-rota:hover { background:rgba(46,168,160,.2); }
+
+  /* Modal salvar rota */
+  .modal-salvar { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:500; display:flex; align-items:flex-end; justify-content:center; animation:fadeIn .2s; }
+  .modal-salvar.hidden { display:none; }
+  .modal-salvar-box { background:var(--bg); border-radius:20px 20px 0 0; padding:20px; width:100%; max-width:600px; }
+  .modal-salvar-box h3 { margin-bottom:12px; font-size:17px; }
+  .modal-salvar-actions { display:flex; gap:8px; margin-top:12px; }
+  .modal-salvar-actions button { flex:1; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; width:auto; }
+  .btn-cancelar-salvar { background:var(--card2); border:1px solid var(--border); color:var(--muted); }
+  .btn-confirmar-salvar { background:var(--primary); border:none; color:#fff; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  /* Params */
   .params-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; margin-bottom:14px; }
   .margem-row, .desc-row { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
-  .margem-row input[type=range], .desc-row input[type=range] {
-    flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,.1);
-    outline:none; border:none; padding:0; margin:0; cursor:pointer;
-  }
-  .margem-row input[type=range] { accent-color:var(--primary); }
-  .desc-row   input[type=range] { accent-color:#22c55e; }
+  .margem-row input[type=range] { flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,.1); outline:none; border:none; padding:0; margin:0; cursor:pointer; accent-color:var(--primary); }
+  .desc-row   input[type=range] { flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,.1); outline:none; border:none; padding:0; margin:0; cursor:pointer; accent-color:#22c55e; }
   .margem-badge { min-width:48px; text-align:center; font-weight:700; color:var(--primary); font-size:15px; }
   .desc-badge   { min-width:48px; text-align:center; font-weight:700; color:#22c55e; font-size:15px; }
 
-  /* ── Resultado único ── */
-  .result-unica {
-    background:linear-gradient(135deg, var(--card), var(--bg2));
-    border:1px solid rgba(46,168,160,.2); border-radius:18px;
-    padding:20px; text-align:center; margin-bottom:14px; animation:slideUp .3s ease;
-  }
+  /* Resultado */
+  .result-unica { background:linear-gradient(135deg,var(--card),var(--bg2)); border:1px solid rgba(46,168,160,.2); border-radius:18px; padding:20px; text-align:center; margin-bottom:14px; animation:slideUp .3s ease; }
   .result-unica .valor-grande { font-size:42px; font-weight:800; color:var(--primary); line-height:1; margin:8px 0; letter-spacing:-1px; }
   .result-unica .custo-info   { font-size:13px; color:var(--muted); margin-top:6px; }
   .result-unica .lucro-info   { font-size:15px; font-weight:600; margin-top:8px; padding-top:10px; border-top:1px solid var(--border); }
 
-  /* ── Tabela constante ── */
   .tabela-constante { border-radius:14px; overflow:hidden; border:1px solid var(--border); margin-bottom:14px; animation:slideUp .3s ease; }
-  .tabela-header {
-    display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr;
-    background:rgba(46,168,160,.12); padding:10px 14px;
-    font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.5px;
-  }
-  .tabela-row {
-    display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr;
-    padding:11px 14px; font-size:13px; border-bottom:1px solid var(--border);
-    align-items:center; transition:background .15s;
-  }
+  .tabela-header { display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; background:rgba(46,168,160,.12); padding:10px 14px; font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.5px; }
+  .tabela-row { display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; padding:11px 14px; font-size:13px; border-bottom:1px solid var(--border); align-items:center; transition:background .15s; }
   .tabela-row:last-child { border-bottom:none; }
   .tabela-row:hover { background:rgba(46,168,160,.07); }
-  .col-qtd   { font-weight:700; color:var(--text); }
-  .col-valor { font-weight:700; color:var(--primary); }
-  .col-desc  { font-size:12px; color:#22c55e; font-weight:600; }
-  .col-total { font-weight:700; color:var(--accent); }
+  .col-qtd{font-weight:700;color:var(--text)} .col-valor{font-weight:700;color:var(--primary)} .col-desc{font-size:12px;color:#22c55e;font-weight:600} .col-total{font-weight:700;color:var(--accent)}
 
-  /* ── WhatsApp ── */
+  /* WhatsApp */
   .wpp-section { margin-bottom:14px; }
-  .wpp-toggle  { display:flex; gap:8px; margin-bottom:10px; }
-  .wpp-toggle button {
-    flex:1; padding:9px; border-radius:10px; background:var(--input-bg);
-    color:var(--muted); font-size:13px; width:auto; border:1px solid var(--border); transition:all .2s;
-  }
+  .wpp-toggle { display:flex; gap:8px; margin-bottom:10px; }
+  .wpp-toggle button { flex:1; padding:9px; border-radius:10px; background:var(--input-bg); color:var(--muted); font-size:13px; width:auto; border:1px solid var(--border); transition:all .2s; }
   .wpp-toggle button.active { background:#25d366; color:#fff; border-color:#25d366; }
-  .btn-wpp {
-    background:#25d366 !important; color:#fff !important; font-size:16px !important;
-    font-weight:700 !important; margin-top:10px; border-radius:14px !important;
-    padding:16px !important; box-shadow:0 4px 20px rgba(37,211,102,.3);
-  }
+  .btn-wpp { background:#25d366 !important; color:#fff !important; font-size:16px !important; font-weight:700 !important; margin-top:10px; border-radius:14px !important; padding:16px !important; box-shadow:0 4px 20px rgba(37,211,102,.3); }
 
-  /* ── Veículo banner ── */
-  .veiculo-banner {
-    display:flex; align-items:center; gap:12px;
-    background:rgba(46,168,160,.08); border:1px solid rgba(46,168,160,.2);
-    border-radius:12px; padding:12px 14px; margin-bottom:14px;
-  }
-  .veiculo-banner .icon { font-size:24px; }
-  .veiculo-banner .nome { font-weight:700; font-size:15px; }
-  .veiculo-banner .custo { font-size:12px; color:var(--secondary); margin-top:2px; }
+  .veiculo-banner { display:flex; align-items:center; gap:12px; background:rgba(46,168,160,.08); border:1px solid rgba(46,168,160,.2); border-radius:12px; padding:12px 14px; margin-bottom:14px; }
+  .veiculo-banner .icon{font-size:24px} .veiculo-banner .nome{font-weight:700;font-size:15px} .veiculo-banner .custo{font-size:12px;color:var(--secondary);margin-top:2px}
 
   .hidden { display:none !important; }
-  @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-  .anim-in { animation:slideUp .3s ease forwards; }
-
-  /* Ajuste mapa tema escuro */
-  [data-theme="dark"] #map { filter:invert(92%) hue-rotate(180deg) brightness(.9) contrast(.9); }
+  @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
 </style>
 </head>
 <body class="has-global-nav">
@@ -197,10 +200,7 @@
 <!-- Banner veículo -->
 <div class="veiculo-banner">
   <div class="icon">🚗</div>
-  <div>
-    <div class="nome" id="bNome">—</div>
-    <div class="custo" id="bCusto">Configure um veículo no Início</div>
-  </div>
+  <div><div class="nome" id="bNome">—</div><div class="custo" id="bCusto">Configure um veículo no Início</div></div>
 </div>
 
 <!-- Tipo -->
@@ -209,31 +209,19 @@
   <div class="tipo-btn" id="btnConstante" onclick="setTipo('constante')"><span>🔄</span>Viagem Constante</div>
 </div>
 
-<!-- ══ CARD ROTA ══ -->
+<!-- ══ CARD ROTA COM MÚLTIPLAS PARADAS ══ -->
 <div class="rota-card">
   <div class="rota-card-header">
-    <span class="rota-card-title">📍 Origem → Destino</span>
+    <span class="rota-card-title">📍 Rota</span>
+    <button class="rota-swap" onclick="inverterRota()">⇅ Inverter</button>
   </div>
 
-  <div class="rota-fields">
-    <!-- Origem -->
-    <div class="rota-field">
-      <div class="rota-field-label"><span class="rota-field-dot dot-origem"></span>Origem</div>
-      <input id="inputOrigem" type="text" placeholder="Rua, número, bairro ou CEP…" autocomplete="off">
-      <button class="rota-field-clear" id="clearOrigem" onclick="limparCampo('origem')">✕</button>
-    </div>
+  <!-- Lista de paradas dinâmica -->
+  <div class="paradas-list" id="paradasList"></div>
 
-    <div class="rota-connector">
-      <div class="rota-connector-line"></div>
-      <button class="rota-swap" onclick="swapEnderecos()" title="Inverter">⇅ Inverter</button>
-    </div>
-
-    <!-- Destino -->
-    <div class="rota-field">
-      <div class="rota-field-label"><span class="rota-field-dot dot-destino"></span>Destino</div>
-      <input id="inputDestino" type="text" placeholder="Rua, número, bairro ou CEP…" autocomplete="off">
-      <button class="rota-field-clear" id="clearDestino" onclick="limparCampo('destino')">✕</button>
-    </div>
+  <!-- Botões -->
+  <div class="rota-actions">
+    <button class="btn-add-parada" onclick="adicionarParada()">＋ Adicionar parada</button>
   </div>
 
   <!-- Loading -->
@@ -241,14 +229,20 @@
     <div class="spinner"></div><span>Calculando rota…</span>
   </div>
 
-  <!-- Resultado rota -->
+  <!-- Resultado -->
   <div class="rota-resultado" id="rotaResultado">
     <div style="font-size:22px">🗺️</div>
-    <div class="rota-resultado-meta">
+    <div style="flex:1">
       <div class="rota-resultado-km" id="rotaKmLabel">—</div>
       <div class="rota-resultado-sub" id="rotaSubLabel"></div>
+      <div class="paradas-resumo" id="paradasResumo"></div>
     </div>
-    <button class="rota-limpar" onclick="limparRota()">✕ Limpar</button>
+    <button class="rota-limpar" onclick="limparRota()">✕</button>
+  </div>
+
+  <!-- Salvar rota -->
+  <div id="btnSalvarWrap" class="hidden" style="padding:0 14px 12px">
+    <button class="btn-salvar-rota" onclick="abrirModalSalvar()">💾 Salvar esta rota</button>
   </div>
 
   <!-- Mapa -->
@@ -257,10 +251,8 @@
     <button class="mapa-overlay-btn" onclick="abrirGoogleMaps()">🗺 Abrir no Maps</button>
   </div>
 
-  <!-- Modo manual toggle -->
-  <button class="modo-manual-btn" onclick="toggleModoManual()">
-    ✏️ <span id="modoLabel">Inserir KM manualmente</span>
-  </button>
+  <!-- Modo manual -->
+  <button class="modo-manual-btn" onclick="toggleModoManual()">✏️ <span id="modoLabel">Inserir KM manualmente</span></button>
 </div>
 
 <!-- KM manual -->
@@ -269,6 +261,18 @@
     <label>KM a percorrer (manual)</label>
     <input id="kmInput" type="number" placeholder="Ex: 25" oninput="calcular()" style="margin-bottom:0">
   </div>
+</div>
+
+<!-- ══ HISTÓRICO DE ROTAS ══ -->
+<div class="historico-section">
+  <div class="historico-header" onclick="toggleHistorico()">
+    <div class="historico-header-left">
+      ⭐ Rotas salvas
+      <span class="historico-count" id="historicoCount">0</span>
+    </div>
+    <span class="historico-chevron" id="historicoChevron">▼</span>
+  </div>
+  <div class="historico-list" id="historicoList"></div>
 </div>
 
 <!-- Parâmetros -->
@@ -340,13 +344,26 @@
 </div>
 
 <div style="height:24px"></div>
-</div><!-- /padding wrapper -->
+</div>
+
+<!-- Modal salvar rota -->
+<div class="modal-salvar hidden" id="modalSalvar">
+  <div class="modal-salvar-box">
+    <h3>💾 Salvar rota</h3>
+    <label>Nome da rota</label>
+    <input id="nomeRotaInput" type="text" placeholder="Ex: Escola + Centro, Cliente João…">
+    <div class="modal-salvar-actions">
+      <button class="btn-cancelar-salvar" onclick="fecharModalSalvar()">Cancelar</button>
+      <button class="btn-confirmar-salvar" onclick="confirmarSalvarRota()">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Toast -->
 <div id="toast" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--input-bg);color:white;padding:14px 18px;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:9999;font-weight:500;max-width:90vw;text-align:center"></div>
 
-<!-- ══ JAVASCRIPT PRINCIPAL ══ -->
 <script>
+// ── Storage ──
 const data  = JSON.parse(localStorage.getItem('kmApp'))     || {veiculos:[],ativo:null};
 const vData = JSON.parse(localStorage.getItem('viagensApp')) || {clientes:[]};
 
@@ -355,18 +372,18 @@ let destinatario = 'cadastrado';
 let modoManual   = false;
 let kmRota       = 0;
 let duracaoRota  = '';
-let endOrigemFull= '';
-let endDestinoFull='';
 
-// Objetos Google Maps
-let mapObj        = null;
-let markerOrigem  = null;
-let markerDestino = null;
-let polylineRota  = null;
-let acOrigem      = null;
-let acDestino     = null;
+// Estado das paradas: array de { id, inputEl, acObj, place: {address, lat, lng} }
+let paradas = [];
+let paradaIdCounter = 0;
+
+// Google Maps
+let mapObj            = null;
 let directionsService = null;
 let directionsRenderer= null;
+
+// Histórico
+let rotasSalvas = JSON.parse(localStorage.getItem('rotasSalvas')) || [];
 
 // ── Utils ──
 function fmt(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -381,12 +398,10 @@ function mascaraTel(i){
   v=v.length<=10?v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3'):v.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
   i.value=v;
 }
-
-// ── Veículo ──
 function getAtivo(){ return data.veiculos.find(v=>v.id===data.ativo); }
 function custoPorKm(v){
   if(!v||v.consumo<=0) return 0;
-  return v.custos.comb/v.consumo + ((v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0))/(Number(v.kmMensal)||2000);
+  return v.custos.comb/v.consumo+((v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0))/(Number(v.kmMensal)||2000);
 }
 function initBanner(){
   const v=getAtivo(); if(!v) return;
@@ -394,15 +409,11 @@ function initBanner(){
   const c=custoPorKm(v);
   document.getElementById('bCusto').innerText=c>0?`Custo por km: R$ ${c.toFixed(3)}`:'Configure os custos no Início';
 }
-
-// ── Clientes ──
 function popularClientes(){
   const s=document.getElementById('selectCliente');
   s.innerHTML='<option value="">— Selecione um cliente —</option>';
   (vData.clientes||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;s.appendChild(o);});
 }
-
-// ── Tipo ──
 function setTipo(t){
   tipoViagem=t;
   document.getElementById('btnUnica').classList.toggle('active',t==='unica');
@@ -410,13 +421,9 @@ function setTipo(t){
   document.getElementById('descontoWrap').classList.toggle('hidden',t==='unica');
   esconderResultados(); calcular();
 }
-
-// ── Sliders ──
 function atualizarMargem() { document.getElementById('margemBadge').innerText=document.getElementById('margemSlider').value+'%'; calcular(); }
 function atualizarDesconto(){ document.getElementById('descontoBadge').innerText=document.getElementById('descontoSlider').value+'%'; calcular(); }
 function atualizarMaoObra() { document.getElementById('maoObraBadge').innerText=document.getElementById('maoObraSlider').value+'%'; calcular(); }
-
-// ── Modo manual ──
 function toggleModoManual(){
   modoManual=!modoManual;
   document.getElementById('kmManualWrap').classList.toggle('hidden',!modoManual);
@@ -424,41 +431,143 @@ function toggleModoManual(){
   if(!modoManual){ document.getElementById('kmInput').value=''; calcular(); }
   else if(kmRota){ document.getElementById('kmInput').value=kmRota; calcular(); }
 }
-function getKm(){ return modoManual ? Number(document.getElementById('kmInput').value)||0 : kmRota; }
+function getKm(){ return modoManual?Number(document.getElementById('kmInput').value)||0:kmRota; }
 
-// ── Swap endereços ──
-function swapEnderecos(){
-  const iO=document.getElementById('inputOrigem');
-  const iD=document.getElementById('inputDestino');
-  const tmp=iO.value; iO.value=iD.value; iD.value=tmp;
-  const tC=endOrigemFull; endOrigemFull=endDestinoFull; endDestinoFull=tC;
-  // Re-trigger autocomplete places swap se existir
-  if(acOrigem&&acDestino){
-    const pO=acOrigem.getPlace&&acOrigem.getPlace();
-    // simplesmente limpar e deixar usuário confirmar
-  }
-  if(kmRota) calcularRotaGoogle();
+// ════════════════════════════════════════
+// PARADAS DINÂMICAS
+// ════════════════════════════════════════
+function criarParadaEl(id, isFirst, isLast, totalParadas) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'parada-item';
+  wrapper.dataset.id = id;
+
+  // Cor do dot
+  const dotClass = isFirst ? 'dot-origem' : isLast ? 'dot-destino' : 'dot-meio';
+  const label    = isFirst ? 'Origem' : isLast ? 'Destino' : `Parada ${totalParadas - 2}`;
+
+  wrapper.innerHTML = `
+    <div class="parada-dot-wrap">
+      <div class="parada-dot ${dotClass}"></div>
+      ${!isLast ? '<div class="parada-line"></div>' : ''}
+    </div>
+    <div class="parada-input-wrap">
+      <input type="text" placeholder="${label} — endereço ou CEP" autocomplete="off" data-pid="${id}">
+      <button class="parada-clear" data-pid="${id}" onclick="limparParada(${id})">✕</button>
+    </div>
+    ${totalParadas > 2 && !isFirst && !isLast
+      ? `<button class="parada-remove" onclick="removerParada(${id})" title="Remover parada">✕</button>`
+      : '<div style="width:32px;flex-shrink:0"></div>'}
+  `;
+  return wrapper;
 }
 
-// ────────────────────────────────────────────
-// GOOGLE MAPS INIT
-// ────────────────────────────────────────────
-function initGoogleMaps(){
-  // DirectionsService
+function renderizarParadas() {
+  const list = document.getElementById('paradasList');
+  list.innerHTML = '';
+  paradas.forEach((p, i) => {
+    const isFirst = i === 0;
+    const isLast  = i === paradas.length - 1;
+    const el = criarParadaEl(p.id, isFirst, isLast, paradas.length);
+    list.appendChild(el);
+
+    const input = el.querySelector('input');
+    input.value = p.place ? p.place.address : '';
+
+    // Inicializar autocomplete Google
+    if(window.google) {
+      const ac = new google.maps.places.Autocomplete(input, {
+        componentRestrictions:{country:'br'},
+        fields:['geometry','formatted_address','name']
+      });
+      ac.addListener('place_changed', () => {
+        const place = ac.getPlace();
+        if(!place.geometry) return;
+        p.place = {
+          address: place.formatted_address || place.name,
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng()
+        };
+        input.value = p.place.address;
+        el.querySelector('.parada-clear').classList.add('show');
+        document.getElementById('mapaWrap').classList.add('show');
+        setTimeout(()=>google.maps.event.trigger(mapObj,'resize'),100);
+        verificarECalcularRota();
+      });
+      input.addEventListener('input', () => {
+        el.querySelector('.parada-clear').classList.toggle('show', input.value.length>0);
+        if(!input.value){ p.place=null; esconderResultadoRota(); }
+      });
+      p.acObj = ac;
+    }
+  });
+}
+
+function adicionarParada() {
+  if(paradas.length >= 8){ showToast('Máximo de 8 paradas','info'); return; }
+  // Inserir antes do último (destino)
+  const novaParada = { id: ++paradaIdCounter, place: null, acObj: null };
+  paradas.splice(paradas.length - 1, 0, novaParada);
+  renderizarParadas();
+  // Focar no novo campo
+  const inputs = document.querySelectorAll('#paradasList input');
+  if(inputs[paradas.length - 2]) inputs[paradas.length - 2].focus();
+}
+
+function removerParada(id) {
+  paradas = paradas.filter(p => p.id !== id);
+  renderizarParadas();
+  verificarECalcularRota();
+}
+
+function limparParada(id) {
+  const p = paradas.find(x => x.id === id);
+  if(p){ p.place = null; }
+  const input = document.querySelector(`input[data-pid="${id}"]`);
+  if(input){ input.value=''; }
+  const btn = document.querySelector(`.parada-clear[data-pid="${id}"]`);
+  if(btn) btn.classList.remove('show');
+  esconderResultadoRota();
+}
+
+function inicializarParadas() {
+  paradas = [
+    { id: ++paradaIdCounter, place: null, acObj: null },
+    { id: ++paradaIdCounter, place: null, acObj: null }
+  ];
+  renderizarParadas();
+}
+
+function inverterRota() {
+  paradas.reverse();
+  renderizarParadas();
+  if(kmRota) verificarECalcularRota();
+}
+
+function verificarECalcularRota() {
+  const preenchidas = paradas.filter(p => p.place);
+  if(preenchidas.length >= 2 && preenchidas[0].id === paradas[0].id && preenchidas[preenchidas.length-1].id === paradas[paradas.length-1].id) {
+    // Pelo menos origem e destino preenchidos
+    const todasPreenchidas = paradas.every(p => p.place);
+    if(todasPreenchidas || (paradas[0].place && paradas[paradas.length-1].place)) {
+      calcularRotaGoogle();
+    }
+  }
+}
+
+// ════════════════════════════════════════
+// GOOGLE MAPS
+// ════════════════════════════════════════
+function initGoogleMaps() {
   directionsService  = new google.maps.DirectionsService();
   directionsRenderer = new google.maps.DirectionsRenderer({
     suppressMarkers: false,
     polylineOptions:{ strokeColor:'#2ea8a0', strokeWeight:4, strokeOpacity:.85 }
   });
 
-  // Mapa centrado no Brasil
   mapObj = new google.maps.Map(document.getElementById('map'),{
-    center:{lat:-15.77972, lng:-47.92972},
-    zoom:4,
-    mapTypeControl:false,
-    streetViewControl:false,
-    fullscreenControl:false,
-    zoomControlOptions:{ position: google.maps.ControlPosition.RIGHT_CENTER },
+    center:{lat:-15.77972,lng:-47.92972}, zoom:4,
+    mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
+    zoomControlOptions:{position:google.maps.ControlPosition.RIGHT_CENTER},
     styles:[
       {elementType:'geometry',stylers:[{color:'#1d2636'}]},
       {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
@@ -471,126 +580,63 @@ function initGoogleMaps(){
     ]
   });
   directionsRenderer.setMap(mapObj);
-
-  // Autocomplete Origem
-  acOrigem = new google.maps.places.Autocomplete(
-    document.getElementById('inputOrigem'),
-    { componentRestrictions:{country:'br'}, fields:['geometry','formatted_address','name'] }
-  );
-  acOrigem.addListener('place_changed', ()=>{
-    const p=acOrigem.getPlace();
-    if(!p.geometry){ showToast('Endereço não encontrado','error'); return; }
-    endOrigemFull=p.formatted_address||p.name;
-    document.getElementById('clearOrigem').classList.add('show');
-    if(endDestinoFull) calcularRotaGoogle();
-    else mostrarPinUnico(p.geometry.location,'origem');
-    document.getElementById('mapaWrap').classList.add('show');
-  });
-
-  // Autocomplete Destino
-  acDestino = new google.maps.places.Autocomplete(
-    document.getElementById('inputDestino'),
-    { componentRestrictions:{country:'br'}, fields:['geometry','formatted_address','name'] }
-  );
-  acDestino.addListener('place_changed', ()=>{
-    const p=acDestino.getPlace();
-    if(!p.geometry){ showToast('Endereço não encontrado','error'); return; }
-    endDestinoFull=p.formatted_address||p.name;
-    document.getElementById('clearDestino').classList.add('show');
-    if(endOrigemFull) calcularRotaGoogle();
-    else mostrarPinUnico(p.geometry.location,'destino');
-    document.getElementById('mapaWrap').classList.add('show');
-  });
-
-  // Mostrar mapa ao focar nos campos
-  document.getElementById('inputOrigem').addEventListener('focus', ()=>{
-    document.getElementById('mapaWrap').classList.add('show');
-    setTimeout(()=>google.maps.event.trigger(mapObj,'resize'),100);
-  });
-  document.getElementById('inputDestino').addEventListener('focus', ()=>{
-    document.getElementById('mapaWrap').classList.add('show');
-    setTimeout(()=>google.maps.event.trigger(mapObj,'resize'),100);
-  });
-
-  // Botões clear
-  document.getElementById('inputOrigem').addEventListener('input', ()=>{
-    document.getElementById('clearOrigem').classList.toggle('show', document.getElementById('inputOrigem').value.length>0);
-    if(!document.getElementById('inputOrigem').value){ endOrigemFull=''; esconderResultadoRota(); }
-  });
-  document.getElementById('inputDestino').addEventListener('input', ()=>{
-    document.getElementById('clearDestino').classList.toggle('show', document.getElementById('inputDestino').value.length>0);
-    if(!document.getElementById('inputDestino').value){ endDestinoFull=''; esconderResultadoRota(); }
-  });
+  inicializarParadas();
+  renderizarHistorico();
 }
 
-function mostrarPinUnico(location, tipo){
-  if(markerOrigem){ markerOrigem.setMap(null); markerOrigem=null; }
-  if(markerDestino){ markerDestino.setMap(null); markerDestino=null; }
-  directionsRenderer.setDirections({routes:[]});
-
-  const marker = new google.maps.Marker({
-    position: location,
-    map: mapObj,
-    icon:{
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 9,
-      fillColor: tipo==='origem' ? '#22c55e' : '#ef4444',
-      fillOpacity: 1,
-      strokeColor: '#fff',
-      strokeWeight: 2
-    }
-  });
-  if(tipo==='origem') markerOrigem=marker; else markerDestino=marker;
-  mapObj.panTo(location);
-  mapObj.setZoom(15);
-  setTimeout(()=>google.maps.event.trigger(mapObj,'resize'),100);
-}
-
-// ────────────────────────────────────────────
-// CALCULAR ROTA — Google Directions API
-// ────────────────────────────────────────────
-function calcularRotaGoogle(){
-  if(!endOrigemFull||!endDestinoFull) return;
+function calcularRotaGoogle() {
+  const paradasComPlace = paradas.filter(p => p.place);
+  if(paradasComPlace.length < 2) return;
 
   document.getElementById('rotaLoading').classList.add('show');
   document.getElementById('rotaResultado').classList.remove('show');
 
-  directionsService.route({
-    origin: endOrigemFull,
-    destination: endDestinoFull,
-    travelMode: google.maps.TravelMode.DRIVING,
-    region: 'br'
-  }, (result, status)=>{
-    document.getElementById('rotaLoading').classList.remove('show');
+  const origem   = paradasComPlace[0];
+  const destino  = paradasComPlace[paradasComPlace.length - 1];
+  const waypoints= paradasComPlace.slice(1, -1).map(p => ({
+    location: new google.maps.LatLng(p.place.lat, p.place.lng),
+    stopover: true
+  }));
 
+  directionsService.route({
+    origin:      new google.maps.LatLng(origem.place.lat,  origem.place.lng),
+    destination: new google.maps.LatLng(destino.place.lat, destino.place.lng),
+    waypoints:   waypoints,
+    optimizeWaypoints: false,
+    travelMode:  google.maps.TravelMode.DRIVING,
+    region: 'br'
+  }, (result, status) => {
+    document.getElementById('rotaLoading').classList.remove('show');
     if(status !== google.maps.DirectionsStatus.OK){
-      showToast('Não foi possível calcular a rota. Verifique os endereços.','error');
-      return;
+      showToast('Não foi possível calcular a rota.','error'); return;
     }
 
-    const leg = result.routes[0].legs[0];
-    const distM = leg.distance.value;  // metros
-    kmRota = Math.round(distM/100)/10; // km com 1 casa
+    // Somar distância e duração de todos os trechos
+    let distTotal = 0, durTotal = 0;
+    result.routes[0].legs.forEach(leg => { distTotal += leg.distance.value; durTotal += leg.duration.value; });
 
-    duracaoRota  = leg.duration.text;
-    endOrigemFull   = leg.start_address;
-    endDestinoFull  = leg.end_address;
+    kmRota = Math.round(distTotal/100)/10;
+    const h = Math.floor(durTotal/3600), m = Math.round((durTotal%3600)/60);
+    duracaoRota = h>0 ? `${h}h ${m}min` : `${m} min`;
 
-    // Mostrar resultado
     document.getElementById('rotaKmLabel').innerText = `${kmRota} km`;
-    document.getElementById('rotaSubLabel').innerHTML = `⏱ ${duracaoRota} &nbsp;·&nbsp; ${leg.distance.text}`;
-    document.getElementById('rotaResultado').classList.add('show');
+    document.getElementById('rotaSubLabel').innerHTML = `⏱ ${duracaoRota} &nbsp;·&nbsp; ${(distTotal/1000).toFixed(1)} km`;
 
-    // Renderizar no mapa
-    if(markerOrigem){ markerOrigem.setMap(null); markerOrigem=null; }
-    if(markerDestino){ markerDestino.setMap(null); markerDestino=null; }
-    directionsRenderer.setDirections(result);
+    // Resumo das paradas
+    const nomes = paradasComPlace.map((p,i) => {
+      const short = p.place.address.split(',')[0];
+      return i===0 ? `🟢 ${short}` : i===paradasComPlace.length-1 ? `🔴 ${short}` : `🟡 ${short}`;
+    });
+    document.getElementById('paradasResumo').innerHTML = nomes.join(' → ');
+
+    document.getElementById('rotaResultado').classList.add('show');
+    document.getElementById('btnSalvarWrap').classList.remove('hidden');
     document.getElementById('mapaWrap').classList.add('show');
+
+    directionsRenderer.setDirections(result);
     setTimeout(()=>google.maps.event.trigger(mapObj,'resize'),100);
 
-    // Sincronizar km manual
-    if(modoManual) document.getElementById('kmInput').value=kmRota;
-
+    if(modoManual) document.getElementById('kmInput').value = kmRota;
     calcular();
   });
 }
@@ -598,79 +644,150 @@ function calcularRotaGoogle(){
 function esconderResultadoRota(){
   kmRota=0; duracaoRota='';
   document.getElementById('rotaResultado').classList.remove('show');
+  document.getElementById('btnSalvarWrap').classList.add('hidden');
   esconderResultados();
 }
-
 function esconderResultados(){
   document.getElementById('resultUnica').classList.add('hidden');
   document.getElementById('resultConstante').classList.add('hidden');
   document.getElementById('wppSection').classList.add('hidden');
 }
-
 function limparRota(){
-  endOrigemFull=''; endDestinoFull=''; kmRota=0; duracaoRota='';
-  document.getElementById('inputOrigem').value='';
-  document.getElementById('inputDestino').value='';
-  document.getElementById('clearOrigem').classList.remove('show');
-  document.getElementById('clearDestino').classList.remove('show');
+  kmRota=0; duracaoRota='';
   document.getElementById('rotaResultado').classList.remove('show');
+  document.getElementById('btnSalvarWrap').classList.add('hidden');
   document.getElementById('mapaWrap').classList.remove('show');
   if(directionsRenderer) directionsRenderer.setDirections({routes:[]});
-  if(markerOrigem){ markerOrigem.setMap(null); markerOrigem=null; }
-  if(markerDestino){ markerDestino.setMap(null); markerDestino=null; }
   if(modoManual) document.getElementById('kmInput').value='';
+  paradas.forEach(p => p.place = null);
+  renderizarParadas();
   esconderResultados();
 }
-
-function limparCampo(campo){
-  if(campo==='origem'){
-    document.getElementById('inputOrigem').value='';
-    document.getElementById('clearOrigem').classList.remove('show');
-    endOrigemFull='';
-  } else {
-    document.getElementById('inputDestino').value='';
-    document.getElementById('clearDestino').classList.remove('show');
-    endDestinoFull='';
-  }
-  if(directionsRenderer) directionsRenderer.setDirections({routes:[]});
-  if(markerOrigem){ markerOrigem.setMap(null); markerOrigem=null; }
-  if(markerDestino){ markerDestino.setMap(null); markerDestino=null; }
-  esconderResultadoRota();
-}
-
 function abrirGoogleMaps(){
-  if(!endOrigemFull||!endDestinoFull) return;
-  const url=`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(endOrigemFull)}&destination=${encodeURIComponent(endDestinoFull)}&travelmode=driving`;
+  const c = paradas.filter(p=>p.place);
+  if(c.length<2) return;
+  const o=c[0].place, d=c[c.length-1].place;
+  const wps=c.slice(1,-1).map(p=>`${p.place.lat},${p.place.lng}`).join('|');
+  let url=`https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lng}&destination=${d.lat},${d.lng}&travelmode=driving`;
+  if(wps) url+=`&waypoints=${wps}`;
   window.open(url,'_blank');
 }
 
-// ────────────────────────────────────────────
-// CÁLCULO DE VALOR
-// ────────────────────────────────────────────
+// ════════════════════════════════════════
+// HISTÓRICO DE ROTAS
+// ════════════════════════════════════════
+function toggleHistorico(){
+  const list = document.getElementById('historicoList');
+  const chev = document.getElementById('historicoChevron');
+  list.classList.toggle('show');
+  chev.classList.toggle('open');
+}
+
+function renderizarHistorico(){
+  const count = document.getElementById('historicoCount');
+  const list  = document.getElementById('historicoList');
+  count.innerText = rotasSalvas.length;
+  list.innerHTML = '';
+
+  if(!rotasSalvas.length){
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Nenhuma rota salva ainda</div>';
+    return;
+  }
+
+  rotasSalvas.forEach((r,i) => {
+    const item = document.createElement('div');
+    item.className = 'historico-item';
+    const paradasHtml = r.paradas.map((p,j)=>{
+      const icon = j===0?'🟢':j===r.paradas.length-1?'🔴':'🟡';
+      return `${icon} ${p.address.split(',')[0]}`;
+    }).join('<br>');
+    const data = new Date(r.data).toLocaleDateString('pt-BR');
+    item.innerHTML = `
+      <div class="historico-item-nome">${r.nome}</div>
+      <div class="historico-item-paradas">${paradasHtml}</div>
+      <div class="historico-item-meta">
+        <span class="historico-item-km">📏 ${r.km} km</span>
+        <span class="historico-item-data">${data}</span>
+      </div>
+      <button class="historico-item-del" onclick="deletarRota(${i},event)">🗑</button>
+    `;
+    item.addEventListener('click', () => carregarRota(i));
+    list.appendChild(item);
+  });
+}
+
+function abrirModalSalvar(){
+  document.getElementById('nomeRotaInput').value = '';
+  document.getElementById('modalSalvar').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('nomeRotaInput').focus(), 100);
+}
+function fecharModalSalvar(){ document.getElementById('modalSalvar').classList.add('hidden'); }
+
+function confirmarSalvarRota(){
+  const nome = document.getElementById('nomeRotaInput').value.trim();
+  if(!nome){ showToast('Digite um nome para a rota','info'); return; }
+  const paradasComPlace = paradas.filter(p=>p.place);
+  if(paradasComPlace.length < 2){ showToast('Calcule a rota primeiro','info'); return; }
+
+  const novaRota = {
+    nome,
+    km: kmRota,
+    duracao: duracaoRota,
+    data: new Date().toISOString(),
+    paradas: paradasComPlace.map(p=>p.place)
+  };
+  rotasSalvas.unshift(novaRota);
+  localStorage.setItem('rotasSalvas', JSON.stringify(rotasSalvas));
+  fecharModalSalvar();
+  renderizarHistorico();
+  // Abrir historico automaticamente
+  const list = document.getElementById('historicoList');
+  const chev = document.getElementById('historicoChevron');
+  list.classList.add('show'); chev.classList.add('open');
+  showToast(`Rota "${nome}" salva! ⭐`,'success');
+}
+
+function carregarRota(i){
+  const r = rotasSalvas[i];
+  if(!r) return;
+  // Resetar paradas
+  paradas = r.paradas.map(p => ({ id: ++paradaIdCounter, place: p, acObj: null }));
+  renderizarParadas();
+  document.getElementById('mapaWrap').classList.add('show');
+  setTimeout(()=>{ google.maps.event.trigger(mapObj,'resize'); calcularRotaGoogle(); }, 200);
+  // Fechar historico
+  document.getElementById('historicoList').classList.remove('show');
+  document.getElementById('historicoChevron').classList.remove('open');
+  showToast(`Rota "${r.nome}" carregada!`,'info');
+}
+
+function deletarRota(i, e){
+  e.stopPropagation();
+  rotasSalvas.splice(i,1);
+  localStorage.setItem('rotasSalvas', JSON.stringify(rotasSalvas));
+  renderizarHistorico();
+  showToast('Rota removida','info');
+}
+
+// ── Cálculo ──
 function calcular(){
   const v=getAtivo(), km=getKm();
   if(!v||!km||km<=0){ esconderResultados(); return; }
-
-  const cKm    = custoPorKm(v);
-  const custo  = km*cKm;
-  const margem = Number(document.getElementById('margemSlider').value)/100;
-  const mo     = Number(document.getElementById('maoObraSlider').value)/100;
-  const vBase  = custo*(1+margem+mo);
-
+  const cKm=custoPorKm(v), custo=km*cKm;
+  const margem=Number(document.getElementById('margemSlider').value)/100;
+  const mo=Number(document.getElementById('maoObraSlider').value)/100;
+  const vBase=custo*(1+margem+mo);
   const moEl=document.getElementById('maoObraValor');
   if(moEl) moEl.innerText=mo>0?'+ '+fmt(custo*mo):'';
-
   if(tipoViagem==='unica') calcUnica(custo,vBase,margem,mo);
   else                     calcConstante(custo,vBase);
-
   document.getElementById('wppSection').classList.remove('hidden');
 }
-
 function calcUnica(custo,vBase,margem,mo){
   const lucro=vBase-custo, moR=custo*mo;
   document.getElementById('valorUnico').innerText=fmt(vBase);
-  let ci=`Custo da viagem: ${fmt(custo)}`;
-  if(moR>0) ci+=` · Mão de obra: ${fmt(moR)} (${Math.round(mo*100)}%)`;
+  let ci=`Custo: ${fmt(custo)}`;
+  if(moR>0) ci+=` · Mão de obra: ${fmt(moR)}`;
   document.getElementById('custoUnico').innerText=ci;
   const lEl=document.getElementById('lucroUnico');
   lEl.innerText=`💰 Lucro estimado: ${fmt(lucro)}`;
@@ -678,15 +795,13 @@ function calcUnica(custo,vBase,margem,mo){
   document.getElementById('resultUnica').classList.remove('hidden');
   document.getElementById('resultConstante').classList.add('hidden');
 }
-
 function calcConstante(custo,vBase){
   const max=Math.max(2,Math.min(30,Number(document.getElementById('maxViagens').value)||5));
   const dp=Number(document.getElementById('descontoSlider').value)/100;
   const tab=document.getElementById('tabelaConstante');
   tab.innerHTML=`<div class="tabela-header"><div>Qtd</div><div>Valor/Viagem</div><div>Desconto</div><div>Total</div></div>`;
   for(let i=1;i<=max;i++){
-    const d=Math.min(i===1?0:(i-1)*dp,.6);
-    const vV=vBase*(1-d);
+    const d=Math.min(i===1?0:(i-1)*dp,.6), vV=vBase*(1-d);
     const row=document.createElement('div'); row.className='tabela-row';
     row.innerHTML=`<div class="col-qtd">${i}x ${i===1?'🎯':i<=3?'⭐':'🔥'}</div><div class="col-valor">${fmt(vV)}</div><div class="col-desc">${i===1?'—':'-'+Math.round(d*100)+'%'}</div><div class="col-total">${fmt(vV*i)}</div>`;
     tab.appendChild(row);
@@ -703,30 +818,30 @@ function setDestinatario(t){
   document.getElementById('wrapClienteCad').classList.toggle('hidden',t==='avulso');
   document.getElementById('wrapNumAvulso').classList.toggle('hidden',t==='cadastrado');
 }
-
 function montarMensagem(){
-  const km=getKm(),v=getAtivo(),cKm=custoPorKm(v),custo=km*cKm;
+  const km=getKm(),v=getAtivo(),custo=km*custoPorKm(v);
   const margem=Number(document.getElementById('margemSlider').value)/100;
   const mo=Number(document.getElementById('maoObraSlider').value)/100;
   const vBase=custo*(1+margem+mo);
-  const rotaInfo=endOrigemFull&&endDestinoFull
-    ?`📍 De: ${endOrigemFull}\n📍 Para: ${endDestinoFull}\n📏 Distância: ${km} km${duracaoRota?' (⏱ '+duracaoRota+')':''}\n`
-    :`📏 Distância: ${km} km\n`;
-
+  const pc=paradas.filter(p=>p.place);
+  let rotaInfo=`📏 Distância total: ${km} km${duracaoRota?' (⏱ '+duracaoRota+')':''}\n`;
+  if(pc.length>=2){
+    rotaInfo=pc.map((p,i)=>{
+      const icon=i===0?'🟢':i===pc.length-1?'🔴':'🟡';
+      return `${icon} ${p.place.address.split(',')[0]}`;
+    }).join(' → ')+'\n'+rotaInfo;
+  }
   if(tipoViagem==='unica')
-    return `Olá! Segue o orçamento para sua viagem:\n\n${rotaInfo}💵 Valor: ${fmt(vBase)}\n\nEstamos à disposição! 🚗`;
-
+    return `Olá! Segue o orçamento:\n\n${rotaInfo}💵 Valor: ${fmt(vBase)}\n\nEstamos à disposição! 🚗`;
   const max=Math.max(2,Math.min(30,Number(document.getElementById('maxViagens').value)||5));
   const dp=Number(document.getElementById('descontoSlider').value)/100;
   let linhas='';
   for(let i=1;i<=max;i++){
-    const d=Math.min(i===1?0:(i-1)*dp,.6);
-    const vV=vBase*(1-d);
-    linhas+=`  • ${i}x: ${fmt(vV)}/viagem = ${fmt(vV*i)} total${i===1?'':` (-${Math.round(d*100)}%)`}\n`;
+    const d=Math.min(i===1?0:(i-1)*dp,.6),vV=vBase*(1-d);
+    linhas+=`  • ${i}x: ${fmt(vV)}/viagem = ${fmt(vV*i)}${i===1?'':` (-${Math.round(d*100)}%)`}\n`;
   }
-  return `Olá! Segue orçamento para viagens frequentes:\n\n${rotaInfo}\n📋 Tabela:\n${linhas}\nQuanto mais viagens, maior o desconto! 🚗`;
+  return `Olá! Orçamento para viagens frequentes:\n\n${rotaInfo}\n📋 Tabela:\n${linhas}\nQuanto mais viagens, maior o desconto! 🚗`;
 }
-
 function enviarWhatsApp(){
   if(!getAtivo()){ showToast('Nenhum veículo configurado','error'); return; }
   if(!getKm()||getKm()<=0){ showToast('Calcule a rota ou informe o KM','info'); return; }
@@ -750,36 +865,19 @@ popularClientes();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 
-<!-- Google Maps API com Places + Directions -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDV8OiSzVdPBykYioUtjuxLsnkj9JUanWo&libraries=places&callback=initGoogleMaps&language=pt-BR&region=BR" async defer></script>
 
-<!-- Toggle Tema -->
 <button id="theme-toggle" title="Alternar tema" onclick="toggleTheme()">🌙</button>
-
-<!-- ═══ FAB ═══ -->
 <div id="fab-backdrop" onclick="closeFab()"></div>
 <div id="fab-container">
   <div class="fab-options" id="fab-options">
-    <div class="fab-option" onclick="fabAcao('abastecimento')">
-      <div class="fab-option-label">Novo Abastecimento</div>
-      <button class="fab-option-btn fab-opt-abastecimento">⛽</button>
-    </div>
-    <div class="fab-option" onclick="fabAcao('cotacao')">
-      <div class="fab-option-label">Cotação de Viagem</div>
-      <button class="fab-option-btn fab-opt-cotacao">💰</button>
-    </div>
-    <div class="fab-option" onclick="fabAcao('viagens')">
-      <div class="fab-option-label">Nova Viagem</div>
-      <button class="fab-option-btn fab-opt-viagem">🚕</button>
-    </div>
-    <div class="fab-option" onclick="fabAcao('entregas')">
-      <div class="fab-option-label">Nova Entrega</div>
-      <button class="fab-option-btn fab-opt-entrega">📦</button>
-    </div>
+    <div class="fab-option" onclick="fabAcao('abastecimento')"><div class="fab-option-label">Novo Abastecimento</div><button class="fab-option-btn fab-opt-abastecimento">⛽</button></div>
+    <div class="fab-option" onclick="fabAcao('cotacao')"><div class="fab-option-label">Cotação de Viagem</div><button class="fab-option-btn fab-opt-cotacao">💰</button></div>
+    <div class="fab-option" onclick="fabAcao('viagens')"><div class="fab-option-label">Nova Viagem</div><button class="fab-option-btn fab-opt-viagem">🚕</button></div>
+    <div class="fab-option" onclick="fabAcao('entregas')"><div class="fab-option-label">Nova Entrega</div><button class="fab-option-btn fab-opt-entrega">📦</button></div>
   </div>
   <button id="fab-main" onclick="toggleFab()">+</button>
 </div>
-
 <script>
 (function(){
   const s=localStorage.getItem('kmTheme')||'dark';
@@ -795,23 +893,11 @@ function toggleTheme(){
   const b=document.getElementById('theme-toggle');
   if(b) b.textContent=n==='dark'?'🌙':'☀️';
 }
-function fabAcao(a){
-  closeFab();
-  window.location.href={entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[a]||'#';
-}
-function toggleFab(){
-  const o=document.getElementById('fab-options'),m=document.getElementById('fab-main'),b=document.getElementById('fab-backdrop');
-  const open=o.classList.toggle('visible');
-  m.classList.toggle('open',open); b.classList.toggle('visible',open);
-}
-function closeFab(){
-  document.getElementById('fab-options').classList.remove('visible');
-  document.getElementById('fab-main').classList.remove('open');
-  document.getElementById('fab-backdrop').classList.remove('visible');
-}
+function fabAcao(a){ closeFab(); window.location.href={entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[a]||'#'; }
+function toggleFab(){ const o=document.getElementById('fab-options'),m=document.getElementById('fab-main'),b=document.getElementById('fab-backdrop'); const open=o.classList.toggle('visible'); m.classList.toggle('open',open); b.classList.toggle('visible',open); }
+function closeFab(){ document.getElementById('fab-options').classList.remove('visible'); document.getElementById('fab-main').classList.remove('open'); document.getElementById('fab-backdrop').classList.remove('visible'); }
 </script>
 
-<!-- ═══ GLOBAL NAV ═══ -->
 <nav id="global-nav">
   <a class="gnav-item " href="index.html"><span class="gnav-icon">🚗</span><span class="gnav-label">Início</span></a>
   <a class="gnav-item " href="agenda.html"><span class="gnav-icon">📅</span><span class="gnav-label">Agenda</span></a>
@@ -820,6 +906,5 @@ function closeFab(){
   <a class="gnav-item " href="abastecimento.html"><span class="gnav-icon">⛽</span><span class="gnav-label">Abaste.</span></a>
   <a class="gnav-item active" href="cotacao.html"><span class="gnav-icon">💰</span><span class="gnav-label">Cotação</span></a>
 </nav>
-
 </body>
 </html>

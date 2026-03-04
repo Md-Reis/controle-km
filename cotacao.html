@@ -32,7 +32,21 @@
   .parada-item {
     display:flex; align-items:center; gap:8px; margin-bottom:8px;
     animation: slideUp .25s ease;
+    transition: opacity .2s, transform .2s;
+    touch-action: none;
   }
+  .parada-item.dragging {
+    opacity:.5; transform:scale(.98);
+  }
+  .parada-item.drag-over {
+    border-top:2px solid var(--primary);
+  }
+  .drag-handle {
+    color:var(--muted); font-size:18px; cursor:grab; padding:4px 2px;
+    flex-shrink:0; user-select:none; touch-action:none;
+    display:flex; align-items:center;
+  }
+  .drag-handle:active { cursor:grabbing; color:var(--primary); }
   .parada-dot-wrap {
     display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:20px;
   }
@@ -213,7 +227,7 @@
 <div class="rota-card">
   <div class="rota-card-header">
     <span class="rota-card-title">📍 Rota</span>
-    <button class="rota-swap" onclick="inverterRota()">⇅ Inverter</button>
+    
   </div>
 
   <!-- Lista de paradas dinâmica -->
@@ -441,11 +455,16 @@ function criarParadaEl(id, isFirst, isLast, totalParadas) {
   wrapper.className = 'parada-item';
   wrapper.dataset.id = id;
 
-  // Cor do dot
   const dotClass = isFirst ? 'dot-origem' : isLast ? 'dot-destino' : 'dot-meio';
   const label    = isFirst ? 'Origem' : isLast ? 'Destino' : `Parada ${totalParadas - 2}`;
 
+  const podeMover = totalParadas > 2;
+  const podeRemover = totalParadas > 2 && !isFirst && !isLast;
+
   wrapper.innerHTML = `
+    ${podeMover
+      ? `<div class="drag-handle" data-drag="${id}" title="Arrastar para reordenar">⠿</div>`
+      : `<div style="width:20px;flex-shrink:0"></div>`}
     <div class="parada-dot-wrap">
       <div class="parada-dot ${dotClass}"></div>
       ${!isLast ? '<div class="parada-line"></div>' : ''}
@@ -454,7 +473,7 @@ function criarParadaEl(id, isFirst, isLast, totalParadas) {
       <input type="text" placeholder="${label} — endereço ou CEP" autocomplete="off" data-pid="${id}">
       <button class="parada-clear" data-pid="${id}" onclick="limparParada(${id})">✕</button>
     </div>
-    ${totalParadas > 2 && !isFirst && !isLast
+    ${podeRemover
       ? `<button class="parada-remove" onclick="removerParada(${id})" title="Remover parada">✕</button>`
       : '<div style="width:32px;flex-shrink:0"></div>'}
   `;
@@ -500,6 +519,7 @@ function renderizarParadas() {
       p.acObj = ac;
     }
   });
+  inicializarDragDrop();
 }
 
 function adicionarParada() {
@@ -537,10 +557,83 @@ function inicializarParadas() {
   renderizarParadas();
 }
 
-function inverterRota() {
-  paradas.reverse();
-  renderizarParadas();
-  if(kmRota) verificarECalcularRota();
+// ════════════════════════════════════════
+// DRAG AND DROP — reordenar paradas
+// ════════════════════════════════════════
+function inicializarDragDrop() {
+  const list = document.getElementById('paradasList');
+  let dragEl = null, dragIdx = -1, targetIdx = -1;
+
+  function getItems() { return [...list.querySelectorAll('.parada-item')]; }
+  function idxOf(el)  { return getItems().indexOf(el); }
+
+  function onDragStart(el) {
+    dragEl  = el;
+    dragIdx = idxOf(el);
+    el.classList.add('dragging');
+  }
+  function onDragEnd() {
+    if(!dragEl) return;
+    dragEl.classList.remove('dragging');
+    getItems().forEach(i=>i.classList.remove('drag-over'));
+    if(targetIdx >= 0 && targetIdx !== dragIdx) {
+      // Reordenar array paradas
+      const moved = paradas.splice(dragIdx, 1)[0];
+      paradas.splice(targetIdx, 0, moved);
+      renderizarParadas();
+      if(paradas.filter(p=>p.place).length >= 2) verificarECalcularRota();
+    }
+    dragEl = null; dragIdx = -1; targetIdx = -1;
+  }
+  function onDragOver(el) {
+    if(!dragEl || el === dragEl) return;
+    targetIdx = idxOf(el);
+    getItems().forEach(i=>i.classList.remove('drag-over'));
+    el.classList.add('drag-over');
+  }
+
+  // ── Touch Events (mobile) ──
+  list.querySelectorAll('.drag-handle').forEach(handle => {
+    const item = handle.closest('.parada-item');
+
+    handle.addEventListener('touchstart', e => {
+      e.preventDefault();
+      onDragStart(item);
+    }, {passive:false});
+
+    handle.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const touch  = e.touches[0];
+      const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      if(!elBelow) return;
+      const hoveredItem = elBelow.closest('.parada-item');
+      if(hoveredItem && hoveredItem !== dragEl) onDragOver(hoveredItem);
+    }, {passive:false});
+
+    handle.addEventListener('touchend', e => {
+      e.preventDefault();
+      onDragEnd();
+    }, {passive:false});
+
+    // ── Mouse Events (desktop) ──
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      onDragStart(item);
+      const onMouseMove = ev => {
+        const elBelow = document.elementFromPoint(ev.clientX, ev.clientY);
+        if(!elBelow) return;
+        const hoveredItem = elBelow.closest('.parada-item');
+        if(hoveredItem && hoveredItem !== dragEl) onDragOver(hoveredItem);
+      };
+      const onMouseUp = () => {
+        onDragEnd();
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  });
 }
 
 function verificarECalcularRota() {

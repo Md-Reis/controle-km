@@ -459,10 +459,10 @@ function enviarWhats(tipo) {
     const nome = document.getElementById("detalheNomeInput").value || ''; //Nome do cliente
     const mensagens = {
     chegada: `Olá ${nome}! 
-    \n\nEstou a caminho para buscar os passageiros.
-    \n\nMotorista: Sheyla Toyota
-    \nRG: 42.187.270-6
-    \n🚗 Veículo: Onix - Placa: DYS0E33`,
+    \nEstou a caminho para buscar os passageiros.
+    \nMotorista: Sheyla Toyota
+    RG: 42.187.270-6
+    🚗 Veículo: Onix - Placa: DYS0E33`,
   };
 
   const url = `https://wa.me/55${tel}?text=${encodeURIComponent(mensagens[tipo])}`;
@@ -483,8 +483,8 @@ function enviarWhatsEntrega() {
 
   const nome = passageiro || 'o passageiro';
   const msg  = `✅ Olá! Informamos que o passageiro ${nome} chegou ao seu destino.
-  \n\nAgradecemos a preferência e estamos à disposição para sempre que necessário tornar a sua viagem totalmente tranquila e segura.
-  \n\nEsperamos vê-lo novamente em breve!`;
+  \nAgradecemos a preferência e estamos à disposição para sempre que necessário tornar a sua viagem totalmente tranquila e segura.
+  \nEsperamos vê-lo novamente em breve!`;
 
   window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -1194,4 +1194,3 @@ function closeFab(){
 </nav>
 </body>
 </html>
-

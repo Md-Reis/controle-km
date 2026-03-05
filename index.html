@@ -29,10 +29,9 @@
 
 <body class="has-global-nav">
 <nav id="internal-nav">
-  <button onclick="showPage('veiculos')" class="active">🚗</button>
-  <button onclick="showPage('dashboard')">📊</button>
-  <button onclick="showPage('metas')">🎯</button>
-  <button onclick="showPage('backup')">💾</button>
+  <button onclick="showPage('veiculos')" class="active">🚗 Veículos</button>
+  <button onclick="showPage('dashboard')">📊 Dashboard</button>
+  <button onclick="showPage('backup')">💾 Backup</button>
 </nav>
 
 
@@ -61,42 +60,21 @@
 
   <div id="listaVeiculos"></div>
 
-  <!-- Módulos -->
-  <div style="margin-top:24px">
-  <h3 style="margin-bottom:12px;opacity:.7;font-size:14px;text-transform:uppercase;letter-spacing:.05em">Módulos</h3>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-
-    <a href="entregas.html" style="text-decoration:none;color:inherit">
-      <div class="veiculo-card" style="text-align:center;padding:24px 16px;cursor:pointer">
-        <div style="font-size:36px;margin-bottom:8px">📦</div>
-        <div style="font-weight:bold;font-size:15px">Entregas</div>
+  <!-- Metas Totais (inline na aba Veículos) -->
+  <div style="margin-top:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0;font-size:15px;font-weight:700">🎯 Metas Totais</h3>
+      <div style="display:flex;align-items:center;gap:6px">
+        <select id="metaAnoTotal" onchange="renderMetasTotal()"
+          style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 8px;font-size:13px"></select>
       </div>
-    </a>
-
-    <a href="viagens.html" style="text-decoration:none;color:inherit">
-      <div class="veiculo-card" style="text-align:center;padding:24px 16px;cursor:pointer">
-        <div style="font-size:36px;margin-bottom:8px">🚕</div>
-        <div style="font-weight:bold;font-size:15px">Viagens</div>
-      </div>
-    </a>
-
-    <a href="cotacao.html" style="text-decoration:none;color:inherit">
-      <div class="veiculo-card" style="text-align:center;padding:24px 16px;cursor:pointer">
-        <div style="font-size:32px">💰</div>
-        <div style="font-weight:bold;font-size:15px">Cotação de Viagem</div>
-      </div>
-    </a>
-
-    <a href="abastecimento.html" style="text-decoration:none;color:inherit">
-      <div class="veiculo-card" style="text-align:center;padding:24px 16px;cursor:pointer">
-        <div style="font-size:32px">⛽</div>
-        <div style="font-weight:bold;font-size:15px">Abastecimento</div>
-      </div>
-    </a>
-
+    </div>
+    <p style="opacity:.6;font-size:13px;margin:-4px 0 12px">Soma de entregas + viagens por mês</p>
+    <div id="resumoTotal" class="card" style="margin-bottom:14px"></div>
+    <div id="gaugesTotal" class="gauges-grid"></div>
   </div>
-</div>
+
 <div style="height:80px"></div>
 </section>
 
@@ -254,26 +232,13 @@
 </section>
 
 
-<!-- METAS TOTAIS -->
-<section id="metas" class="page">
-  <h2>🎯 Metas Totais</h2>
-  <p style="opacity:.6;font-size:14px">Soma de entregas + viagens por mês</p>
 
-  <div class="card">
-    <label>Ano</label>
-    <select id="metaAnoTotal" onchange="renderMetasTotal()"></select>
-  </div>
-
-  <div id="resumoTotal" class="card" style="margin-bottom:14px"></div>
-
-  <div id="gaugesTotal" class="gauges-grid"></div>
-</section>
 
 
 <!-- Modal Editar Veículo -->
 <div id="modalVeiculoEdit" class="modal hidden">
   <div class="modal-box" style="max-height:88vh;overflow-y:auto">
-    <h2>✏️ Editar Veículo</h2>
+    <h2 id="tituloModalVeiculo">✏️ Editar Veículo</h2>
 
     <label>Nome</label>
     <input type="text" id="editNomeVeiculo">
@@ -365,7 +330,7 @@
     document.getElementById(id).classList.add('active');
     event.target.classList.add('active');
 
-    if (id === 'metas')     { carregarAnosTotalMeta(); renderMetasTotal(); }
+    if (id === 'veiculos')  { renderVeiculos(); carregarAnosTotalMeta(); renderMetasTotal(); }
     if (id === 'dashboard') { renderDashboard(); }
     if (id === 'backup')    { renderBackupStats(); }
   }
@@ -393,7 +358,7 @@
   }
 
   // ======= VEÍCULOS =======
-
+  
 
   // ======= DASHBOARD =======
   let dashMesOffset = 0; // 0 = mês atual, -1 = mês anterior, etc.
@@ -815,7 +780,6 @@
   function abrirModalVeiculo(id) {
     const titulo = document.getElementById("tituloModalVeiculo");
     if (id === null) {
-      // ── Modo NOVO ──
       veiculoEditandoId = null;
       if (titulo) titulo.textContent = "🚗 Novo Veículo";
       ["editNomeVeiculo","editConsumoVeiculo","editKmMensal",
@@ -824,7 +788,6 @@
       const prev = document.getElementById("previewKmVal");
       if (prev) prev.innerText = "—";
     } else {
-      // ── Modo EDITAR ──
       const v = data.veiculos.find(v => v.id === id);
       if (!v) { showToast("Veículo não encontrado", "error"); return; }
       veiculoEditandoId = id;
@@ -880,14 +843,12 @@
       out:  Number(document.getElementById("editOut").value)   || 0,
     };
     if (veiculoEditandoId === null) {
-      // ── Criar novo ──
       const novo = { id: Date.now(), nome: novoNome, consumo: novoConsumo, kmMensal: novoKmMens, custos };
       data.veiculos.push(novo);
       if (!data.ativo) data.ativo = novo.id;
       save(); renderVeiculos(); fecharModalVeiculo();
       showToast("Veículo adicionado ✅", "success");
     } else {
-      // ── Editar existente ──
       const v = data.veiculos.find(v => v.id === veiculoEditandoId);
       if (!v) { showToast("Veículo não encontrado", "error"); return; }
       v.nome = novoNome; v.consumo = novoConsumo; v.kmMensal = novoKmMens; v.custos = custos;
@@ -1072,6 +1033,8 @@
 
   // ======= INIT =======
   renderVeiculos();
+  carregarAnosTotalMeta();
+  renderMetasTotal();
 
   window.addEventListener("load", () => {
     setTimeout(() => {

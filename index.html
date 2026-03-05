@@ -649,14 +649,18 @@
     const kmApp            = JSON.parse(localStorage.getItem('kmApp'))             || {};
     const viagensApp       = JSON.parse(localStorage.getItem('viagensApp'))        || {};
     const abastecimentoApp = JSON.parse(localStorage.getItem('abastecimentoApp'))  || {};
+    const agendaApp        = JSON.parse(localStorage.getItem('agendaApp'))         || {};
+    const rotasSalvas      = JSON.parse(localStorage.getItem('rotasSalvas'))       || [];
     const tema             = localStorage.getItem('kmTheme') || 'dark';
 
     const payload = {
-      versao:      '1.1',
+      versao:      '1.2',
       exportadoEm: new Date().toISOString(),
       kmApp,
       viagensApp,
       abastecimentoApp,
+      agendaApp,
+      rotasSalvas,
       kmTheme: tema
     };
 
@@ -699,6 +703,8 @@
         if (payload.kmApp)             localStorage.setItem('kmApp',             JSON.stringify(payload.kmApp));
         if (payload.viagensApp)        localStorage.setItem('viagensApp',        JSON.stringify(payload.viagensApp));
         if (payload.abastecimentoApp)  localStorage.setItem('abastecimentoApp',  JSON.stringify(payload.abastecimentoApp));
+        if (payload.agendaApp)         localStorage.setItem('agendaApp',         JSON.stringify(payload.agendaApp));
+        if (Array.isArray(payload.rotasSalvas)) localStorage.setItem('rotasSalvas', JSON.stringify(payload.rotasSalvas));
         if (payload.kmTheme)           localStorage.setItem('kmTheme',           payload.kmTheme);
 
         status.textContent = '✅ Dados restaurados com sucesso! Recarregando...';
@@ -717,12 +723,16 @@
     const kmApp            = JSON.parse(localStorage.getItem('kmApp'))             || {};
     const viagensApp       = JSON.parse(localStorage.getItem('viagensApp'))        || {};
     const abastecimentoApp = JSON.parse(localStorage.getItem('abastecimentoApp'))  || {};
+    const agendaApp        = JSON.parse(localStorage.getItem('agendaApp'))         || {};
+    const rotasSalvas      = JSON.parse(localStorage.getItem('rotasSalvas'))       || [];
 
     const veiculos       = (kmApp.veiculos||[]).length;
     const entregas       = (kmApp.lancamentos||[]).filter(l=>l.tipo==='entrega').length;
     const viagensCont    = (viagensApp.viagens||[]).length;
     const clientesV      = (viagensApp.clientes||[]).length;
     const abastecimentos = (abastecimentoApp.registros||[]).length;
+    const agendamentos   = (agendaApp.agendamentos||[]).length;
+    const rotasSalvasCnt = rotasSalvas.length;
     const anosE          = Object.keys(kmApp.financeiro?.anos||{}).length;
     const anosV          = Object.keys(viagensApp.financeiro?.anos||{}).length;
 
@@ -730,7 +740,9 @@
     const size = new Blob([
       localStorage.getItem('kmApp')            || '',
       localStorage.getItem('viagensApp')       || '',
-      localStorage.getItem('abastecimentoApp') || ''
+      localStorage.getItem('abastecimentoApp') || '',
+      localStorage.getItem('agendaApp')        || '',
+      localStorage.getItem('rotasSalvas')      || ''
     ]).size;
     const sizeStr = size > 1024 ? (size/1024).toFixed(1)+' KB' : size+' bytes';
 
@@ -742,6 +754,8 @@
           ['🚕 Viagens',        viagensCont],
           ['👥 Clientes',       clientesV],
           ['⛽ Abastecimentos', abastecimentos],
+          ['📅 Agendamentos',   agendamentos],
+          ['⭐ Rotas salvas',   rotasSalvasCnt],
           ['📅 Anos de dado',   Math.max(anosE, anosV)],
           ['💿 Tamanho',        sizeStr],
         ].map(([label, val]) => `
@@ -1148,4 +1162,3 @@ function closeFab(){
 </nav>
 </body>
 <footer></footer>
-

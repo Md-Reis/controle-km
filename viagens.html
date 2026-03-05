@@ -565,6 +565,23 @@ function renderHistCliente() {
 
   lista.innerHTML = "";
   viagens.forEach(v=>{
+    // Montar HTML da rota se existir
+    let rotaHtml = '';
+    if (v.rota && v.rota.paradas && v.rota.paradas.length >= 2) {
+      const ps = v.rota.paradas.map((p,i) => {
+        const ic = i===0 ? '🟢' : i===v.rota.paradas.length-1 ? '🔴' : '🟡';
+        return `<span style="white-space:nowrap">${ic} ${p.address.split(',')[0]}</span>`;
+      }).join(' <span style="color:var(--muted)">→</span> ');
+      rotaHtml = `
+        <div style="margin:6px 0;padding:8px 10px;background:rgba(46,168,160,.07);border:1px solid rgba(46,168,160,.2);border-radius:8px;font-size:12px">
+          <div style="color:var(--text);line-height:1.8;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">${ps}</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)">
+            <span>📏 <strong style="color:var(--primary)">${v.rota.km} km</strong></span>
+            ${v.rota.duracao ? `<span>⏱ <strong style="color:var(--primary)">${v.rota.duracao}</strong></span>` : ''}
+          </div>
+        </div>`;
+    }
+
     const item = document.createElement("div");
     item.className = "hist-item";
     item.innerHTML = `
@@ -572,9 +589,10 @@ function renderHistCliente() {
         <span>📅 ${new Date(v.data).toLocaleDateString("pt-BR")}</span>
         <span style="color:${v.lucro>=0?'var(--accent)':'var(--danger)'};font-weight:bold">${formatCurrency(v.valor)}</span>
       </div>
-      <div style="font-size:13px;color:var(--muted)">
+      <div style="font-size:13px;color:var(--muted);margin-top:2px">
         👤 ${v.passageiroNome||'—'} · 📍 ${v.km} km · 💸 Custo: ${formatCurrency(v.custoTotal)}
       </div>
+      ${rotaHtml}
       <div style="font-size:13px;margin-top:4px">
         💰 Lucro: <strong style="color:${v.lucro>=0?'var(--accent)':'var(--danger)'}">${formatCurrency(v.lucro)}</strong>
       </div>

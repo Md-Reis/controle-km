@@ -156,6 +156,60 @@
   to   { opacity:1; transform:none; }
 }
 .anim { animation: slideUp .25s ease; }
+
+/* ══ Rota no modal ══ */
+.rota-section { background:var(--card2); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+.rota-sec-header { padding:12px 14px 0; display:flex; justify-content:space-between; align-items:center; }
+.rota-sec-title  { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.rota-sec-toggle { font-size:12px; color:var(--primary); font-weight:600; cursor:pointer; background:none; border:none; width:auto; padding:4px 8px; }
+
+.paradas-list-ag { padding:10px 14px 0; }
+.parada-ag { display:flex; align-items:center; gap:8px; margin-bottom:8px; animation:slideUp .2s ease; transition:opacity .2s,transform .2s; touch-action:none; }
+.parada-ag.dragging { opacity:.5; transform:scale(.98); }
+.parada-ag.drag-over { border-top:2px solid var(--primary); }
+.pdot-wrap  { display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:16px; }
+.pdot       { width:10px; height:10px; border-radius:50%; flex-shrink:0; border:2px solid #fff; }
+.pdot-line  { width:2px; height:8px; background:var(--border); margin-top:2px; }
+.pdot-o { background:#22c55e; }
+.pdot-m { background:#f59e0b; }
+.pdot-d { background:#ef4444; }
+.pinp-wrap  { flex:1; position:relative; }
+.pinp-wrap input { margin-bottom:0; padding-right:34px; font-size:13px; border-radius:9px; }
+.pinp-clear { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer; padding:3px; width:auto; line-height:1; opacity:0; pointer-events:none; transition:opacity .15s; }
+.pinp-clear.show { opacity:1; pointer-events:all; }
+.pdrag { color:var(--muted); font-size:16px; cursor:grab; padding:2px; flex-shrink:0; user-select:none; touch-action:none; }
+.pdrag:active { color:var(--primary); cursor:grabbing; }
+.premove { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.2); color:#ef4444; border-radius:7px; width:28px; height:28px; font-size:13px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; padding:0; }
+
+.rota-ag-actions { display:flex; gap:8px; padding:8px 14px 10px; }
+.btn-add-parada-ag { flex:1; padding:8px; border-radius:9px; background:rgba(46,168,160,.08); border:1px dashed rgba(46,168,160,.35); color:var(--primary); font-size:13px; font-weight:600; cursor:pointer; width:auto; transition:all .2s; }
+
+.mapa-ag-wrap { height:190px; background:var(--card2); border-top:1px solid var(--border); display:none; position:relative; }
+.mapa-ag-wrap.show { display:block; }
+#mapAg { width:100%; height:100%; }
+
+.rota-loading-ag { padding:8px 14px 10px; display:none; align-items:center; gap:8px; color:var(--muted); font-size:13px; }
+.rota-loading-ag.show { display:flex; }
+.spinner-ag { width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.rota-res-ag { margin:0 14px 10px; padding:10px 12px; background:rgba(46,168,160,.08); border:1px solid rgba(46,168,160,.25); border-radius:10px; display:none; }
+.rota-res-ag.show { display:block; }
+.rota-res-km  { font-size:18px; font-weight:800; color:var(--primary); }
+.rota-res-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.rota-res-custo { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
+.rota-res-custo strong { color:#ef4444; font-size:14px; }
+.custo-aviso { font-size:10px; color:var(--muted); font-style:italic; margin-top:3px; display:flex; align-items:center; gap:4px; }
+.btn-limpar-rota-ag { background:transparent; border:1px solid var(--border); color:var(--muted); width:auto; padding:4px 8px; font-size:11px; border-radius:7px; cursor:pointer; float:right; margin-top:-2px; }
+
+/* Rota resumo no card da agenda */
+.ag-rota-box { background:rgba(46,168,160,.07); border:1px solid rgba(46,168,160,.2); border-radius:10px; padding:10px 12px; margin-bottom:10px; font-size:12px; }
+.ag-rota-paradas { color:var(--text); line-height:1.7; margin-bottom:5px; }
+.ag-rota-stats { display:flex; gap:10px; flex-wrap:wrap; }
+.ag-rota-stat { display:flex; align-items:center; gap:4px; color:var(--muted); }
+.ag-rota-stat strong { color:var(--primary); }
+.ag-custo-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(229,83,75,.1); border:1px solid rgba(229,83,75,.2); color:#ef4444; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
+
 </style>
 </head>
 <body class="has-global-nav">
@@ -238,6 +292,31 @@
     <label>Observação (opcional)</label>
     <input type="text" id="agObs" placeholder="Ex: Buscar em casa, levar à clínica...">
 
+
+    <!-- ══ Seção Rota ══ -->
+    <div class="rota-section">
+      <div class="rota-sec-header">
+        <span class="rota-sec-title">🗺️ Rota da viagem</span>
+        <button class="rota-sec-toggle" onclick="toggleRotaAg()"><span id="rotaAgToggleLabel">▼ Adicionar rota</span></button>
+      </div>
+      <div id="rotaAgBody" style="display:none">
+        <div class="paradas-list-ag" id="paradasListAg"></div>
+        <div class="rota-ag-actions">
+          <button class="btn-add-parada-ag" onclick="adicionarParadaAg()">＋ Adicionar parada</button>
+        </div>
+        <div class="rota-loading-ag" id="rotaLoadingAg"><div class="spinner-ag"></div><span>Calculando rota…</span></div>
+        <div class="rota-res-ag" id="rotaResAg">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div><div class="rota-res-km" id="rotaAgKm">—</div><div class="rota-res-sub" id="rotaAgSub"></div></div>
+            <button class="btn-limpar-rota-ag" onclick="limparRotaAg()">✕ Limpar</button>
+          </div>
+          <div class="rota-res-custo" id="rotaAgCusto"></div>
+        </div>
+        <div class="mapa-ag-wrap" id="mapaAgWrap"><div id="mapAg"></div></div>
+        <div style="height:4px"></div>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button onclick="fecharModalAg()">Cancelar</button>
       <button onclick="salvarAgendamento()" style="background:var(--primary)">💾 Salvar</button>
@@ -264,6 +343,9 @@
     <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
       Isso abrirá o módulo de viagens com os dados pré-preenchidos. O agendamento será marcado como <strong>concluído</strong>.
     </p>
+    <div id="convRotaResumo" style="display:none;margin-bottom:12px">
+      <div class="ag-rota-box" id="convRotaBox"></div>
+    </div>
     <label>KM inicial</label>
     <input type="number" id="convKmInicial" placeholder="KM atual do odômetro">
     <label>KM final</label>
@@ -473,6 +555,27 @@ function renderLista() {
         acoes += `<button class="ag-btn red" onclick="abrirDelAg(${ag.id})">🗑️ Excluir</button>`;
       }
 
+      // Rota resumo — visível apenas para o motorista no card
+      let rotaHtml = '';
+      if (ag.rota && ag.rota.paradas && ag.rota.paradas.length >= 2) {
+        const r = ag.rota;
+        const vAtivo = kmApp.veiculos.find(v=>v.id===kmApp.ativo);
+        const cKm = vAtivo ? calcCustoKm(vAtivo) : 0;
+        const custo = r.km * cKm;
+        const ps = r.paradas.map((p,i) => {
+          const ic = i===0?'🟢':i===r.paradas.length-1?'🔴':'🟡';
+          return `${ic} ${p.address.split(',')[0]}`;
+        }).join(' → ');
+        rotaHtml = `<div class="ag-rota-box">
+          <div class="ag-rota-paradas">${ps}</div>
+          <div class="ag-rota-stats">
+            <div class="ag-rota-stat">📏 <strong>${r.km} km</strong></div>
+            <div class="ag-rota-stat">⏱ <strong>${r.duracao||'—'}</strong></div>
+            ${cKm>0?`<div class="ag-rota-stat"><span class="ag-custo-badge">💸 Custo: ${fmt(custo)}</span></div>`:''}
+          </div>
+        </div>`;
+      }
+
       card.innerHTML = `
         <div class="ag-header">
           <div>
@@ -489,6 +592,7 @@ function renderLista() {
           ${ag.duracao ? `<span>⏱ ${ag.duracao}min</span>` : ''}
         </div>
         ${ag.obs ? `<div class="ag-obs">💬 ${ag.obs}</div>` : ''}
+        ${rotaHtml}
         <div class="ag-acoes">${acoes}</div>
       `;
       slot.appendChild(card);
@@ -592,6 +696,7 @@ function abrirModalNovoAg() {
   document.getElementById('agValor').value     = '';
   document.getElementById('agObs').value       = '';
   document.getElementById('conflitoAlert').classList.remove('visivel');
+  resetarRotaAg();
   document.getElementById('modalAg').classList.remove('hidden');
 }
 
@@ -610,6 +715,10 @@ function abrirEditarAg(id) {
   document.getElementById('agValor').value     = ag.valor || '';
   document.getElementById('agObs').value       = ag.obs || '';
   verificarConflito();
+  resetarRotaAg();
+  if (ag.rota && ag.rota.paradas && ag.rota.paradas.length >= 2) {
+    setTimeout(() => carregarRotaSalvaAg(ag.rota), 300);
+  }
   document.getElementById('modalAg').classList.remove('hidden');
 }
 
@@ -636,11 +745,13 @@ function salvarAgendamento() {
     ag.clienteId=clienteId; ag.passageiro=passageiro;
     ag.data=data; ag.hora=hora; ag.duracao=duracao;
     ag.valor=valor; ag.obs=obs;
+    if (kmRotaAg > 0) ag.rota = { km: kmRotaAg, duracao: duracaoRotaAg, paradas: paradasAg.filter(p=>p.place).map(p=>p.place) };
     showToast('Agendamento atualizado ✅','success');
   } else {
+    const rotaSalva = kmRotaAg > 0 ? { km: kmRotaAg, duracao: duracaoRotaAg, paradas: paradasAg.filter(p=>p.place).map(p=>p.place) } : null;
     agData.agendamentos.push({
       id: Date.now(), clienteId, passageiro, data, hora,
-      duracao, valor, obs, status:'pendente'
+      duracao, valor, obs, status:'pendente', rota: rotaSalva
     });
     showToast('Agendamento salvo ✅','success');
   }
@@ -687,7 +798,16 @@ function enviarConfirmWpp(id) {
   const dataFmt = new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   const hora = ag.hora ? ` às ${ag.hora}` : '';
   const val  = ag.valor ? `\n💵 Valor estimado: ${fmt(ag.valor)}` : '';
-  const msg  = `Olá, ${cli.nome}! 😊\n\nConfirmando seu agendamento:\n\n👤 Passageiro: ${nome}\n📅 ${dataFmt}${hora}${val}\n\nQualquer dúvida estou à disposição! 🚗`;
+  // Rota para o cliente — apenas endereços, NUNCA custo
+  let rotaMsg = '';
+  if (ag.rota && ag.rota.paradas && ag.rota.paradas.length >= 2) {
+    const ps = ag.rota.paradas;
+    rotaMsg = `\n\n📍 Rota:\n` + ps.map((p,i) => {
+      const ic = i===0?'🟢':i===ps.length-1?'🔴':'🟡';
+      return `${ic} ${p.address.split(',')[0]}`;
+    }).join('\n');
+  }
+  const msg  = `Olá, ${cli.nome}! 😊\n\nConfirmando seu agendamento:\n\n👤 Passageiro: ${nome}\n📅 ${dataFmt}${hora}${val}${rotaMsg}\n\nQualquer dúvida estou à disposição! 🚗`;
   window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`,'_blank');
 }
 
@@ -698,6 +818,26 @@ function abrirConverter(id) {
   if (ag) document.getElementById('convValor').value = ag.valor || '';
   document.getElementById('convKmInicial').value = '';
   document.getElementById('convKmFinal').value   = '';
+  // Mostrar resumo da rota se disponível
+  const rw = document.getElementById('convRotaResumo');
+  const rb = document.getElementById('convRotaBox');
+  if (ag?.rota && ag.rota.paradas && ag.rota.paradas.length >= 2) {
+    const r = ag.rota;
+    const vAtivo = kmApp.veiculos.find(v=>v.id===kmApp.ativo);
+    const cKm = vAtivo ? calcCustoKm(vAtivo) : 0;
+    const custo = r.km * cKm;
+    const ps = r.paradas.map((p,i) => {
+      const ic = i===0?'🟢':i===r.paradas.length-1?'🔴':'🟡';
+      return `${ic} ${p.address.split(',')[0]}`;
+    }).join(' → ');
+    rb.innerHTML = `<div class="ag-rota-paradas" style="margin-bottom:6px">${ps}</div>
+      <div class="ag-rota-stats">
+        <div class="ag-rota-stat">📏 <strong>${r.km} km</strong></div>
+        <div class="ag-rota-stat">⏱ <strong>${r.duracao||'—'}</strong></div>
+        ${cKm>0?`<div class="ag-rota-stat"><span class="ag-custo-badge">💸 Custo est.: ${fmt(custo)}</span></div>`:''}
+      </div>`;
+    rw.style.display = 'block';
+  } else { rw.style.display = 'none'; }
   document.getElementById('modalConverter').classList.remove('hidden');
 }
 
@@ -726,7 +866,8 @@ function confirmarConverter() {
     id: Date.now(), clienteId:ag.clienteId, veiculoId:v.id,
     passageiroNome: ag.passageiro||'',
     data: agora.toISOString(),
-    kmInicial:ini, kmFinal:fim, km, valor, custoTotal, lucro, tipo:'viagem'
+    kmInicial:ini, kmFinal:fim, km, valor, custoTotal, lucro, tipo:'viagem',
+    rota: ag.rota || null  // rota salva para histórico do cliente
   };
   vData.viagens.push(viagem);
   // Faturamento viagem
@@ -761,10 +902,268 @@ function calcCustoKm(v) {
 }
 
 
+
+// ═══════════════════════════════════════════════════════
+// ROTA NA AGENDA — Google Maps
+// ═══════════════════════════════════════════════════════
+function calcCustoKm(v) {
+  if (!v || v.consumo <= 0) return 0;
+  return v.custos.comb / v.consumo +
+    ((v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0)) /
+    (Number(v.kmMensal)||2000);
+}
+
+let paradasAg    = [];
+let paradaAgId   = 0;
+let kmRotaAg     = 0;
+let duracaoRotaAg= '';
+let rotaAgAberta = false;
+let mapAg        = null;
+let dirSvcAg     = null;
+let dirRndAg     = null;
+let gmapsReadyAg = false;
+
+function toggleRotaAg() {
+  rotaAgAberta = !rotaAgAberta;
+  document.getElementById('rotaAgBody').style.display = rotaAgAberta ? 'block' : 'none';
+  document.getElementById('rotaAgToggleLabel').textContent = rotaAgAberta ? '▲ Recolher' : '▼ Adicionar rota';
+  if (rotaAgAberta && gmapsReadyAg && !mapAg)       { setTimeout(inicializarMapaAg, 100); }
+  else if (rotaAgAberta && mapAg)                   { setTimeout(()=>google.maps.event.trigger(mapAg,'resize'), 150); }
+}
+
+function inicializarMapaAg() {
+  if (mapAg) return;
+  dirSvcAg = new google.maps.DirectionsService();
+  dirRndAg = new google.maps.DirectionsRenderer({
+    suppressMarkers: false,
+    polylineOptions: { strokeColor:'#2ea8a0', strokeWeight:4, strokeOpacity:.85 }
+  });
+  mapAg = new google.maps.Map(document.getElementById('mapAg'), {
+    center:{lat:-15.77972,lng:-47.92972}, zoom:4,
+    mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
+    styles:[
+      {elementType:'geometry',stylers:[{color:'#1d2636'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#304a57'}]},
+      {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#2ea8a0'}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#17263c'}]},
+      {featureType:'poi',stylers:[{visibility:'off'}]},
+      {featureType:'transit',stylers:[{visibility:'off'}]}
+    ]
+  });
+  dirRndAg.setMap(mapAg);
+  inicializarParadasAg();
+}
+
+function inicializarParadasAg() {
+  paradasAg = [
+    {id:++paradaAgId, place:null, acObj:null},
+    {id:++paradaAgId, place:null, acObj:null}
+  ];
+  renderizarParadasAg();
+}
+
+function resetarRotaAg() {
+  kmRotaAg=0; duracaoRotaAg='';
+  paradasAg = [{id:++paradaAgId,place:null,acObj:null},{id:++paradaAgId,place:null,acObj:null}];
+  rotaAgAberta = false;
+  document.getElementById('rotaAgBody').style.display = 'none';
+  document.getElementById('rotaAgToggleLabel').textContent = '▼ Adicionar rota';
+  document.getElementById('rotaResAg').classList.remove('show');
+  document.getElementById('mapaAgWrap').classList.remove('show');
+  if (dirRndAg) dirRndAg.setDirections({routes:[]});
+  if (mapAg) renderizarParadasAg();
+}
+
+function carregarRotaSalvaAg(rota) {
+  if (!rota || !rota.paradas) return;
+  rotaAgAberta = true;
+  document.getElementById('rotaAgBody').style.display = 'block';
+  document.getElementById('rotaAgToggleLabel').textContent = '▲ Recolher';
+  if (gmapsReadyAg && !mapAg) {
+    inicializarMapaAg();
+    setTimeout(() => {
+      paradasAg = rota.paradas.map(p => ({id:++paradaAgId, place:p, acObj:null}));
+      renderizarParadasAg();
+      setTimeout(calcularRotaAg, 400);
+    }, 250);
+    return;
+  }
+  if (!mapAg) return;
+  paradasAg = rota.paradas.map(p => ({id:++paradaAgId, place:p, acObj:null}));
+  renderizarParadasAg();
+  setTimeout(calcularRotaAg, 300);
+}
+
+function renderizarParadasAg() {
+  const list = document.getElementById('paradasListAg'); list.innerHTML = '';
+  paradasAg.forEach((p, i) => {
+    const isFirst = i===0, isLast = i===paradasAg.length-1;
+    const dotCls  = isFirst ? 'pdot-o' : isLast ? 'pdot-d' : 'pdot-m';
+    const label   = isFirst ? 'Origem' : isLast ? 'Destino' : `Parada ${i}`;
+    const podeRem = paradasAg.length>2 && !isFirst && !isLast;
+    const podeMov = paradasAg.length>2;
+    const el = document.createElement('div');
+    el.className = 'parada-ag'; el.dataset.id = p.id;
+    el.innerHTML = `
+      ${podeMov ? `<div class="pdrag" data-drag="${p.id}">⠿</div>` : '<div style="width:16px;flex-shrink:0"></div>'}
+      <div class="pdot-wrap">
+        <div class="pdot ${dotCls}"></div>
+        ${!isLast ? '<div class="pdot-line"></div>' : ''}
+      </div>
+      <div class="pinp-wrap">
+        <input type="text" placeholder="${label} — endereço, CEP…" autocomplete="off" data-pid="${p.id}">
+        <button class="pinp-clear" data-pid="${p.id}" onclick="limparParadaAg(${p.id})">✕</button>
+      </div>
+      ${podeRem ? `<button class="premove" onclick="removerParadaAg(${p.id})">✕</button>` : '<div style="width:28px;flex-shrink:0"></div>'}
+    `;
+    list.appendChild(el);
+    const input = el.querySelector('input');
+    if (p.place) { input.value = p.place.address; el.querySelector('.pinp-clear').classList.add('show'); }
+    if (window.google) {
+      const ac = new google.maps.places.Autocomplete(input, {
+        componentRestrictions:{country:'br'}, fields:['geometry','formatted_address','name']
+      });
+      ac.addListener('place_changed', () => {
+        const pl = ac.getPlace(); if (!pl.geometry) return;
+        p.place = { address: pl.formatted_address||pl.name, lat: pl.geometry.location.lat(), lng: pl.geometry.location.lng() };
+        input.value = p.place.address;
+        el.querySelector('.pinp-clear').classList.add('show');
+        document.getElementById('mapaAgWrap').classList.add('show');
+        setTimeout(()=>google.maps.event.trigger(mapAg,'resize'),100);
+        verificarCalcularRotaAg();
+      });
+      input.addEventListener('input', () => {
+        el.querySelector('.pinp-clear').classList.toggle('show', input.value.length>0);
+        if (!input.value) { p.place=null; esconderResAg(); }
+      });
+      p.acObj = ac;
+    }
+  });
+  dragDropAg();
+}
+
+function adicionarParadaAg() {
+  if (paradasAg.length >= 8) { showToast('Máximo de 8 paradas','info'); return; }
+  paradasAg.splice(paradasAg.length-1, 0, {id:++paradaAgId, place:null, acObj:null});
+  renderizarParadasAg();
+  const inputs = document.querySelectorAll('#paradasListAg input');
+  if (inputs[paradasAg.length-2]) inputs[paradasAg.length-2].focus();
+}
+
+function removerParadaAg(id) {
+  paradasAg = paradasAg.filter(p=>p.id!==id);
+  renderizarParadasAg(); verificarCalcularRotaAg();
+}
+
+function limparParadaAg(id) {
+  const p = paradasAg.find(x=>x.id===id); if (p) p.place=null;
+  const inp = document.querySelector(`#paradasListAg input[data-pid="${id}"]`); if(inp) inp.value='';
+  const btn = document.querySelector(`#paradasListAg .pinp-clear[data-pid="${id}"]`); if(btn) btn.classList.remove('show');
+  esconderResAg();
+}
+
+function dragDropAg() {
+  const list = document.getElementById('paradasListAg');
+  let dragEl=null, dragIdx=-1, targetIdx=-1;
+  const getItems = () => [...list.querySelectorAll('.parada-ag')];
+  const idxOf    = el => getItems().indexOf(el);
+  const onStart  = el => { dragEl=el; dragIdx=idxOf(el); el.classList.add('dragging'); };
+  const onEnd    = () => {
+    if (!dragEl) return;
+    dragEl.classList.remove('dragging');
+    getItems().forEach(i=>i.classList.remove('drag-over'));
+    if (targetIdx>=0 && targetIdx!==dragIdx) {
+      const moved = paradasAg.splice(dragIdx,1)[0]; paradasAg.splice(targetIdx,0,moved);
+      renderizarParadasAg();
+      if (paradasAg.filter(p=>p.place).length>=2) calcularRotaAg();
+    }
+    dragEl=null; dragIdx=-1; targetIdx=-1;
+  };
+  const onOver = el => {
+    if (!dragEl||el===dragEl) return;
+    targetIdx=idxOf(el); getItems().forEach(i=>i.classList.remove('drag-over')); el.classList.add('drag-over');
+  };
+  list.querySelectorAll('.pdrag').forEach(h => {
+    const item = h.closest('.parada-ag');
+    h.addEventListener('touchstart', e=>{e.preventDefault();onStart(item);},{passive:false});
+    h.addEventListener('touchmove',  e=>{
+      e.preventDefault();
+      const t=e.touches[0], el=document.elementFromPoint(t.clientX,t.clientY);
+      if (!el) return; const hov=el.closest('.parada-ag'); if(hov&&hov!==dragEl) onOver(hov);
+    },{passive:false});
+    h.addEventListener('touchend',   e=>{e.preventDefault();onEnd();},{passive:false});
+    h.addEventListener('mousedown',  e=>{
+      e.preventDefault(); onStart(item);
+      const mm = ev=>{ const el=document.elementFromPoint(ev.clientX,ev.clientY); if(!el) return; const hov=el.closest('.parada-ag'); if(hov&&hov!==dragEl) onOver(hov); };
+      const mu = ()=>{ onEnd(); document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+      document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
+    });
+  });
+}
+
+function verificarCalcularRotaAg() {
+  if (paradasAg[0]?.place && paradasAg[paradasAg.length-1]?.place) calcularRotaAg();
+}
+
+function calcularRotaAg() {
+  const com = paradasAg.filter(p=>p.place); if (com.length<2||!dirSvcAg) return;
+  document.getElementById('rotaLoadingAg').classList.add('show');
+  document.getElementById('rotaResAg').classList.remove('show');
+  const origin = new google.maps.LatLng(com[0].place.lat, com[0].place.lng);
+  const dest   = new google.maps.LatLng(com[com.length-1].place.lat, com[com.length-1].place.lng);
+  const wps    = com.slice(1,-1).map(p => ({location:new google.maps.LatLng(p.place.lat,p.place.lng),stopover:true}));
+  dirSvcAg.route({origin, destination:dest, waypoints:wps, travelMode:google.maps.TravelMode.DRIVING, region:'br'}, (result, status) => {
+    document.getElementById('rotaLoadingAg').classList.remove('show');
+    if (status !== google.maps.DirectionsStatus.OK) { showToast('Não foi possível calcular a rota.','error'); return; }
+    let distM=0, durS=0;
+    result.routes[0].legs.forEach(l => { distM+=l.distance.value; durS+=l.duration.value; });
+    kmRotaAg = Math.round(distM/100)/10;
+    const h = Math.floor(durS/3600), m = Math.round((durS%3600)/60);
+    duracaoRotaAg = h>0 ? `${h}h ${m}min` : `${m} min`;
+    document.getElementById('rotaAgKm').textContent  = `${kmRotaAg} km`;
+    document.getElementById('rotaAgSub').innerHTML   = `⏱ ${duracaoRotaAg} &nbsp;·&nbsp; ${(distM/1000).toFixed(1)} km`;
+    // Custo — só para o motorista
+    const vAtivo = kmApp.veiculos.find(v=>v.id===kmApp.ativo);
+    const cKm    = vAtivo ? calcCustoKm(vAtivo) : 0;
+    const custo  = kmRotaAg * cKm;
+    const cel    = document.getElementById('rotaAgCusto');
+    if (custo > 0) {
+      cel.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>💸 Custo estimado:</span><strong>${fmt(custo)}</strong>
+        </div>
+        <div class="custo-aviso">🔒 Apenas para você — nunca enviado ao cliente</div>`;
+    } else {
+      cel.innerHTML = '<span style="color:var(--muted)">Configure um veículo para ver o custo estimado</span>';
+    }
+    document.getElementById('rotaResAg').classList.add('show');
+    document.getElementById('mapaAgWrap').classList.add('show');
+    dirRndAg.setDirections(result);
+    setTimeout(()=>google.maps.event.trigger(mapAg,'resize'), 100);
+  });
+}
+
+function esconderResAg() {
+  kmRotaAg=0; duracaoRotaAg='';
+  document.getElementById('rotaResAg').classList.remove('show');
+}
+
+function limparRotaAg() {
+  paradasAg.forEach(p=>p.place=null);
+  renderizarParadasAg(); esconderResAg();
+  document.getElementById('mapaAgWrap').classList.remove('show');
+  if (dirRndAg) dirRndAg.setDirections({routes:[]});
+}
+
+function initGoogleMaps() { gmapsReadyAg = true; }
+
 // ════════ INIT ════════
 render();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDV8OiSzVdPBykYioUtjuxLsnkj9JUanWo&libraries=places&callback=initGoogleMaps&language=pt-BR&region=BR" async defer></script>
 
 <!-- Toggle Tema -->
 <button id="theme-toggle" title="Alternar tema" onclick="toggleTheme()">🌙</button>

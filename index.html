@@ -29,9 +29,9 @@
 
 <body class="has-global-nav">
 <nav id="internal-nav">
-  <button onclick="showPage('veiculos')" class="active">🚗 Veículos</button>
-  <button onclick="showPage('dashboard')">📊 Dashboard</button>
-  <button onclick="showPage('backup')">💾 Backup</button>
+  <button onclick="showPage('veiculos')" class="active"><span class="nav-icon">🚗</span><span class="nav-label">Veículos</span></button>
+  <button onclick="showPage('dashboard')"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
+  <button onclick="showPage('backup')"><span class="nav-icon">💾</span><span class="nav-label">Backup</span></button>
 </nav>
 
 
@@ -89,21 +89,21 @@
   </div>
 
   <!-- KPIs do dia -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div class="card" style="text-align:center;margin-bottom:0;padding:14px 10px">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Faturado hoje</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Faturado hoje</div>
       <div id="dashFatHoje" style="font-size:22px;font-weight:800;color:var(--accent);margin-top:4px">R$ 0</div>
     </div>
-    <div class="card" style="text-align:center;margin-bottom:0;padding:14px 10px">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Lucro hoje</div>
+    <div class="kpi-card">
+      <div class="kpi-label">Lucro hoje</div>
       <div id="dashLucroHoje" style="font-size:22px;font-weight:800;color:var(--primary);margin-top:4px">R$ 0</div>
     </div>
-    <div class="card" style="text-align:center;margin-bottom:0;padding:14px 10px">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">KM rodados hoje</div>
+    <div class="kpi-card">
+      <div class="kpi-label">KM rodados hoje</div>
       <div id="dashKmHoje" style="font-size:22px;font-weight:800;color:var(--secondary);margin-top:4px">0 km</div>
     </div>
-    <div class="card" style="text-align:center;margin-bottom:0;padding:14px 10px">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Corridas hoje</div>
+    <div class="kpi-card">
+      <div class="kpi-label">Corridas hoje</div>
       <div id="dashCorridasHoje" style="font-size:22px;font-weight:800;color:var(--text);margin-top:4px">0</div>
     </div>
   </div>

@@ -319,6 +319,10 @@
     setTimeout(() => t.style.display='none', 2800);
   }
 
+  function toLocalDateStr(d) {
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
   function getVeiculo(id) { return kmApp.veiculos.find(v=>v.id===id); }
 
   function calcularCustoPorKm(v) {
@@ -332,7 +336,7 @@
   // ── Init ──
   function init() {
     // Seta data de hoje
-    document.getElementById('inpData').value = new Date().toISOString().slice(0,10);
+    document.getElementById('inpData').value = toLocalDateStr(new Date());
 
     // Popula select de veículos
     const sel = document.getElementById('selVeiculo');
@@ -702,7 +706,7 @@
     document.getElementById('inpValor').value  = '';
     document.getElementById('inpPosto').value  = '';
     document.getElementById('previewAbast').style.display = 'none';
-    document.getElementById('inpData').value   = new Date().toISOString().slice(0,10);
+    document.getElementById('inpData').value   = toLocalDateStr(new Date());
 
     showToast('Abastecimento salvo ✅','success');
     renderTudo();

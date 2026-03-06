@@ -326,9 +326,10 @@
   // ======= PÁGINAS =======
   function showPage(id) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#internal-nav button').forEach(b => b.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    event.target.classList.add('active');
+    const btn = event.target.closest('button');
+    if (btn) btn.classList.add('active');
 
     if (id === 'veiculos')  { renderVeiculos(); carregarAnosTotalMeta(); renderMetasTotal(); }
     if (id === 'dashboard') { renderDashboard(); }
@@ -1139,4 +1140,3 @@ function closeFab(){
 </nav>
 </body>
 <footer></footer>
-

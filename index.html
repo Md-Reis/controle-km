@@ -242,6 +242,28 @@
 
 
 
+<!-- Modal Confirmar Importação de Backup -->
+<div id="modalImportConfirm" class="modal hidden">
+  <div class="modal-box" style="max-width:340px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:44px;margin-bottom:8px">📥</div>
+      <h2 style="margin:0 0 8px;font-size:18px">Restaurar backup?</h2>
+      <p style="color:var(--muted);font-size:14px;margin:0;line-height:1.5">
+        Todos os dados atuais serão <strong style="color:var(--danger)">substituídos</strong> pelos do arquivo selecionado.
+      </p>
+    </div>
+    <div style="background:rgba(229,83,75,.08);border:1px solid rgba(229,83,75,.25);border-radius:10px;padding:10px 12px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--danger);line-height:1.6">
+        ⚠️ Esta ação é <strong>irreversível</strong>. Veículos, entregas, viagens, clientes e agendamentos atuais serão perdidos. Certifique-se de ter um backup recente.
+      </div>
+    </div>
+    <div class="flex">
+      <button onclick="executarImportacao()" style="background:var(--danger);color:#fff;border-color:var(--danger)">📥 Restaurar mesmo assim</button>
+      <button class="btn-secondary" onclick="cancelarImport()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Confirmar Exclusão de Veículo -->
 <div id="modalDelVeiculo" class="modal hidden">
   <div class="modal-box" style="max-width:320px">
@@ -525,7 +547,7 @@
 
   function renderDashboard() {
     const agora    = new Date();
-    const hojeStr  = agora.toISOString().slice(0,10);
+    const hojeStr  = toLocalDateStr(agora);
 
     // Mês navegável
     const refDate = new Date(agora.getFullYear(), agora.getMonth() + dashMesOffset, 1);
@@ -672,12 +694,13 @@
 
     if (agHoje.length === 0) {
       elHoje.innerHTML = `
-        <div class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px">
+        <div class="card" onclick="window.location.href='agenda.html'" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer">
           <div style="font-size:26px">📅</div>
-          <div>
+          <div style="flex:1">
             <div style="font-weight:700;font-size:14px">Agenda de Hoje</div>
             <div style="font-size:13px;color:var(--muted);margin-top:2px">Nenhum agendamento para hoje</div>
           </div>
+          <span style="color:var(--muted);font-size:18px">›</span>
         </div>`;
     } else {
       const rows = agHoje.map(ag => {
@@ -699,10 +722,10 @@
           </div>`;
       }).join('');
       elHoje.innerHTML = `
-        <div class="card" style="padding:12px 16px">
+        <div class="card" onclick="window.location.href='agenda.html'" style="padding:12px 16px;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <strong style="font-size:14px">📅 Agenda de Hoje</strong>
-            <span style="font-size:12px;color:var(--muted);background:var(--card2);padding:2px 8px;border-radius:20px">${agHoje.length} agendamento${agHoje.length>1?'s':''}</span>
+            <span style="font-size:12px;color:var(--muted);background:var(--card2);padding:2px 8px;border-radius:20px">${agHoje.length} agendamento${agHoje.length>1?'s':''} ›</span>
           </div>
           ${rows}
         </div>`;
@@ -738,10 +761,10 @@
           </div>`;
       }).join('');
       elProx.innerHTML = `
-        <div class="card" style="padding:12px 16px">
+        <div class="card" onclick="window.location.href='agenda.html'" style="padding:12px 16px;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <strong style="font-size:14px">📆 Próximos dias</strong>
-            <span style="font-size:12px;color:var(--muted);background:var(--card2);padding:2px 8px;border-radius:20px">${agProximos.length} agendamento${agProximos.length>1?'s':''}</span>
+            <span style="font-size:12px;color:var(--muted);background:var(--card2);padding:2px 8px;border-radius:20px">${agProximos.length} agendamento${agProximos.length>1?'s':''} ›</span>
           </div>
           ${rows}
         </div>`;
@@ -800,6 +823,39 @@
       </div>`;
   }
 
+  // ======= IMPORTAÇÃO (modal) =======
+  let pendingImportPayload = null;
+  let pendingImportEvent   = null;
+
+  function cancelarImport() {
+    document.getElementById('modalImportConfirm').classList.add('hidden');
+    const status = document.getElementById('importStatus');
+    if (status) { status.textContent = 'Restauração cancelada.'; status.style.color = 'var(--muted)'; }
+    if (pendingImportEvent) pendingImportEvent.target.value = '';
+    pendingImportPayload = null;
+    pendingImportEvent   = null;
+  }
+
+  function executarImportacao() {
+    const payload = pendingImportPayload;
+    const event   = pendingImportEvent;
+    document.getElementById('modalImportConfirm').classList.add('hidden');
+    if (!payload) return;
+    const status = document.getElementById('importStatus');
+
+    if (payload.kmApp)             localStorage.setItem('kmApp',             JSON.stringify(payload.kmApp));
+    if (payload.viagensApp)        localStorage.setItem('viagensApp',        JSON.stringify(payload.viagensApp));
+    if (payload.abastecimentoApp)  localStorage.setItem('abastecimentoApp',  JSON.stringify(payload.abastecimentoApp));
+    if (payload.agendaApp)         localStorage.setItem('agendaApp',         JSON.stringify(payload.agendaApp));
+    if (Array.isArray(payload.rotasSalvas)) localStorage.setItem('rotasSalvas', JSON.stringify(payload.rotasSalvas));
+    if (payload.kmTheme)           localStorage.setItem('kmTheme',           payload.kmTheme);
+
+    if (status) { status.textContent = '✅ Dados restaurados! Recarregando...'; status.style.color = 'var(--accent)'; }
+    pendingImportPayload = null;
+    pendingImportEvent   = null;
+    setTimeout(() => location.reload(), 1500);
+  }
+
   // ======= BACKUP =======
   function exportarBackup() {
     const kmApp            = JSON.parse(localStorage.getItem('kmApp'))             || {};
@@ -851,23 +907,10 @@
           throw new Error('Arquivo inválido ou corrompido.');
         }
 
-        // Confirma antes de sobrescrever
-        if (!confirm('⚠️ Isso vai substituir TODOS os dados atuais pelos do arquivo.\n\nTem certeza?')) {
-          status.textContent = 'Restauração cancelada.';
-          event.target.value = '';
-          return;
-        }
-
-        if (payload.kmApp)             localStorage.setItem('kmApp',             JSON.stringify(payload.kmApp));
-        if (payload.viagensApp)        localStorage.setItem('viagensApp',        JSON.stringify(payload.viagensApp));
-        if (payload.abastecimentoApp)  localStorage.setItem('abastecimentoApp',  JSON.stringify(payload.abastecimentoApp));
-        if (payload.agendaApp)         localStorage.setItem('agendaApp',         JSON.stringify(payload.agendaApp));
-        if (Array.isArray(payload.rotasSalvas)) localStorage.setItem('rotasSalvas', JSON.stringify(payload.rotasSalvas));
-        if (payload.kmTheme)           localStorage.setItem('kmTheme',           payload.kmTheme);
-
-        status.textContent = '✅ Dados restaurados com sucesso! Recarregando...';
-        status.style.color = 'var(--accent)';
-        setTimeout(() => location.reload(), 1500);
+        // Abre modal de confirmação antes de sobrescrever
+        pendingImportPayload = payload;
+        pendingImportEvent   = event;
+        document.getElementById('modalImportConfirm').classList.remove('hidden');
 
       } catch(err) {
         status.textContent = '❌ Erro: ' + err.message;
@@ -959,22 +1002,53 @@
 
   function renderVeiculos() {
     listaVeiculos.innerHTML = '';
+
+    // ── Onboarding estado vazio ──
     if (data.veiculos.length === 0) {
-      listaVeiculos.innerHTML = "<small>Nenhum veículo cadastrado.</small>";
+      listaVeiculos.innerHTML = `
+        <div class="card" style="text-align:center;padding:28px 20px">
+          <div style="font-size:52px;margin-bottom:12px">🚗</div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:8px">Nenhum veículo cadastrado</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px">
+            Cadastre seu veículo para começar a registrar entregas, viagens e calcular lucro por km.
+          </div>
+          <div style="font-size:13px;color:var(--muted);text-align:left;background:var(--card2);border-radius:10px;padding:14px;margin-bottom:4px">
+            <div style="font-weight:700;margin-bottom:8px;color:var(--text)">Como funciona:</div>
+            <div style="margin-bottom:6px">1️⃣ Clique em <strong>+ Novo Veículo</strong> acima</div>
+            <div style="margin-bottom:6px">2️⃣ Informe consumo (km/l) e custos mensais</div>
+            <div style="margin-bottom:6px">3️⃣ O sistema calculará seu custo/km automaticamente</div>
+            <div>4️⃣ Pronto — registre entregas e viagens com lucro em tempo real</div>
+          </div>
+        </div>`;
       return;
     }
 
     data.veiculos.forEach(v => {
       const ativo = v.id === data.ativo;
+      const semCustos = !v.custos?.comb || v.custos.comb <= 0;
+
       let custoKmCombTxt  = "—";
       let custoKmTotalTxt = "—";
 
-      if (v.consumo > 0) {
-        const custoKmComb  = v.custos?.comb > 0 ? v.custos.comb / v.consumo : 0;
+      if (v.consumo > 0 && !semCustos) {
+        const custoKmComb  = v.custos.comb / v.consumo;
         const custoKmTotal = calcularCustoPorKm(v);
         custoKmCombTxt  = `R$ ${custoKmComb.toFixed(2)}`;
         custoKmTotalTxt = `R$ ${custoKmTotal.toFixed(2)}`;
       }
+
+      // Alerta de custos não configurados
+      const alertaCustos = semCustos ? `
+        <div onclick="abrirModalVeiculo(${v.id})" style="
+          display:flex;align-items:center;gap:8px;margin:8px 0 4px;
+          background:rgba(232,148,10,.1);border:1px solid rgba(232,148,10,.3);
+          border-radius:8px;padding:8px 10px;cursor:pointer">
+          <span style="font-size:16px">⚠️</span>
+          <span style="font-size:12px;color:var(--secondary);font-weight:600;flex:1">
+            Custos não configurados — lucro não calculado
+          </span>
+          <span style="font-size:12px;color:var(--primary);font-weight:700">Configurar →</span>
+        </div>` : '';
 
       const card = document.createElement('div');
       card.className = `veiculo-card ${ativo ? 'ativo' : ''}`;
@@ -986,8 +1060,15 @@
         </div>
         <div class="veiculo-body">
           <small>${v.consumo} km/l</small>
+          ${alertaCustos}
+          ${!semCustos ? `
           <div class="linha"><span>⛽ Combustível / km</span><strong>${custoKmCombTxt}</strong></div>
-          <div class="linha total"><span>🔧 Custo total / km</span><strong>${custoKmTotalTxt}</strong></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;
+            margin-top:10px;padding:10px 12px;
+            background:rgba(124,106,230,.1);border:1px solid rgba(124,106,230,.2);border-radius:10px">
+            <span style="font-size:13px;color:var(--muted)">🔧 Custo total / km</span>
+            <strong style="font-size:20px;font-weight:800;color:var(--primary)">${custoKmTotalTxt}</strong>
+          </div>` : ''}
         </div>
         <div class="veiculo-acoes">
           <button onclick="setAtivo(${v.id})">${ativo ? 'Selecionado ✅' : 'Selecionar'}</button>

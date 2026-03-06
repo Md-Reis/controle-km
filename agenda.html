@@ -913,12 +913,6 @@ function calcCustoKm(v) {
 // ═══════════════════════════════════════════════════════
 // ROTA NA AGENDA — Google Maps
 // ═══════════════════════════════════════════════════════
-function calcCustoKm(v) {
-  if (!v || v.consumo <= 0) return 0;
-  return v.custos.comb / v.consumo +
-    ((v.custos.man||0)+(v.custos.pneu||0)+(v.custos.seg||0)+(v.custos.out||0)) /
-    (Number(v.kmMensal)||2000);
-}
 
 let paradasAg    = [];
 let paradaAgId   = 0;

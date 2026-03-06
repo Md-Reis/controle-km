@@ -89,8 +89,18 @@
 <!-- HISTÓRICO -->
 <section id="historico" class="page">
   <h2>📄 Histórico</h2>
+
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+    <select id="filtroMesHist" onchange="renderHistorico()"
+      style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;font-size:13px">
+    </select>
+    <select id="filtroAnoHist" onchange="popularMesesFiltro(); renderHistorico()"
+      style="width:80px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;font-size:13px">
+    </select>
+  </div>
+  <div id="resumoFiltroHist" style="margin-bottom:10px"></div>
   <div id="listaHistorico"></div>
-  <button onclick="exportCSV()">📤 Exportar CSV</button>
+  <button onclick="exportCSV()" style="margin-top:8px">📤 Exportar CSV</button>
 </section>
 
 
@@ -201,7 +211,7 @@
     document.getElementById('nav' + id.charAt(0).toUpperCase() + id.slice(1))?.classList.add('active');
 
     if (id === 'lancamento') { atualizarCustoKmNovoLancamento(); ativarListenersLancamento(); carregarDraft(); atualizarEstadoLimpeza(); }
-    if (id === 'historico') renderHistorico();
+    if (id === 'historico') { popularAnosFiltro(); popularMesesFiltro(); renderHistorico(); }
     if (id === 'metas') { carregarAnosMeta(); renderMetas(); }
   }
 
@@ -451,29 +461,94 @@
   }
 
   // ======= HISTÓRICO =======
+  // ── Filtro do histórico ──
+  function popularAnosFiltro() {
+    const sel = document.getElementById('filtroAnoHist');
+    if (!sel) return;
+    const anoAtual = new Date().getFullYear();
+    const anos = new Set(data.lancamentos.map(l => new Date(l.data).getFullYear()));
+    anos.add(anoAtual);
+    sel.innerHTML = [...anos].sort((a,b)=>b-a).map(a =>
+      `<option value="${a}" ${a===anoAtual?'selected':''}>${a}</option>`
+    ).join('');
+  }
+
+  function popularMesesFiltro() {
+    const sel = document.getElementById('filtroMesHist');
+    if (!sel) return;
+    const anoSel = Number(document.getElementById('filtroAnoHist')?.value) || new Date().getFullYear();
+    const meses = ['Todos os meses','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const mesAtual = new Date().getMonth() + 1;
+    sel.innerHTML = meses.map((m, i) =>
+      `<option value="${i}" ${i===mesAtual && anoSel===new Date().getFullYear()?'selected':''}>${m}</option>`
+    ).join('');
+  }
+
   function renderHistorico() {
     const v = getAtivo();
-    const listaHistorico = document.getElementById("listaHistorico");
-    listaHistorico.innerHTML = "";
+    const listaHistorico = document.getElementById('listaHistorico');
+    listaHistorico.innerHTML = '';
 
     if (!v) {
-      listaHistorico.innerHTML = "<small>Nenhum lançamento registrado.</small>";
+      listaHistorico.innerHTML = '<small>Nenhum lançamento registrado.</small>';
       return;
     }
 
-    const historico = data.lancamentos.filter(l => l.veiculoId === v.id);
+    // Inicializar filtros se ainda não estiverem populados
+    const selAno = document.getElementById('filtroAnoHist');
+    if (selAno && !selAno.options.length) { popularAnosFiltro(); popularMesesFiltro(); }
+
+    const anoFiltro = Number(selAno?.value) || new Date().getFullYear();
+    const mesFiltro = Number(document.getElementById('filtroMesHist')?.value ?? -1);
+
+    let historico = data.lancamentos.filter(l => {
+      if (l.veiculoId !== v.id) return false;
+      const d = new Date(l.data);
+      if (d.getFullYear() !== anoFiltro) return false;
+      if (mesFiltro > 0 && d.getMonth() + 1 !== mesFiltro) return false;
+      return true;
+    }).sort((a, b) => new Date(b.data) - new Date(a.data));
+
+    // Resumo do período
+    const resumoEl = document.getElementById('resumoFiltroHist');
+    if (resumoEl && historico.length > 0) {
+      const totalFat   = historico.reduce((s,h) => s + (h.valor||0), 0);
+      const totalLucro = historico.reduce((s,h) => s + (h.lucro||0), 0);
+      const totalKm    = historico.reduce((s,h) => s + (h.km||0), 0);
+      const corLucro   = totalLucro >= 0 ? 'var(--accent)' : 'var(--danger)';
+      resumoEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px">
+          <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Faturado</div>
+            <div style="font-size:15px;font-weight:800;color:var(--accent);margin-top:2px">${formatCurrency(totalFat)}</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Lucro</div>
+            <div style="font-size:15px;font-weight:800;color:${corLucro};margin-top:2px">${formatCurrency(totalLucro)}</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">KM</div>
+            <div style="font-size:15px;font-weight:800;color:var(--secondary);margin-top:2px">${totalKm.toFixed(0)} km</div>
+          </div>
+        </div>`;
+    } else if (resumoEl) {
+      resumoEl.innerHTML = '';
+    }
 
     if (historico.length === 0) {
-      listaHistorico.innerHTML = "<small>Nenhum lançamento registrado.</small>";
+      listaHistorico.innerHTML = '<small style="color:var(--muted)">Nenhum lançamento neste período.</small>';
       return;
     }
 
     historico.forEach(h => {
-      const card = document.createElement("div");
-      card.className = "card";
-      const lucroColor = h.lucro >= 0 ? "var(--primary)" : "var(--danger)";
+      const card = document.createElement('div');
+      card.className = 'card';
+      const lucroColor = h.lucro >= 0 ? 'var(--primary)' : 'var(--danger)';
+      const d = new Date(h.data);
+      const dataStr = d.toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit', year:'2-digit'});
       card.innerHTML = `
-        <h3>📅 ${new Date(h.data).toLocaleDateString()}</h3>
+        <h3>📅 ${dataStr}</h3>
         <p>KM rodados: <strong>${h.km} km</strong></p>
         <p>Valor recebido: <strong>R$ ${h.valor.toFixed(2)}</strong></p>
         <p>Custo total: <strong>R$ ${h.custoTotal.toFixed(2)}</strong></p>

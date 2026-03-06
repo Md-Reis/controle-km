@@ -88,6 +88,10 @@
     <div id="dashSaudacao" style="font-size:20px;font-weight:700;margin-top:4px"></div>
   </div>
 
+  <!-- Agenda do dia + proximos -->
+  <div id="dashAgendaHoje" style="margin-bottom:14px"></div>
+  <div id="dashAgendaProximos" style="margin-bottom:14px"></div>
+
   <!-- KPIs do dia -->
   <div class="kpi-grid">
     <div class="kpi-card">
@@ -107,6 +111,9 @@
       <div id="dashCorridasHoje" style="font-size:22px;font-weight:800;color:var(--text);margin-top:4px">0</div>
     </div>
   </div>
+
+  <!-- Resumo semanal -->
+  <div id="dashSemana" style="margin-bottom:14px"></div>
 
   <!-- Progresso do mês -->
   <div class="card">
@@ -234,6 +241,26 @@
 
 
 
+
+<!-- Modal Confirmar Exclusão de Veículo -->
+<div id="modalDelVeiculo" class="modal hidden">
+  <div class="modal-box" style="max-width:320px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:44px;margin-bottom:8px">🗑️</div>
+      <h2 style="margin:0 0 8px;font-size:18px">Excluir veículo?</h2>
+      <p id="modalDelVeiculoNome" style="color:var(--muted);font-size:14px;margin:0;line-height:1.5"></p>
+    </div>
+    <div style="background:rgba(229,83,75,.08);border:1px solid rgba(229,83,75,.25);border-radius:10px;padding:10px 12px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--danger);line-height:1.6">
+        ⚠️ Esta ação é <strong>irreversível</strong>. O histórico de corridas vinculado a este veículo será mantido, mas o veículo não poderá ser recuperado.
+      </div>
+    </div>
+    <div class="flex">
+      <button class="danger" onclick="confirmarDelVeiculo()">🗑️ Excluir</button>
+      <button class="btn-secondary" onclick="fecharModalDelVeiculo()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Editar Veículo -->
 <div id="modalVeiculoEdit" class="modal hidden">
@@ -599,8 +626,178 @@
           <div style="font-size:13px;font-weight:700;color:${cor}">${formatCurrency(l.lucro)}</div>
         </div>`;
     }).join('');
+    // Agenda do dia e próximos
+    renderDashAgenda();
+    // Resumo semanal
+    renderDashSemana(todos);
     // Gráfico comparativo
     renderDashboardChart(todasOrdenadas);
+  }
+
+  // ======= AGENDA NO DASHBOARD =======
+  function toLocalDateStr(d) {
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
+  function renderDashAgenda() {
+    const agData  = JSON.parse(localStorage.getItem('agendaApp')) || {};
+    const vData   = JSON.parse(localStorage.getItem('viagensApp')) || {};
+    const ags     = agData.agendamentos || [];
+    const hoje    = new Date();
+    const hojeStr = toLocalDateStr(hoje);
+    const amanha  = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()+1);
+    const amanhaStr = toLocalDateStr(amanha);
+    const depoisStr = toLocalDateStr(new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()+2));
+
+    const statusLabel = {
+      pendente:  '⏳ Pendente',
+      confirmado:'✅ Confirmado',
+      concluido: '🎉 Concluído',
+      cancelado: '✖ Cancelado'
+    };
+    const statusCor = {
+      pendente:  'var(--secondary)',
+      confirmado:'var(--primary)',
+      concluido: 'var(--accent)',
+      cancelado: 'var(--muted)'
+    };
+
+    // Hoje
+    const agHoje = ags
+      .filter(a => a.data === hojeStr && a.status !== 'cancelado')
+      .sort((a,b) => (a.hora||'00:00').localeCompare(b.hora||'00:00'));
+
+    const elHoje = document.getElementById('dashAgendaHoje');
+    if (!elHoje) return;
+
+    if (agHoje.length === 0) {
+      elHoje.innerHTML = `
+        <div class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px">
+          <div style="font-size:26px">📅</div>
+          <div>
+            <div style="font-weight:700;font-size:14px">Agenda de Hoje</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:2px">Nenhum agendamento para hoje</div>
+          </div>
+        </div>`;
+    } else {
+      const rows = agHoje.map(ag => {
+        const cli  = vData.clientes?.find(c => c.id === ag.clienteId);
+        const nome = cli?.nome || 'Cliente';
+        const cor  = statusCor[ag.status] || 'var(--muted)';
+        const lbl  = statusLabel[ag.status] || ag.status;
+        return `
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div style="font-size:18px;min-width:20px;text-align:center">🕐</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:1px">
+                ${ag.hora ? ag.hora+' · ' : ''}
+                <span style="color:${cor}">${lbl}</span>
+              </div>
+            </div>
+            ${ag.valor ? `<div style="font-weight:700;font-size:14px;color:var(--accent);white-space:nowrap">${formatCurrency(ag.valor)}</div>` : ''}
+          </div>`;
+      }).join('');
+      elHoje.innerHTML = `
+        <div class="card" style="padding:12px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong style="font-size:14px">📅 Agenda de Hoje</strong>
+            <span style="font-size:12px;color:var(--muted);background:var(--card2);padding:2px 8px;border-radius:20px">${agHoje.length} agendamento${agHoje.length>1?'s':''}</span>
+          </div>
+          ${rows}
+        </div>`;
+    }
+
+    // Proximos (amanha + depois)
+    const agProximos = ags
+      .filter(a => (a.data === amanhaStr || a.data === depoisStr) && a.status !== 'cancelado')
+      .sort((a,b) => a.data.localeCompare(b.data) || (a.hora||'00:00').localeCompare(b.hora||'00:00'));
+
+    const elProx = document.getElementById('dashAgendaProximos');
+    if (!elProx) return;
+
+    if (agProximos.length === 0) {
+      elProx.innerHTML = '';
+    } else {
+      const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      const rows = agProximos.map(ag => {
+        const cli  = vData.clientes?.find(c => c.id === ag.clienteId);
+        const nome = cli?.nome || 'Cliente';
+        const dAg  = new Date(ag.data+'T12:00:00');
+        const diaLabel = ag.data === amanhaStr ? 'Amanhã' : DIAS[dAg.getDay()];
+        const cor  = statusCor[ag.status] || 'var(--muted)';
+        return `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--primary);min-width:36px;text-align:center;line-height:1.3">
+              ${diaLabel}<br>${ag.hora||'??:??'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome}</div>
+              <div style="font-size:11px;color:${cor};margin-top:1px">${statusLabel[ag.status]||ag.status}</div>
+            </div>
+            ${ag.valor ? `<div style="font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap">${formatCurrency(ag.valor)}</div>` : ''}
+          </div>`;
+      }).join('');
+      elProx.innerHTML = `
+        <div class="card" style="padding:12px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong style="font-size:14px">📆 Próximos dias</strong>
+            <span style="font-size:12px;color:var(--muted);background:var(--card2);padding:2px 8px;border-radius:20px">${agProximos.length} agendamento${agProximos.length>1?'s':''}</span>
+          </div>
+          ${rows}
+        </div>`;
+    }
+  }
+
+  // ======= RESUMO SEMANAL =======
+  function renderDashSemana(todos) {
+    const hoje     = new Date();
+    const diaSem   = hoje.getDay();
+    const ini = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - diaSem);
+    const fim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + (6 - diaSem), 23, 59, 59);
+
+    const daSemana = todos.filter(l => {
+      if (!l.data) return false;
+      const d = new Date(l.data);
+      return d >= ini && d <= fim;
+    });
+
+    const fatSem      = daSemana.reduce((s,l) => s+(l.valor||0), 0);
+    const lucroSem    = daSemana.reduce((s,l) => s+(l.lucro||0), 0);
+    const kmSem       = daSemana.reduce((s,l) => s+(l.km||0), 0);
+    const corridasSem = daSemana.length;
+
+    const el = document.getElementById('dashSemana');
+    if (!el) return;
+
+    const diaIni   = ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const diaFim   = fim.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const corLucro = lucroSem >= 0 ? 'var(--accent)' : 'var(--danger)';
+
+    el.innerHTML = `
+      <div class="card" style="padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <strong style="font-size:14px">📆 Esta semana</strong>
+          <span style="font-size:11px;color:var(--muted)">${diaIni} — ${diaFim}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;text-align:center">
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Faturado</div>
+            <div style="font-size:15px;font-weight:800;color:var(--accent)">${formatCurrency(fatSem)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Lucro</div>
+            <div style="font-size:15px;font-weight:800;color:${corLucro}">${formatCurrency(lucroSem)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">KM</div>
+            <div style="font-size:15px;font-weight:800;color:var(--secondary)">${kmSem.toFixed(0)} km</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Corridas</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text)">${corridasSem}</div>
+          </div>
+        </div>
+      </div>`;
   }
 
   // ======= BACKUP =======
@@ -631,7 +828,9 @@
     a.download = `sheyla-toyota-backup-${data_str}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    localStorage.setItem('kmBackupEm', new Date().toISOString());
     showToast('Backup exportado com sucesso ✅', 'success');
+    renderBackupStats();
   }
 
   function importarBackup(event) {
@@ -705,7 +904,38 @@
     ]).size;
     const sizeStr = size > 1024 ? (size/1024).toFixed(1)+' KB' : size+' bytes';
 
+    // Card de ultimo backup
+    const backupEm = localStorage.getItem('kmBackupEm');
+    let backupBanner = '';
+    if (backupEm) {
+      const diff = Math.floor((Date.now() - new Date(backupEm).getTime()) / 86400000);
+      const cor  = diff <= 3 ? 'var(--accent)' : diff <= 7 ? 'var(--secondary)' : 'var(--danger)';
+      const icon = diff <= 3 ? '✅' : diff <= 7 ? '⚠️' : '🔴';
+      const txt  = diff === 0 ? 'Hoje' : diff === 1 ? 'Ontem' : `Há ${diff} dias`;
+      backupBanner = `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+          background:rgba(0,0,0,.15);border-radius:10px;margin-bottom:12px;
+          border:1px solid ${cor}33">
+          <div style="font-size:22px">${icon}</div>
+          <div style="flex:1">
+            <div style="font-size:12px;color:var(--muted)">Último backup</div>
+            <div style="font-weight:700;color:${cor};font-size:14px">${txt}</div>
+          </div>
+          ${diff > 7 ? '<div style="font-size:11px;color:var(--danger);text-align:right;line-height:1.4">Faça um<br>backup!</div>' : ''}
+        </div>`;
+    } else {
+      backupBanner = `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+          background:rgba(229,83,75,.07);border-radius:10px;margin-bottom:12px;
+          border:1px solid rgba(229,83,75,.2)">
+          <div style="font-size:22px">🔴</div>
+          <div style="font-size:13px;color:var(--muted)">Nenhum backup realizado ainda.<br>
+            <strong style="color:var(--danger)">Exporte seus dados agora!</strong></div>
+        </div>`;
+    }
+
     document.getElementById('backupStats').innerHTML = `
+      ${backupBanner}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${[
           ['🚗 Veículos',       veiculos],
@@ -858,12 +1088,29 @@
     }
   }
 
+  let veiculoDeletandoId = null;
+
   function delVeiculo(id) {
-    data.veiculos = data.veiculos.filter(v => v.id !== id);
-    if (data.ativo === id) data.ativo = null;
-    save();
-    renderVeiculos();
-    showToast("Veículo excluído com sucesso ❌", "info");
+    const v = data.veiculos.find(v => v.id === id);
+    if (!v) return;
+    veiculoDeletandoId = id;
+    document.getElementById("modalDelVeiculoNome").textContent =
+      `Tem certeza que deseja excluir o veículo " ${v.nome} "?`;
+    document.getElementById("modalDelVeiculo").classList.remove("hidden");
+  }
+
+  function fecharModalDelVeiculo() {
+    document.getElementById("modalDelVeiculo").classList.add("hidden");
+    veiculoDeletandoId = null;
+  }
+
+  function confirmarDelVeiculo() {
+    if (veiculoDeletandoId === null) return;
+    data.veiculos = data.veiculos.filter(v => v.id !== veiculoDeletandoId);
+    if (data.ativo === veiculoDeletandoId) data.ativo = null;
+    veiculoDeletandoId = null;
+    save(); renderVeiculos(); fecharModalDelVeiculo();
+    showToast("Veículo excluído ❌", "info");
   }
 
   // ======= CUSTOS =======

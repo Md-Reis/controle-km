@@ -102,10 +102,6 @@
   <button onclick="showPage('metas')" id="navMetas"><span class="nav-icon">🎯</span><span class="nav-label">Metas</span></button>
 </nav>
 
-
-
-
-
 <!-- ===== CLIENTES ===== -->
 <section id="clientes" class="page active">
   <h2>👥 Clientes</h2>
@@ -114,7 +110,6 @@
   </div>
   <div id="listaClientes"></div>
 </section>
-
 
 <!-- ===== LANÇAMENTO ===== -->
 <section id="lancamento" class="page">
@@ -396,7 +391,11 @@ function renderClientes() {
     return;
   }
   lista.innerHTML = "";
-  vData.clientes.forEach(c => {
+  // Ordem alfabética
+  const clientesOrdenados = [...vData.clientes].sort((a, b) =>
+    a.nome.localeCompare(b.nome, 'pt-BR', {sensitivity: 'base'})
+  );
+  clientesOrdenados.forEach(c => {
     const viagens    = vData.viagens.filter(v=>v.clienteId===c.id).length;
     const passageiros = (c.passageiros||[]).map(p=>p.nome).join(", ")||"—";
     const card = document.createElement("div");
@@ -1190,4 +1189,3 @@ function closeFab(){
 </nav>
 </body>
 </html>
-

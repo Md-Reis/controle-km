@@ -1092,8 +1092,9 @@ function confirmarAgendar() {
 
   const paradasAtuais = (typeof paradas !== 'undefined')
     ? paradas.filter(p=>p.place).map(p=>p.place) : [];
+  // kmRota e duracaoRota são variáveis globais preenchidas pelo Google Maps
   const rotaSalva = paradasAtuais.length >= 2
-    ? { duracao, paradas: paradasAtuais } : null;
+    ? { km: kmRota, duracao: duracaoRota || String(duracao), paradas: paradasAtuais } : null;
 
   agData.agendamentos.push({
     id: Date.now(), clienteId, passageiro: null,

@@ -431,6 +431,8 @@ let destinatario = 'cadastrado';
 let modoManual   = false;
 let kmRota       = 0;
 let duracaoRota  = '';
+let ultimoValorCalculado = 0;   // valor base da última cotação (usado ao agendar)
+let ultimoCustoCalculado = 0;   // custo puro (sem margem)
 
 // Estado das paradas: array de { id, inputEl, acObj, place: {address, lat, lng} }
 let paradas = [];
@@ -789,6 +791,8 @@ function esconderResultados(){
   document.getElementById('resultUnica').classList.add('hidden');
   document.getElementById('resultConstante').classList.add('hidden');
   document.getElementById('wppSection').classList.add('hidden');
+  ultimoValorCalculado = 0;
+  ultimoCustoCalculado = 0;
 }
 function limparRota(){
   kmRota=0; duracaoRota='';
@@ -917,6 +921,8 @@ function calcular(){
   const vBase=custo*(1+margem+mo);
   const moEl=document.getElementById('maoObraValor');
   if(moEl) moEl.innerText=mo>0?'+ '+fmt(custo*mo):'';
+  ultimoValorCalculado = vBase;   // salva para uso no agendamento
+  ultimoCustoCalculado = custo;
   if(tipoViagem==='unica') calcUnica(custo,vBase,margem,mo);
   else                     calcConstante(custo,vBase);
   document.getElementById('wppSection').classList.remove('hidden');
@@ -1026,12 +1032,14 @@ function abrirModalAgendar() {
   const agDataEl = document.getElementById('agData');
   if (agDataEl) agDataEl.value = toLocalDateStrCot(new Date());
 
-  // Preenche valor com o calculado (viagem única)
+  // Preenche valor com o calculado — usa variável global (funciona em modo único E constante)
   const valorEl = document.getElementById('agValor');
   if (valorEl) {
-    const valTxt = document.getElementById('valorUnico')?.innerText || '';
-    const vNum = parseFloat(valTxt.replace(/[^0-9,]/g,'').replace(',','.'));
-    if (!isNaN(vNum) && vNum > 0) valorEl.value = vNum.toFixed(2);
+    if (ultimoValorCalculado > 0) {
+      valorEl.value = ultimoValorCalculado.toFixed(2);
+    } else {
+      valorEl.value = '';
+    }
   }
 
   // Popular clientes e pré-selecionar o do whats

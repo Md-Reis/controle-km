@@ -180,13 +180,21 @@
 <!-- ===== HISTÓRICO ===== -->
 <section id="historico" class="page">
   <h2>📄 Histórico de Viagens</h2>
-  <div class="filter-row">
+
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+    <select id="filtroAnoViagem" onchange="popularMesesFiltroViagem(); renderHistoricoViagens()"
+      style="width:82px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;font-size:13px"></select>
+    <select id="filtroMesViagem" onchange="renderHistoricoViagens()"
+      style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;font-size:13px"></select>
+  </div>
+  <div style="margin-bottom:8px">
     <select id="filtroCliente" class="vselect" onchange="renderHistoricoViagens()">
       <option value="">Todos os clientes</option>
     </select>
   </div>
+  <div id="resumoFiltroViagem" style="margin-bottom:10px"></div>
   <div id="listaHistoricoViagens"></div>
-  <button onclick="exportCSVViagens()">📤 Exportar CSV</button>
+  <button onclick="exportCSVViagens()" style="margin-top:8px">📤 Exportar CSV</button>
 </section>
 
 
@@ -362,7 +370,7 @@ function showPage(id) {
 
   if (id==='clientes')   renderClientes();
   if (id==='lancamento') initLancamento();
-  if (id==='historico')  { popularFiltroCliente(); renderHistoricoViagens(); }
+  if (id==='historico')  { popularFiltroCliente(); popularAnosFiltroViagem(); popularMesesFiltroViagem(); renderHistoricoViagens(); }
   if (id==='metas')      { carregarAnosMetaViagem(); renderMetasViagem(); }
 }
 
@@ -764,32 +772,98 @@ function popularFiltroCliente() {
   sel.value = val;
 }
 
+function popularAnosFiltroViagem() {
+  const sel = document.getElementById('filtroAnoViagem');
+  if (!sel) return;
+  const anoAtual = new Date().getFullYear();
+  const anos = new Set(vData.viagens.map(v => new Date(v.data).getFullYear()));
+  anos.add(anoAtual);
+  sel.innerHTML = [...anos].sort((a,b)=>b-a).map(a =>
+    `<option value="${a}" ${a===anoAtual?'selected':''}>${a}</option>`
+  ).join('');
+}
+
+function popularMesesFiltroViagem() {
+  const sel = document.getElementById('filtroMesViagem');
+  if (!sel) return;
+  const anoSel = Number(document.getElementById('filtroAnoViagem')?.value) || new Date().getFullYear();
+  const meses = ['Todos os meses','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const mesAtual = new Date().getMonth() + 1;
+  sel.innerHTML = meses.map((m, i) =>
+    `<option value="${i}" ${i===mesAtual && anoSel===new Date().getFullYear()?'selected':''}>${m}</option>`
+  ).join('');
+}
+
 function renderHistoricoViagens() {
-  const lista    = document.getElementById("listaHistoricoViagens");
-  const filtroId = Number(document.getElementById("filtroCliente").value)||null;
-  const viagens  = vData.viagens
-    .filter(v=>!filtroId||v.clienteId===filtroId)
-    .sort((a,b)=>new Date(b.data)-new Date(a.data));
+  const lista    = document.getElementById('listaHistoricoViagens');
+  const filtroId = Number(document.getElementById('filtroCliente').value)||null;
 
-  if (viagens.length===0) { lista.innerHTML="<small style='opacity:.5'>Nenhuma viagem registrada.</small>"; return; }
+  // Inicializar filtros se necessário
+  const selAno = document.getElementById('filtroAnoViagem');
+  if (selAno && !selAno.options.length) { popularAnosFiltroViagem(); popularMesesFiltroViagem(); }
 
-  lista.innerHTML="";
+  const anoFiltro = Number(selAno?.value) || new Date().getFullYear();
+  const mesFiltro = Number(document.getElementById('filtroMesViagem')?.value ?? 0);
+
+  const viagens = vData.viagens
+    .filter(v => {
+      if (filtroId && v.clienteId !== filtroId) return false;
+      const d = new Date(v.data);
+      if (d.getFullYear() !== anoFiltro) return false;
+      if (mesFiltro > 0 && d.getMonth() + 1 !== mesFiltro) return false;
+      return true;
+    })
+    .sort((a,b) => new Date(b.data) - new Date(a.data));
+
+  // Resumo do período
+  const resumoEl = document.getElementById('resumoFiltroViagem');
+  if (resumoEl && viagens.length > 0) {
+    const totalFat   = viagens.reduce((s,v) => s + (v.valor||0), 0);
+    const totalLucro = viagens.reduce((s,v) => s + (v.lucro||0), 0);
+    const totalKm    = viagens.reduce((s,v) => s + (v.km||0), 0);
+    const corLucro   = totalLucro >= 0 ? 'var(--accent)' : 'var(--danger)';
+    resumoEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Faturado</div>
+          <div style="font-size:15px;font-weight:800;color:var(--accent);margin-top:2px">${formatCurrency(totalFat)}</div>
+        </div>
+        <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Lucro</div>
+          <div style="font-size:15px;font-weight:800;color:${corLucro};margin-top:2px">${formatCurrency(totalLucro)}</div>
+        </div>
+        <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">KM</div>
+          <div style="font-size:15px;font-weight:800;color:var(--secondary);margin-top:2px">${totalKm.toFixed(0)} km</div>
+        </div>
+      </div>`;
+  } else if (resumoEl) {
+    resumoEl.innerHTML = '';
+  }
+
+  if (viagens.length===0) {
+    lista.innerHTML="<small style='color:var(--muted)'>Nenhuma viagem neste período.</small>";
+    return;
+  }
+
+  lista.innerHTML='';
   viagens.forEach(v=>{
     const cliente = vData.clientes.find(c=>c.id===v.clienteId);
-    const item=document.createElement("div");
-    item.className="card";
-    const cor = v.lucro>=0?"var(--primary)":"var(--danger)";
+    const item=document.createElement('div');
+    item.className='card';
+    const cor = v.lucro>=0?'var(--primary)':'var(--danger)';
+    const d = new Date(v.data);
+    const dataStr = d.toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit', year:'2-digit'});
     item.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <strong>📅 ${new Date(v.data).toLocaleDateString("pt-BR")}</strong>
+        <strong>📅 ${dataStr}</strong>
         <span style="font-size:12px;color:var(--muted)">${cliente?.nome||'—'}</span>
       </div>
       <p style="margin:4px 0">👤 Passageiro: <strong>${v.passageiroNome||'—'}</strong></p>
       <p style="margin:4px 0">📍 KM rodados: <strong>${v.km} km</strong></p>
-      <p style="margin:4px 0">💵 Valor recebido: <strong>R$ ${v.valor.toFixed(2)}</strong></p>
-      <p style="margin:4px 0">💸 Custo total: <strong>R$ ${v.custoTotal.toFixed(2)}</strong></p>
-      <hr>
-      <h2 style="color:${cor}">💰 Lucro: R$ ${v.lucro.toFixed(2)}</h2>
+      <p style="margin:4px 0">💵 Valor recebido: <strong style="color:var(--accent)">${formatCurrency(v.valor)}</strong></p>
+      <p style="margin:4px 0">💰 Lucro: <strong style="color:${cor}">${formatCurrency(v.lucro)}</strong></p>
       <div class="flex" style="margin-top:8px">
         <button onclick="abrirEditarViagem(${v.id})">✏️ Editar</button>
         <button class="danger" onclick="delViagem(${v.id})">🗑️ Excluir</button>

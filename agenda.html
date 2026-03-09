@@ -346,10 +346,12 @@
     <div id="convRotaResumo" style="display:none;margin-bottom:12px">
       <div class="ag-rota-box" id="convRotaBox"></div>
     </div>
-    <label>KM inicial</label>
-    <input type="number" id="convKmInicial" placeholder="KM atual do odômetro">
-    <label>KM final</label>
-    <input type="number" id="convKmFinal" placeholder="KM ao final da viagem">
+    <div id="convKmWrap" style="display:none">
+      <label>KM inicial <span style="font-size:11px;color:var(--muted)">(somente quando não há rota)</span></label>
+      <input type="number" id="convKmInicial" placeholder="KM atual do odômetro">
+      <label>KM final</label>
+      <input type="number" id="convKmFinal" placeholder="KM ao final da viagem">
+    </div>
     <label>Valor recebido (R$)</label>
     <input type="number" id="convValor" placeholder="Valor recebido" step="0.01">
     <div class="modal-actions">
@@ -846,6 +848,10 @@ function abrirConverter(id) {
       </div>`;
     rw.style.display = 'block';
   } else { rw.style.display = 'none'; }
+  // Mostrar campos km somente se não há rota com km
+  const kmWrap = document.getElementById('convKmWrap');
+  if (kmWrap) kmWrap.style.display = (ag?.rota?.km ? 'none' : '');
+
   document.getElementById('modalConverter').classList.remove('hidden');
 }
 
@@ -857,13 +863,22 @@ function confirmarConverter() {
   const fim   = Number(document.getElementById('convKmFinal').value);
   const valor = Number(document.getElementById('convValor').value);
 
-  if (!ini||!fim||fim<=ini) { showToast('KM inicial/final inválidos','info'); return; }
-  if (!valor||valor<=0)     { showToast('Informe o valor recebido','info'); return; }
+  if (!valor||valor<=0) { showToast('Informe o valor recebido','info'); return; }
 
   const v = kmApp.veiculos.find(v=>v.id===kmApp.ativo);
   if (!v) { showToast('Nenhum veículo ativo','error'); return; }
 
-  const km = fim-ini;
+  // Se há rota com km, usa. Senão, usa km inicial/final.
+  const rotaAg = ag?.rota;
+  let km;
+  if (rotaAg && rotaAg.km) {
+    km = rotaAg.km;
+  } else if (ini && fim && fim > ini) {
+    km = fim - ini;
+  } else {
+    showToast('Informe o KM inicial/final ou certifique que a rota tem distância','info');
+    return;
+  }
   const cKm = calcCustoKm(v);
   const custoTotal = km*cKm;
   const lucro = valor-custoTotal;
@@ -886,12 +901,8 @@ function confirmarConverter() {
     (vData.financeiro.anos[ano].faturamento[mes]||0) + valor;
   saveVD();
 
-  // Espelha em kmApp
-  kmApp.lancamentos.push({
-    id:viagem.id, veiculoId:v.id, data:agora.toISOString(),
-    km, valor, custoTotal, lucro, tipo:'viagem'
-  });
-  saveKm();
+  // Nota: viagens são lidas pelo dashboard via getAllLancamentos() — não duplicamos em kmApp
+  saveKm();   // salva kmApp (veículos/config), sem adicionar lançamento duplicado
 
   // Marca agendamento como concluído
   ag.status = 'concluido';

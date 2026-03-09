@@ -49,6 +49,9 @@
       <button id="btnLimparLancamento" class="btn-limpar hidden" onclick="confirmarLimpeza()">✕</button>
     </div>
 
+    <label>Data da entrega</label>
+    <input id="lDataEntrega" type="date" style="margin-bottom:10px">
+
     <label>KM inicial</label>
     <input id="lKmInicial" type="number" placeholder="Ex: 10">
 
@@ -255,18 +258,25 @@
     }
   }
 
+  function toLocalDateStr(d) {
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
   function ativarListenersLancamento() {
     const lKmInicial = document.getElementById("lKmInicial");
-    const lKmFinal = document.getElementById("lKmFinal");
-    const lValor = document.getElementById("lValor");
-    const lData = document.getElementById("lData");
+    const lKmFinal   = document.getElementById("lKmFinal");
+    const lValor     = document.getElementById("lValor");
+    const lDataEl    = document.getElementById("lDataEntrega");
 
     if (!lKmInicial) return;
+
+    // Preenche data padrão = hoje
+    if (lDataEl && !lDataEl.value) lDataEl.value = toLocalDateStr(new Date());
 
     lKmInicial.oninput = () => { salvarDraft(); atualizarPreview(); atualizarEstadoLimpeza(); };
     lKmFinal.oninput   = () => { salvarDraft(); atualizarPreview(); atualizarEstadoLimpeza(); };
     lValor.oninput     = () => { salvarDraft(); atualizarPreview(); atualizarEstadoLimpeza(); };
-    if (lData) lData.oninput = salvarDraft;
+    if (lDataEl) lDataEl.oninput = salvarDraft;
   }
 
   function salvarDraft() {
@@ -274,7 +284,7 @@
     if (!v) return;
     data.draftLancamento = {
       veiculoId: v.id,
-      data: '',
+      data:      document.getElementById("lDataEntrega")?.value || '',
       kmInicial: document.getElementById("lKmInicial")?.value || '',
       kmFinal:   document.getElementById("lKmFinal")?.value || '',
       valor:     document.getElementById("lValor")?.value || ''
@@ -288,7 +298,8 @@
     if (data.draftLancamento.veiculoId !== v.id) return;
 
     const d = data.draftLancamento;
-    document.getElementById("lData").value      = d.data      || '';
+    const lDataEl = document.getElementById("lDataEntrega");
+    if (lDataEl) lDataEl.value = d.data || toLocalDateStr(new Date());
     document.getElementById("lKmInicial").value = d.kmInicial || '';
     document.getElementById("lKmFinal").value   = d.kmFinal   || '';
     document.getElementById("lValor").value     = d.valor     || '';
@@ -358,6 +369,7 @@
     card.style.transform = "scale(0.98)";
     card.style.opacity = "0.6";
     setTimeout(() => {
+      document.getElementById("lDataEntrega").value = toLocalDateStr(new Date());
       document.getElementById("lKmInicial").value = "";
       document.getElementById("lKmFinal").value   = "";
       document.getElementById("lKm").value        = "";
@@ -389,10 +401,13 @@
     const custoTotal = km * custoKm;
     const lucro = valor - custoTotal;
 
+    const dataEntregaVal = document.getElementById("lDataEntrega")?.value || toLocalDateStr(new Date());
+    const dataEntrega = new Date(dataEntregaVal + 'T12:00:00').toISOString();
+
     data.lancamentos.push({
       id: Date.now(),
       veiculoId: v.id,
-      data: new Date().toISOString(),
+      data: dataEntrega,
       kmInicial: ini,
       kmFinal: fim,
       km,
@@ -402,8 +417,8 @@
       tipo: 'entrega'
     });
 
-    const agora = new Date();
-    addFaturamentoMes(agora.getFullYear(), agora.getMonth(), valor);
+    const dEntrega = new Date(dataEntrega);
+    addFaturamentoMes(dEntrega.getFullYear(), dEntrega.getMonth(), valor);
     delete data.draftLancamento;
     save();
 
@@ -413,6 +428,7 @@
       const resultadoCard = document.getElementById("resultadoCard");
       if (resultadoCard) resultadoCard.style.display = "none";
       resultadoAtual = null;
+      document.getElementById("lDataEntrega").value = toLocalDateStr(new Date());
       document.getElementById("lKmInicial").value = "";
       document.getElementById("lKmFinal").value   = "";
       document.getElementById("lKm").value        = "";

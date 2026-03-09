@@ -213,10 +213,18 @@
 <!-- Histórico -->
 <div style="padding:0 16px 20px">
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <strong>🕒 Histórico</strong>
       <span id="histCount" style="font-size:12px;color:var(--muted)"></span>
     </div>
+    <!-- Filtros de período -->
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <select id="filtroAnoAbast" onchange="popularMesesFiltroAbast(); renderHistorico()"
+        style="width:82px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 8px;font-size:13px"></select>
+      <select id="filtroMesAbast" onchange="renderHistorico()"
+        style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 8px;font-size:13px"></select>
+    </div>
+    <div id="resumoAbastPeriodo" style="margin-bottom:8px"></div>
     <div id="histLista"></div>
   </div>
 </div>
@@ -373,6 +381,8 @@
     renderBanner();
     renderKPIs();
     renderAlerta();
+    popularAnosFiltroAbast();
+    popularMesesFiltroAbast();
     renderHistorico();
     renderGrafico();
   }
@@ -508,28 +518,97 @@
       </div>`;
   }
 
+  function popularAnosFiltroAbast() {
+    const sel = document.getElementById('filtroAnoAbast');
+    if (!sel) return;
+    const regs = getRegistrosVeiculo();
+    const anoAtual = new Date().getFullYear();
+    const anos = new Set(regs.map(r => new Date(r.data).getFullYear()));
+    anos.add(anoAtual);
+    sel.innerHTML = [...anos].sort((a,b)=>b-a).map(a =>
+      `<option value="${a}" ${a===anoAtual?'selected':''}>${a}</option>`
+    ).join('');
+  }
+
+  function popularMesesFiltroAbast() {
+    const sel = document.getElementById('filtroMesAbast');
+    if (!sel) return;
+    const anoSel = Number(document.getElementById('filtroAnoAbast')?.value) || new Date().getFullYear();
+    const meses = ['Todos os meses','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const mesAtual = new Date().getMonth() + 1;
+    sel.innerHTML = meses.map((m, i) =>
+      `<option value="${i}" ${i===mesAtual && anoSel===new Date().getFullYear()?'selected':''}>${m}</option>`
+    ).join('');
+  }
+
   function renderHistorico() {
     const regs = getRegistrosVeiculo();
     const consumos = calcularConsumos(regs);
     const lista = document.getElementById('histLista');
     const count = document.getElementById('histCount');
 
-    count.textContent = regs.length + ' registro(s)';
+    // Inicializar filtros se necessário
+    const selAno = document.getElementById('filtroAnoAbast');
+    if (selAno && !selAno.options.length) { popularAnosFiltroAbast(); popularMesesFiltroAbast(); }
+
+    const anoFiltro = Number(selAno?.value) || new Date().getFullYear();
+    const mesFiltro = Number(document.getElementById('filtroMesAbast')?.value ?? 0);
+
+    // Filtrar registros pelo período
+    const regsFiltrados = regs.filter(r => {
+      const d = new Date(r.data);
+      if (d.getFullYear() !== anoFiltro) return false;
+      if (mesFiltro > 0 && d.getMonth() + 1 !== mesFiltro) return false;
+      return true;
+    });
+
+    count.textContent = regs.length + ' registro(s) total';
+
+    // Resumo do período filtrado
+    const resumoEl = document.getElementById('resumoAbastPeriodo');
+    if (resumoEl && regsFiltrados.length > 0) {
+      const totalGasto  = regsFiltrados.reduce((s,r) => s+(r.valor||0), 0);
+      const totalLitros = regsFiltrados.reduce((s,r) => s+(r.litros||0), 0);
+      const custLitro   = totalLitros > 0 ? totalGasto/totalLitros : 0;
+      resumoEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px">
+          <div style="background:var(--card2);border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Gasto</div>
+            <div style="font-size:14px;font-weight:800;color:var(--danger);margin-top:1px">${formatCurrency(totalGasto)}</div>
+          </div>
+          <div style="background:var(--card2);border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Litros</div>
+            <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:1px">${totalLitros.toFixed(1)}L</div>
+          </div>
+          <div style="background:var(--card2);border-radius:8px;padding:8px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">R$/Litro</div>
+            <div style="font-size:14px;font-weight:800;color:var(--secondary);margin-top:1px">R$ ${custLitro.toFixed(2)}</div>
+          </div>
+        </div>`;
+    } else if (resumoEl) {
+      resumoEl.innerHTML = '';
+    }
 
     if (regs.length === 0) {
       lista.innerHTML = '<small style="color:var(--muted)">Nenhum abastecimento registrado.</small>';
       return;
     }
+    if (regsFiltrados.length === 0) {
+      lista.innerHTML = '<small style="color:var(--muted)">Nenhum abastecimento neste período.</small>';
+      return;
+    }
 
-    // Monta mapa de consumo por índice
+    // Monta mapa de consumo por índice (baseado em todos os registros, não só filtrados)
     const consumoMap = {};
     consumos.forEach(c => consumoMap[c.idx] = c);
 
     const v = getVeiculo(veiculoAtualId);
-    const regsDesc = [...regs].reverse();
+    // Inverter para mostrar mais recente primeiro, mas manter índices originais
+    const regsDesc = regsFiltrados.slice().reverse();
 
-    lista.innerHTML = regsDesc.map((r, i) => {
-      const idxOriginal = regs.length - 1 - i;
+    lista.innerHTML = regsDesc.map((r) => {
+      const idxOriginal = regs.indexOf(r);
       const cons = consumoMap[idxOriginal];
       const d    = new Date(r.data);
       const dataStr = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'});

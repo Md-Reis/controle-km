@@ -422,18 +422,17 @@
   }
 
   function getAllLancamentos() {
-    // Mescla entregas (kmApp.lancamentos tipo entrega) com viagens (viagensApp.viagens)
-    const kmData = JSON.parse(localStorage.getItem('kmApp')) || {};
-    const vAppData = JSON.parse(localStorage.getItem('viagensApp')) || {};
+    // Entregas: kmApp.lancamentos (tipo:'entrega' — km inicial/final)
+    // Viagens:  viagensApp.viagens (com cliente, passageiro, rota)
+    // Os dois são módulos separados; kmApp NÃO contém espelhos de viagens
+    const kmData   = JSON.parse(localStorage.getItem('kmApp'))    || {};
+    const vAppData = JSON.parse(localStorage.getItem('viagensApp'))|| {};
     const entregas = (kmData.lancamentos || []).filter(l => l.tipo === 'entrega');
-    const viagens  = (vAppData.viagens || []).map(v => ({
+    const viagens  = (vAppData.viagens   || []).map(v => ({
       id: v.id, veiculoId: v.veiculoId, data: v.data,
       km: v.km, valor: v.valor, custoTotal: v.custoTotal, lucro: v.lucro, tipo: 'viagem'
     }));
-    // Merge avoiding duplicates (viagem ids may exist in kmApp.lancamentos too)
-    const entregaIds = new Set(entregas.map(e => e.id));
-    const allViagens = viagens.filter(v => !entregaIds.has(v.id));
-    return [...entregas, ...allViagens];
+    return [...entregas, ...viagens];
   }
 
   let dashChartInstance = null;
@@ -906,7 +905,15 @@
     if (!payload) return;
     const status = document.getElementById('importStatus');
 
-    if (payload.kmApp)             localStorage.setItem('kmApp',             JSON.stringify(payload.kmApp));
+    if (payload.kmApp) {
+      // Garantir que kmApp.lancamentos contém SOMENTE entregas (tipo:'entrega')
+      // Viagens ficam exclusivamente em viagensApp.viagens (sem espelho)
+      const kmClean = JSON.parse(JSON.stringify(payload.kmApp));
+      if (Array.isArray(kmClean.lancamentos)) {
+        kmClean.lancamentos = kmClean.lancamentos.filter(l => l.tipo === 'entrega');
+      }
+      localStorage.setItem('kmApp', JSON.stringify(kmClean));
+    }
     if (payload.viagensApp)        localStorage.setItem('viagensApp',        JSON.stringify(payload.viagensApp));
     if (payload.abastecimentoApp)  localStorage.setItem('abastecimentoApp',  JSON.stringify(payload.abastecimentoApp));
     if (payload.agendaApp)         localStorage.setItem('agendaApp',         JSON.stringify(payload.agendaApp));
@@ -928,11 +935,17 @@
     const rotasSalvas      = JSON.parse(localStorage.getItem('rotasSalvas'))       || [];
     const tema             = localStorage.getItem('kmTheme') || 'dark';
 
+    // Garantir que kmApp exportado contém SOMENTE entregas (sem espelhos de viagens)
+    const kmAppClean = JSON.parse(JSON.stringify(kmApp));
+    if (Array.isArray(kmAppClean.lancamentos)) {
+      kmAppClean.lancamentos = kmAppClean.lancamentos.filter(l => l.tipo === 'entrega');
+    }
+
     const payload = {
-      versao:      '1.2',
+      versao:      '1.3',
       exportadoEm: new Date().toISOString(),
-      kmApp,
-      viagensApp,
+      kmApp:       kmAppClean,   // contém apenas entregas
+      viagensApp,                 // contém viagens com cliente/passageiro/rota
       abastecimentoApp,
       agendaApp,
       rotasSalvas,
@@ -1460,6 +1473,10 @@
       <div class="fab-option-label">Nova Viagem</div>
       <button class="fab-option-btn fab-opt-viagem">🚕</button>
     </div>
+    <div class="fab-option" onclick="fabAcao('agenda')">
+      <div class="fab-option-label">Novo Agendamento</div>
+      <button class="fab-option-btn fab-opt-agenda">📅</button>
+    </div>
     <div class="fab-option" onclick="fabAcao('entregas')">
       <div class="fab-option-label">Nova Entrega</div>
       <button class="fab-option-btn fab-opt-entrega">📦</button>
@@ -1486,7 +1503,7 @@ function toggleTheme(){
 /* ── FAB ── */
 function fabAcao(acao){
   closeFab();
-  window.location.href = {entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[acao] || '#';
+  window.location.href = {entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html',agenda:'agenda.html'}[acao] || '#';
 }
 function toggleFab(){
   const o=document.getElementById('fab-options');

@@ -568,7 +568,8 @@ function renderLista() {
         const r = ag.rota;
         const vAtivo = kmApp.veiculos.find(v=>v.id===kmApp.ativo);
         const cKm = vAtivo ? calcCustoKm(vAtivo) : 0;
-        const custo = r.km * cKm;
+        const kmVal = r.km != null && !isNaN(Number(r.km)) ? Number(r.km) : null;
+        const custo = kmVal != null ? kmVal * cKm : null;
         const ps = r.paradas.map((p,i) => {
           const ic = i===0?'🟢':i===r.paradas.length-1?'🔴':'🟡';
           return `${ic} ${p.address.split(',')[0]}`;
@@ -576,9 +577,9 @@ function renderLista() {
         rotaHtml = `<div class="ag-rota-box">
           <div class="ag-rota-paradas">${ps}</div>
           <div class="ag-rota-stats">
-            <div class="ag-rota-stat">📏 <strong>${r.km} km</strong></div>
+            ${kmVal != null ? `<div class="ag-rota-stat">📏 <strong>${kmVal} km</strong></div>` : ''}
             <div class="ag-rota-stat">⏱ <strong>${r.duracao||'—'}</strong></div>
-            ${cKm>0?`<div class="ag-rota-stat"><span class="ag-custo-badge">💸 Custo: ${fmt(custo)}</span></div>`:''}
+            ${custo != null && cKm>0 ? `<div class="ag-rota-stat"><span class="ag-custo-badge">💸 Custo: ${fmt(custo)}</span></div>` : ''}
           </div>
         </div>`;
       }

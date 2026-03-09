@@ -142,15 +142,6 @@
   <div class="card lancamento-card">
     <button id="btnLimparViagem" class="btn-limpar hidden" onclick="confirmarLimpezaViagem()">✕</button>
 
-    <label>KM inicial</label>
-    <input id="vgKmInicial" type="number">
-
-    <label>KM final</label>
-    <input id="vgKmFinal" type="number">
-
-    <label>KM rodados</label>
-    <input id="vgKm" type="number" disabled>
-
     <button id="btnEntregue" onclick="enviarWhatsEntrega()"
       style="background:#25d366;color:#fff;margin-top:4px;display:none">
       ✅ Avisar passageiro entregue
@@ -158,6 +149,27 @@
 
     <label>Valor recebido (R$)</label>
     <input id="vgValor" type="number">
+
+    <!-- Card de rota pré-carregada -->
+    <div id="vgRotaCard" style="margin-top:12px;display:none">
+      <div style="background:var(--card2);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">🗺️ Rota da viagem</div>
+        <div id="vgRotaParadas" style="font-size:13px;margin-bottom:6px"></div>
+        <div style="display:flex;gap:12px;font-size:13px">
+          <span id="vgRotaKm" style="color:var(--secondary);font-weight:700"></span>
+          <span id="vgRotaDuracao" style="color:var(--muted)"></span>
+        </div>
+        <button onclick="limparRotaViagem()" style="margin-top:8px;font-size:12px;background:var(--card2);border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:8px">✕ Remover rota</button>
+      </div>
+    </div>
+
+    <div id="vgSemRotaAviso" style="margin-top:12px;background:rgba(232,148,10,.1);border:1px solid rgba(232,148,10,.3);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--secondary)">
+      ⚠️ Nenhuma rota definida. Faça uma cotação e agende a viagem para ter a rota automática, ou use o campo abaixo.
+      <div style="margin-top:8px">
+        <label style="font-size:12px">KM percorrido (manual)</label>
+        <input id="vgKmManual" type="number" placeholder="Ex: 12" oninput="atualizarPreviewViagem()" style="margin-top:4px">
+      </div>
+    </div>
 
     <div id="vgPreview" style="margin-top:10px;font-weight:bold;"></div>
 
@@ -344,6 +356,7 @@ if (!vData.viagens)    vData.viagens    = [];
 if (!vData.financeiro) vData.financeiro = {anos:{}};
 
 let clienteEditandoId = null;
+let vgRotaAtual = null;   // rota da viagem atual (km, paradas, duração)
 
 function save()  { localStorage.setItem('kmApp',     JSON.stringify(data));  }
 function vSave() { localStorage.setItem('viagensApp', JSON.stringify(vData)); }
@@ -623,9 +636,11 @@ function initLancamento() {
     sel.appendChild(opt);
   });
 
-  document.getElementById("vgKmInicial").oninput = ()=>{ calcKmViagem(); atualizarPreviewViagem(); atualizarBtnLimpar(); };
-  document.getElementById("vgKmFinal").oninput   = ()=>{ calcKmViagem(); atualizarPreviewViagem(); atualizarBtnLimpar(); };
-  document.getElementById("vgValor").oninput     = ()=>{ atualizarPreviewViagem(); atualizarBtnLimpar(); };
+  document.getElementById("vgValor").oninput = ()=>{ atualizarPreviewViagem(); atualizarBtnLimpar(); };
+  const kmel = document.getElementById('vgKmManual');
+  if (kmel) kmel.oninput = ()=>{ atualizarPreviewViagem(); atualizarBtnLimpar(); };
+  // Inicializar estado da rota
+  setRotaViagem(vgRotaAtual);
 }
 
 function onClienteChange() {
@@ -665,24 +680,13 @@ function abrirEdicaoClienteRapida() {
 }
 
 function calcKmViagem() {
-  const ini = Number(document.getElementById("vgKmInicial").value);
-  const fim = Number(document.getElementById("vgKmFinal").value);
-  const km  = fim - ini;
-  const btn = document.getElementById("btnEntregue");
-
-  if (ini > 0 && fim > 0 && fim >= ini) {
-    document.getElementById("vgKm").value = km;
-    btn.style.display = "block";
-  } else {
-    document.getElementById("vgKm").value = "";
-    btn.style.display = "none";
-  }
+  // KM agora vem da rota; função mantida para compatibilidade
 }
 
 function atualizarPreviewViagem() {
   const preview = document.getElementById("vgPreview");
   const v     = getAtivo();
-  const km    = Number(document.getElementById("vgKm").value);
+  const km    = (vgRotaAtual?.km) || Number(document.getElementById('vgKmManual')?.value) || 0;
   const valor = Number(document.getElementById("vgValor").value);
   if (!v||!km||!valor) { preview.innerText=""; return; }
   const lucro = valor - km*calcularCustoPorKm(v);
@@ -692,8 +696,8 @@ function atualizarPreviewViagem() {
 
 function atualizarBtnLimpar() {
   const btn = document.getElementById("btnLimparViagem");
-  const tem = document.getElementById("vgKmInicial").value.trim() ||
-              document.getElementById("vgKmFinal").value.trim()   ||
+  const tem = (vgRotaAtual != null) ||
+              (document.getElementById("vgKmManual")?.value||'').trim() ||
               document.getElementById("vgValor").value.trim();
   tem ? btn.classList.remove("hidden") : btn.classList.add("hidden");
 }
@@ -702,28 +706,68 @@ function confirmarLimpezaViagem() {
   document.getElementById("modalLimpezaViagem").classList.remove("hidden");
 }
 function limparViagem() {
-  ["vgKmInicial","vgKmFinal","vgKm","vgValor"].forEach(id=>document.getElementById(id).value="");
+  ['vgValor','vgKmManual'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   document.getElementById("vgPreview").innerText = "";
   document.getElementById("vgResultadoCard").style.display = "none";
   document.getElementById("modalLimpezaViagem").classList.add("hidden");
+  limparRotaViagem();
   atualizarBtnLimpar();
   showToast("Campos limpos ✔","info");
+}
+
+function setRotaViagem(rota) {
+  // Chamada quando uma viagem é pré-preenchida da agenda/cotação
+  vgRotaAtual = rota;
+  const card  = document.getElementById('vgRotaCard');
+  const aviso = document.getElementById('vgSemRotaAviso');
+  if (rota && rota.km) {
+    if (card)  card.style.display  = '';
+    if (aviso) aviso.style.display = 'none';
+    const ps = (rota.paradas||[]).map((p,i) => {
+      const ic = i===0?'🟢':i===(rota.paradas.length-1)?'🔴':'🟡';
+      return ic+' '+p.address.split(',')[0];
+    }).join(' → ');
+    const el = document.getElementById('vgRotaParadas');
+    if (el) el.textContent = ps;
+    const ekm = document.getElementById('vgRotaKm');
+    if (ekm) ekm.textContent = rota.km + ' km';
+    const edur = document.getElementById('vgRotaDuracao');
+    if (edur) edur.textContent = rota.duracao || '';
+  } else {
+    if (card)  card.style.display  = 'none';
+    if (aviso) aviso.style.display = '';
+  }
+  atualizarPreviewViagem();
+}
+
+function limparRotaViagem() {
+  vgRotaAtual = null;
+  const card  = document.getElementById('vgRotaCard');
+  const aviso = document.getElementById('vgSemRotaAviso');
+  if (card)  card.style.display  = 'none';
+  if (aviso) aviso.style.display = '';
+  atualizarPreviewViagem();
 }
 
 function salvarViagem() {
   const v          = getAtivo();
   const clienteId  = Number(document.getElementById("vgCliente").value);
-  const ini        = Number(document.getElementById("vgKmInicial").value);
-  const fim        = Number(document.getElementById("vgKmFinal").value);
   const valor      = Number(document.getElementById("vgValor").value);
   const passageiro = document.getElementById("vgPassageiro").value;
 
-  if (!v)                     { showToast("Nenhum veículo selecionado","error"); return; }
-  if (!clienteId)             { showToast("Selecione um cliente","info"); return; }
-  if (!ini||!fim||fim<=ini)   { showToast("KM inicial/final inválidos","info"); return; }
-  if (!valor||valor<=0)       { showToast("Informe o valor recebido","info"); return; }
+  if (!v)              { showToast("Nenhum veículo selecionado","error"); return; }
+  if (!clienteId)      { showToast("Selecione um cliente","info"); return; }
+  if (!valor||valor<=0){ showToast("Informe o valor recebido","info"); return; }
 
-  const km         = fim-ini;
+  // KM vem da rota cadastrada (cotação/agendamento) ou campo manual
+  const rotaAtual = vgRotaAtual || null;
+  const kmManual  = Number(document.getElementById('vgKmManual')?.value) || 0;
+  const km = rotaAtual?.km || kmManual;
+  if (!km || km <= 0) { showToast("Informe o KM percorrido ou defina uma rota","info"); return; }
+
   const custoTotal = km*calcularCustoPorKm(v);
   const lucro      = valor-custoTotal;
   const agora      = new Date();
@@ -732,19 +776,13 @@ function salvarViagem() {
     id: Date.now(),
     clienteId, veiculoId:v.id, passageiroNome:passageiro,
     data: agora.toISOString(),
-    kmInicial:ini, kmFinal:fim, km, valor, custoTotal, lucro, tipo:'viagem'
+    km, valor, custoTotal, lucro, tipo:'viagem',
+    rota: rotaAtual
   };
   vData.viagens.push(viagem);
   addFaturamentoMesViagem(agora.getFullYear(), agora.getMonth(), valor);
   vSave();
-
-  // Espelha em kmApp para metas gerais do index
-  data.lancamentos.push({
-    id:viagem.id, veiculoId:v.id, data:agora.toISOString(),
-    km, valor, custoTotal, lucro, tipo:'viagem'
-  });
-  recalcularFinanceiroGeral();
-  save();
+  // Nota: viagens são lidas pelo dashboard via getAllLancamentos() — não duplicamos em kmApp
 
   // Resultado
   document.getElementById("vgRKm").innerText    = km+" km";
@@ -1192,6 +1230,10 @@ if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
       <div class="fab-option-label">Nova Viagem</div>
       <button class="fab-option-btn fab-opt-viagem">🚕</button>
     </div>
+    <div class="fab-option" onclick="fabAcao('agenda')">
+      <div class="fab-option-label">Novo Agendamento</div>
+      <button class="fab-option-btn fab-opt-agenda">📅</button>
+    </div>
     <div class="fab-option" onclick="fabAcao('entregas')">
       <div class="fab-option-label">Nova Entrega</div>
       <button class="fab-option-btn fab-opt-entrega">📦</button>
@@ -1218,7 +1260,7 @@ function toggleTheme(){
 /* ── FAB ── */
 function fabAcao(acao){
   closeFab();
-  if(acao==='viagens'){closeFab();showPage('lancamento');}else{window.location.href={entregas:'entregas.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[acao]||'#';}
+  if(acao==='viagens'){closeFab();showPage('lancamento');}else{window.location.href={entregas:'entregas.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html',agenda:'agenda.html'}[acao]||'#';}
 }
 function toggleFab(){
   const o=document.getElementById('fab-options');

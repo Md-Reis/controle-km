@@ -355,9 +355,54 @@
     </div>
     <button class="btn-wpp" onclick="enviarWhatsApp()">📤 Enviar pelo WhatsApp</button>
   </div>
+
+  <!-- Agendar corrida -->
+  <div style="margin-top:12px;padding:0 2px">
+    <button onclick="abrirModalAgendar()" style="
+      width:100%;padding:12px;border-radius:12px;
+      background:linear-gradient(135deg,var(--primary) 0%,#1a8a82 100%);
+      color:#fff;font-size:14px;font-weight:700;border:none;
+      box-shadow:0 4px 14px rgba(46,168,160,.3);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:8px
+    ">📅 Agendar esta corrida</button>
+  </div>
 </div>
 
 <div style="height:24px"></div>
+</div>
+
+<!-- Modal Agendar Corrida -->
+<div id="modalAgendar" class="modal hidden">
+  <div class="modal-box" style="max-height:88vh;overflow-y:auto">
+    <h2>📅 Agendar corrida</h2>
+
+    <label>Data</label>
+    <input type="date" id="agData">
+
+    <label>Horário</label>
+    <input type="time" id="agHora" value="08:00">
+
+    <label>Duração estimada (min)</label>
+    <input type="number" id="agDuracao" placeholder="Ex: 60" min="5">
+
+    <label>Valor cobrado (R$)</label>
+    <input type="number" id="agValor" step="0.01" placeholder="Preenchido automaticamente">
+
+    <label>Cliente</label>
+    <select id="agClienteSelect" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;width:100%;margin-bottom:10px">
+      <option value="">— Selecione um cliente —</option>
+    </select>
+
+    <label>Observações (opcional)</label>
+    <input type="text" id="agObs" placeholder="Ex: Levar 2 malas, pegar no lobby...">
+
+    <div id="agRotaInfo" style="background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--muted);display:none"></div>
+
+    <div class="flex" style="margin-top:4px">
+      <button onclick="confirmarAgendar()">📅 Agendar</button>
+      <button class="danger" onclick="fecharModalAgendar()">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <!-- Modal salvar rota -->
@@ -971,6 +1016,89 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
   </div>
   <button id="fab-main" onclick="toggleFab()">+</button>
 </div>
+<script>
+/* ── AGENDAR DA COTAÇÃO ── */
+function toLocalDateStrCot(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function abrirModalAgendar() {
+  const agDataEl = document.getElementById('agData');
+  if (agDataEl) agDataEl.value = toLocalDateStrCot(new Date());
+
+  // Preenche valor com o calculado (viagem única)
+  const valorEl = document.getElementById('agValor');
+  if (valorEl) {
+    const valTxt = document.getElementById('valorUnico')?.innerText || '';
+    const vNum = parseFloat(valTxt.replace(/[^0-9,]/g,'').replace(',','.'));
+    if (!isNaN(vNum) && vNum > 0) valorEl.value = vNum.toFixed(2);
+  }
+
+  // Popular clientes e pré-selecionar o do whats
+  const selCli = document.getElementById('selectCliente');
+  const agCli  = document.getElementById('agClienteSelect');
+  const vDataAg = JSON.parse(localStorage.getItem('viagensApp')) || {};
+  if (agCli) {
+    agCli.innerHTML = '<option value="">— Selecione —</option>';
+    (vDataAg.clientes||[])
+      .sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'}))
+      .forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome;
+        if (selCli && String(c.id) === selCli.value) opt.selected = true;
+        agCli.appendChild(opt);
+      });
+  }
+
+  // Info da rota
+  const infoEl  = document.getElementById('agRotaInfo');
+  const kmLabel = document.getElementById('rotaKmLabel')?.innerText;
+  if (infoEl && kmLabel && kmLabel !== '—') {
+    infoEl.style.display = '';
+    infoEl.textContent = '🗺️ ' + kmLabel;
+  } else if (infoEl) {
+    infoEl.style.display = 'none';
+  }
+
+  document.getElementById('modalAgendar').classList.remove('hidden');
+}
+
+function fecharModalAgendar() {
+  document.getElementById('modalAgendar').classList.add('hidden');
+}
+
+function confirmarAgendar() {
+  const data      = document.getElementById('agData').value;
+  const hora      = document.getElementById('agHora').value;
+  const duracao   = Number(document.getElementById('agDuracao').value) || 0;
+  const valor     = Number(document.getElementById('agValor').value)   || 0;
+  const clienteId = Number(document.getElementById('agClienteSelect').value) || null;
+  const obs       = document.getElementById('agObs').value.trim();
+
+  if (!data) { showToast('Informe a data','info'); return; }
+  if (!hora) { showToast('Informe o horário','info'); return; }
+
+  const agData = JSON.parse(localStorage.getItem('agendaApp')) || { agendamentos: [] };
+  if (!agData.agendamentos) agData.agendamentos = [];
+
+  const paradasAtuais = (typeof paradas !== 'undefined')
+    ? paradas.filter(p=>p.place).map(p=>p.place) : [];
+  const rotaSalva = paradasAtuais.length >= 2
+    ? { duracao, paradas: paradasAtuais } : null;
+
+  agData.agendamentos.push({
+    id: Date.now(), clienteId, passageiro: null,
+    data, hora, duracao, valor, obs,
+    status: 'pendente', rota: rotaSalva
+  });
+
+  localStorage.setItem('agendaApp', JSON.stringify(agData));
+  fecharModalAgendar();
+  showToast('✅ Corrida agendada! Verifique na Agenda.', 'success');
+}
+</script>
+
 <script>
 (function(){
   const s=localStorage.getItem('kmTheme')||'dark';

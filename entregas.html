@@ -163,6 +163,21 @@
 </div>
 
 
+<!-- Modal Confirmar Exclusão de Entrega -->
+<div id="modalDelEntrega" class="modal hidden">
+  <div class="modal-box confirmar-box" style="max-width:320px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:8px">🗑️</div>
+      <h3 style="margin:0 0 8px">Excluir lançamento?</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0">Esta ação não pode ser desfeita. O lançamento será removido do histórico e do financeiro.</p>
+    </div>
+    <div class="modal-actions">
+      <button onclick="cancelarDelEntrega()">Cancelar</button>
+      <button class="danger" onclick="confirmarDelEntrega()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" style="
   position:fixed;
   bottom:20px;
@@ -195,6 +210,7 @@
   if (!data.lancamentos) data.lancamentos = [];
 
   let anoSelecionado = new Date().getFullYear();
+  let entregaDeletandoId = null;
   let resultadoAtual = null;
   let lancamentoEditandoId = null;
 
@@ -572,7 +588,7 @@
         <h2 style="color:${lucroColor}">💰 Lucro: R$ ${h.lucro.toFixed(2)}</h2>
         <div class="flex">
           <button onclick="abrirModalEdicao(${h.id})">✏️ Editar</button>
-          <button class="danger" onclick="delHist(${h.id})">🗑️ Excluir</button>
+          <button class="danger" onclick="abrirDelHist(${h.id})">🗑️ Excluir</button>
         </div>
       `;
       listaHistorico.appendChild(card);
@@ -594,15 +610,27 @@
     save();
   }
 
-  function delHist(id) {
+  function abrirDelHist(id) {
+    entregaDeletandoId = id;
+    document.getElementById('modalDelEntrega').classList.remove('hidden');
+  }
+  function confirmarDelEntrega() {
+    if (!entregaDeletandoId) return;
+    const id = entregaDeletandoId;
     const h = data.lancamentos.find(l => l.id === id);
-    if (!h) { showToast("Lançamento não encontrado", "error"); return; }
+    if (!h) { showToast('Lançamento não encontrado', 'error'); return; }
     data.lancamentos = data.lancamentos.filter(l => l.id !== id);
     save();
     recalcularFinanceiroPorHistorico();
     renderHistorico();
     generateGauges(anoSelecionado);
-    showToast("Lançamento excluído ❌", "info");
+    document.getElementById('modalDelEntrega').classList.add('hidden');
+    entregaDeletandoId = null;
+    showToast('Lançamento excluído ❌', 'info');
+  }
+  function cancelarDelEntrega() {
+    entregaDeletandoId = null;
+    document.getElementById('modalDelEntrega').classList.add('hidden');
   }
 
   function abrirModalEdicao(id) {

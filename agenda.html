@@ -236,6 +236,9 @@
   <div class="resumo-dia" id="resumoDia"></div>
 
   <!-- Lista de agendamentos -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+    <button onclick="exportCSVAgenda()" style="font-size:12px;padding:5px 14px;background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px;font-weight:600">📤 Exportar CSV</button>
+  </div>
   <div id="listaAg" class="anim"></div>
 
 </div>
@@ -360,6 +363,49 @@
     </div>
   </div>
 </div>
+
+<script>
+/* ── EXPORTAR CSV AGENDA ── */
+function exportCSVAgenda() {
+  const ags = agData.agendamentos;
+  if (!ags || ags.length === 0) { showToast('Nenhum agendamento para exportar', 'info'); return; }
+
+  const vd = JSON.parse(localStorage.getItem('viagensApp')) || {};
+  const cliMap = {};
+  (vd.clientes||[]).forEach(c => cliMap[c.id] = c);
+
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const statusLabel = {pendente:'Pendente',confirmado:'Confirmado',concluido:'Concluído',cancelado:'Cancelado'};
+
+  const headers = ['Data','Horário','Cliente','Passageiro','Valor (R$)','Status','Duração (min)','KM Rota','Observações'];
+
+  const sorted = [...ags].sort((a,b) => (a.data+a.hora).localeCompare(b.data+b.hora));
+
+  const rows = sorted.map(a => {
+    const cli   = cliMap[a.clienteId];
+    const nomeC = cli ? cli.nome : '—';
+    const pass  = a.passageiro || nomeC;
+    const [ano,mes,dia] = (a.data||'').split('-');
+    const dataFmt = dia && mes ? `${dia}/${mes}/${ano}` : a.data||'';
+    const kmRota  = a.rota?.km || '';
+    const st      = statusLabel[a.status] || a.status || '';
+    return [dataFmt, a.hora||'', nomeC, pass, (a.valor||0).toFixed(2), st, a.duracao||'', kmRota, a.obs||''];
+  });
+
+  const csv = [headers, ...rows].map(row =>
+    row.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')
+  ).join('');
+
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'agenda-' + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exportado ✅', 'success');
+}
+</script>
 
 <script>
 // ════════ TEMA ════════

@@ -226,6 +226,12 @@
     </div>
     <div id="resumoAbastPeriodo" style="margin-bottom:8px"></div>
     <div id="histLista"></div>
+    <button onclick="exportCSVAbastecimento()" style="
+      width:100%;margin-top:12px;padding:10px;border-radius:10px;
+      background:var(--card2);border:1px solid var(--border);
+      color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:6px
+    ">📤 Exportar CSV</button>
   </div>
 </div>
 
@@ -905,6 +911,46 @@
   </div>
   <button id="fab-main" onclick="toggleFab()">+</button>
 </div>
+<script>
+/* ── EXPORTAR CSV ── */
+function exportCSVAbastecimento() {
+  const regs = getRegistrosVeiculo();
+  if (regs.length === 0) { showToast('Nenhum registro para exportar', 'info'); return; }
+
+  const headers = ['Data','KM Odometro','Litros','Valor (R$)','R$/Litro','Combustivel','Posto','Consumo (km/l)'];
+  const consumos = calcularConsumos(regs);
+  const consumoMap = {};
+  consumos.forEach(c => consumoMap[c.idx] = c);
+
+  const rows = regs.map((r, i) => {
+    const d = new Date(r.data);
+    const data = d.toLocaleDateString('pt-BR');
+    const litros = r.litros.toFixed(2);
+    const valor  = r.valor.toFixed(2);
+    const precoL = (r.valor / r.litros).toFixed(3);
+    const cons   = consumoMap[i];
+    const consumo = cons ? cons.consumo.toFixed(1) : '';
+    return [data, r.km, litros, valor, precoL, r.combustivel||'', r.posto||'', consumo];
+  });
+
+  const csv = [headers, ...rows].map(row =>
+    row.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')
+  ).join('\n');
+
+  const bom  = '\uFEFF';
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const vei  = getVeiculo(veiculoAtualId);
+  const nome = vei ? vei.nome.replace(/\s+/g,'-') : 'veiculo';
+  a.href     = url;
+  a.download = 'abastecimento-' + nome + '-' + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exportado com sucesso ✅', 'success');
+}
+</script>
+
 <script>
 /* ── TEMA ── */
 (function(){

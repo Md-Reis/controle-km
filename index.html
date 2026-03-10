@@ -37,7 +37,7 @@
 
 
 <!-- Splash Screen -->
-<div id="splash">
+<div id="splash" style="display:none">
   <img src="assets/logo.webp" alt="Sheyla Toyota">
 </div>
 
@@ -1733,11 +1733,19 @@ function exportarBackup() {
   renderMetasTotal();
 
   window.addEventListener("load", () => {
-    setTimeout(() => {
-      const splash = document.getElementById("splash");
-      splash.style.opacity = "0";
-      setTimeout(() => splash.remove(), 2000);
-    }, 1500);
+    const splash = document.getElementById("splash");
+    // Só exibe o splash na primeira abertura da sessão
+    if (!sessionStorage.getItem('splashVisto')) {
+      sessionStorage.setItem('splashVisto', '1');
+      splash.style.display = '';   // mostra
+      setTimeout(() => {
+        splash.style.opacity = "0";
+        setTimeout(() => splash.remove(), 600);
+      }, 1500);
+    } else {
+      // Já viu — remove sem aparecer
+      splash.remove();
+    }
   });
 
   if ("serviceWorker" in navigator) {

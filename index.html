@@ -740,15 +740,15 @@
       }
 
       return `
-        <a href="\${link}" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent">
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">\${icon}</div>
+        <a href="${link}" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent">
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${icon}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600">\${formatCurrency(l.valor)}</div>
-            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">\${dia} às \${hora} · \${(l.km||0).toFixed(0)} km\${nomeExtra ? ' · ' + nomeExtra : ''}</div>
+            <div style="font-size:13px;font-weight:600">${formatCurrency(l.valor)}</div>
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dia} às ${hora} · ${(l.km||0).toFixed(0)} km${nomeExtra ? ' · ' + nomeExtra : ''}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
-            <div style="font-size:12px;font-weight:700;color:\${cor}">\${formatCurrency(l.lucro)}</div>
-            <div style="font-size:10px;color:var(--muted)">\${l.tipo === 'entrega' ? 'Entrega' : 'Viagem'}</div>
+            <div style="font-size:12px;font-weight:700;color:${cor}">${formatCurrency(l.lucro)}</div>
+            <div style="font-size:10px;color:var(--muted)">${l.tipo === 'entrega' ? 'Entrega' : 'Viagem'}</div>
           </div>
         </a>`;
     }).join('');

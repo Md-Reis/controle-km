@@ -396,7 +396,17 @@
     <label>Observações (opcional)</label>
     <input type="text" id="agObs" placeholder="Ex: Levar 2 malas, pegar no lobby...">
 
-    <div id="agRotaInfo" style="background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--muted);display:none"></div>
+    <!-- Card da rota calculada -->
+    <div id="agRotaCard" style="display:none;background:var(--card2);border-radius:12px;padding:12px 14px;border:1px solid var(--border);margin-bottom:12px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🗺️ Rota desta corrida</div>
+      <div id="agRotaParadas" style="font-size:13px;line-height:1.7;margin-bottom:8px"></div>
+      <div style="display:flex;gap:16px;font-size:13px;border-top:1px solid var(--border);padding-top:8px">
+        <span>📏 <strong id="agRotaKmVal" style="color:var(--secondary)"></strong></span>
+        <span>⏱️ <span id="agRotaDurVal" style="color:var(--muted)"></span></span>
+        <span>💰 <strong id="agRotaCustoVal" style="color:var(--accent)"></strong></span>
+      </div>
+    </div>
+    <div id="agRotaInfo" style="display:none"></div>
 
     <div class="flex" style="margin-top:4px">
       <button onclick="confirmarAgendar()">📅 Agendar</button>
@@ -1060,14 +1070,29 @@ function abrirModalAgendar() {
       });
   }
 
-  // Info da rota
-  const infoEl  = document.getElementById('agRotaInfo');
-  const kmLabel = document.getElementById('rotaKmLabel')?.innerText;
-  if (infoEl && kmLabel && kmLabel !== '—') {
-    infoEl.style.display = '';
-    infoEl.textContent = '🗺️ ' + kmLabel;
-  } else if (infoEl) {
-    infoEl.style.display = 'none';
+  // Card de rota calculada
+  const rotaCard = document.getElementById('agRotaCard');
+  if (rotaCard && kmRota > 0) {
+    // Paradas
+    const ps = paradas.filter(p=>p.place).map((p,i,arr)=>{
+      const ic = i===0 ? '🟢' : i===arr.length-1 ? '🔴' : '🟡';
+      return ic + ' ' + (p.place.address||'').split(',')[0];
+    }).join('<br>');
+    const paradEl = document.getElementById('agRotaParadas');
+    if (paradEl) paradEl.innerHTML = ps || '—';
+    const kmEl = document.getElementById('agRotaKmVal');
+    if (kmEl) kmEl.textContent = kmRota + ' km';
+    const durEl = document.getElementById('agRotaDurVal');
+    if (durEl) durEl.textContent = duracaoRota || '—';
+    const custoEl = document.getElementById('agRotaCustoVal');
+    if (custoEl) {
+      const vAt = getAtivo();
+      const custo = vAt ? (kmRota * custoPorKm(vAt)).toFixed(2) : '—';
+      custoEl.textContent = custo !== '—' ? 'R$ ' + custo : '—';
+    }
+    rotaCard.style.display = '';
+  } else if (rotaCard) {
+    rotaCard.style.display = 'none';
   }
 
   document.getElementById('modalAgendar').classList.remove('hidden');

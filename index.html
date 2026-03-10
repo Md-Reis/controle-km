@@ -31,6 +31,7 @@
 <nav id="internal-nav">
   <button onclick="showPage('veiculos')" id="navVeiculos" class="active"><span class="nav-icon">🚗</span><span class="nav-label">Veículos</span></button>
   <button onclick="showPage('dashboard')" id="navDashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
+  <button onclick="showPage('stats')" id="navStats"><span class="nav-icon">🏆</span><span class="nav-label">Stats</span></button>
   <button onclick="showPage('backup')" id="navBackup"><span class="nav-icon">💾</span><span class="nav-label">Backup</span></button>
 </nav>
 
@@ -186,6 +187,39 @@
 </section>
 
 <!-- BACKUP -->
+<!-- ESTATÍSTICAS GERAIS -->
+<section id="stats" class="page">
+  <h2>🏆 Estatísticas Gerais</h2>
+  <p style="color:var(--muted);font-size:14px;margin-top:-8px;margin-bottom:16px">Totais acumulados de toda a sua história.</p>
+
+  <!-- KPIs All-time -->
+  <div id="statsAllTime" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
+
+  <!-- Recordes -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🥇 Recordes</div>
+    <div id="statsRecordes"></div>
+  </div>
+
+  <!-- Médias -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Médias por corrida</div>
+    <div id="statsMedias"></div>
+  </div>
+
+  <!-- Mês mais rentável -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📅 Top 3 meses mais rentáveis</div>
+    <div id="statsTopMeses"></div>
+  </div>
+
+  <!-- Top Clientes all-time -->
+  <div class="card">
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">👤 Top clientes (todas as viagens)</div>
+    <div id="statsTopClientes"></div>
+  </div>
+</section>
+
 <section id="backup" class="page">
   <h2>💾 Backup e Restauração</h2>
   <p style="color:var(--muted);font-size:14px;margin-top:-8px">Seus dados ficam salvos no navegador. Exporte regularmente para não perder nada.</p>
@@ -260,6 +294,7 @@
         ⚠️ Esta ação é <strong>irreversível</strong>. Veículos, entregas, viagens, clientes e agendamentos atuais serão perdidos. Certifique-se de ter um backup recente.
       </div>
     </div>
+    <div id="importResumo" style="margin-bottom:14px"></div>
     <div class="flex">
       <button onclick="executarImportacao()" style="background:var(--danger);color:#fff;border-color:var(--danger)">📥 Restaurar mesmo assim</button>
       <button class="btn-secondary" onclick="cancelarImport()">Cancelar</button>
@@ -386,6 +421,7 @@
     if (id === 'veiculos')  { renderVeiculos(); carregarAnosTotalMeta(); renderMetasTotal(); }
     if (id === 'dashboard') { renderDashboard(); }
     if (id === 'backup')    { renderBackupStats(); }
+    if (id === 'stats')     { renderStats(); }
   }
 
   // ======= AUX =======
@@ -679,21 +715,42 @@
       ul.innerHTML = '<small style="color:var(--muted)">Nenhuma corrida registrada ainda.</small>';
       return;
     }
+    // Para viagens, buscar nome do cliente/passageiro
+    const vAppUl = JSON.parse(localStorage.getItem('viagensApp')) || {};
+    const viaMap = {};
+    (vAppUl.viagens||[]).forEach(v => viaMap[v.id] = v);
+    const cliMap = {};
+    (vAppUl.clientes||[]).forEach(c => cliMap[c.id] = c);
+
     ul.innerHTML = todasOrdenadas.map(l => {
-      const d   = new Date(l.data);
-      const dia = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-      const hora= d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-      const icon= l.tipo === 'entrega' ? '📦' : '🚕';
-      const cor = l.lucro >= 0 ? 'var(--accent)' : 'var(--danger)';
+      const d    = new Date(l.data);
+      const dia  = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+      const hora = d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+      const icon = l.tipo === 'entrega' ? '📦' : '🚕';
+      const cor  = l.lucro >= 0 ? 'var(--accent)' : 'var(--danger)';
+      const link = l.tipo === 'entrega' ? 'entregas.html' : 'viagens.html';
+
+      // Nome para viagens
+      let nomeExtra = '';
+      if (l.tipo === 'viagem') {
+        const vObj = viaMap[l.id];
+        const cli  = vObj ? cliMap[vObj.clienteId] : null;
+        const pass = vObj?.passageiroNome;
+        nomeExtra  = cli ? cli.nome + (pass && pass !== cli.nome ? ' · ' + pass : '') : '';
+      }
+
       return `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:20px">${icon}</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600">${formatCurrency(l.valor)}</div>
-            <div style="font-size:12px;color:var(--muted)">${dia} às ${hora} · ${(l.km||0).toFixed(0)} km</div>
+        <a href="\${link}" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent">
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">\${icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">\${formatCurrency(l.valor)}</div>
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">\${dia} às \${hora} · \${(l.km||0).toFixed(0)} km\${nomeExtra ? ' · ' + nomeExtra : ''}</div>
           </div>
-          <div style="font-size:13px;font-weight:700;color:${cor}">${formatCurrency(l.lucro)}</div>
-        </div>`;
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+            <div style="font-size:12px;font-weight:700;color:\${cor}">\${formatCurrency(l.lucro)}</div>
+            <div style="font-size:10px;color:var(--muted)">\${l.tipo === 'entrega' ? 'Entrega' : 'Viagem'}</div>
+          </div>
+        </a>`;
     }).join('');
     // Último abastecimento
     renderDashUltimoAbast();
@@ -972,7 +1029,148 @@
   }
 
   // ======= BACKUP =======
-  function exportarBackup() {
+  function renderStats() {
+    const todos = getAllLancamentos();
+    const vAppD = JSON.parse(localStorage.getItem('viagensApp')) || {};
+    const cliMap = {};
+    (vAppD.clientes||[]).forEach(c => cliMap[c.id] = c);
+
+    if (todos.length === 0) {
+      document.getElementById('statsAllTime').innerHTML =
+        '<div style="grid-column:span 2;text-align:center;color:var(--muted);padding:24px 0">Nenhuma corrida registrada ainda.</div>';
+      ['statsRecordes','statsMedias','statsTopMeses','statsTopClientes'].forEach(id=>{
+        const el = document.getElementById(id); if(el) el.innerHTML='<small style="color:var(--muted)">—</small>';
+      });
+      return;
+    }
+
+    const viagens  = todos.filter(l=>l.tipo==='viagem');
+    const entregas = todos.filter(l=>l.tipo==='entrega');
+
+    // ── All-time KPIs ──────────────────────────────────────────────
+    const totalFat   = todos.reduce((s,l)=>s+(l.valor||0),0);
+    const totalLucro = todos.reduce((s,l)=>s+(l.lucro||0),0);
+    const totalKm    = todos.reduce((s,l)=>s+(l.km||0),0);
+    const totalCusto = todos.reduce((s,l)=>s+(l.custoTotal||0),0);
+    const margemPct  = totalFat > 0 ? (totalLucro/totalFat*100).toFixed(1) : 0;
+
+    const kpis = [
+      {label:'Total faturado',   val: formatCurrency(totalFat),          cor:'var(--accent)',    icon:'💵'},
+      {label:'Lucro total',       val: formatCurrency(totalLucro),         cor: totalLucro>=0?'var(--primary)':'var(--danger)', icon:'💰'},
+      {label:'KM rodados',        val: totalKm.toFixed(0)+' km',           cor:'var(--secondary)', icon:'🛣️'},
+      {label:'Corridas',          val: todos.length,                        cor:'var(--text)',      icon:'🚗'},
+      {label:'Viagens',           val: viagens.length,                      cor:'var(--primary)',   icon:'🚕'},
+      {label:'Entregas',          val: entregas.length,                     cor:'var(--secondary)', icon:'📦'},
+      {label:'Custo total',       val: formatCurrency(totalCusto),          cor:'var(--danger)',    icon:'⛽'},
+      {label:'Margem média',      val: margemPct+'%',                       cor: margemPct>=30?'var(--accent)':'var(--secondary)', icon:'📈'},
+    ];
+
+    document.getElementById('statsAllTime').innerHTML = kpis.map(k=>`
+      <div style="background:var(--card2);border-radius:12px;padding:12px 14px">
+        <div style="font-size:18px;margin-bottom:4px">${k.icon}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${k.label}</div>
+        <div style="font-size:16px;font-weight:800;color:${k.cor};margin-top:2px">${k.val}</div>
+      </div>`).join('');
+
+    // ── Recordes ──────────────────────────────────────────────────
+    const maiorValor = todos.reduce((m,l)=>l.valor>m.valor?l:m, todos[0]);
+    const maiorKm    = todos.reduce((m,l)=>(l.km||0)>(m.km||0)?l:m, todos[0]);
+    const maiorLucro = todos.reduce((m,l)=>l.lucro>m.lucro?l:m, todos[0]);
+
+    const recFmt = (l) => {
+      const d = new Date(l.data);
+      return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    };
+
+    document.getElementById('statsRecordes').innerHTML = [
+      {label:'Maior faturamento único', val: formatCurrency(maiorValor.valor), sub: recFmt(maiorValor)+' · '+(maiorValor.tipo==='viagem'?'🚕':'📦')},
+      {label:'Maior lucro único',        val: formatCurrency(maiorLucro.lucro), sub: recFmt(maiorLucro)},
+      {label:'Maior distância',          val: (maiorKm.km||0).toFixed(0)+' km',  sub: recFmt(maiorKm)},
+    ].map(rec=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600">${rec.label}</div>
+          <div style="font-size:11px;color:var(--muted)">${rec.sub}</div>
+        </div>
+        <div style="font-size:14px;font-weight:800;color:var(--accent)">${rec.val}</div>
+      </div>`).join('');
+
+    // ── Médias ────────────────────────────────────────────────────
+    const mediaValor = totalFat / todos.length;
+    const mediaLucro = totalLucro / todos.length;
+    const mediaKm    = totalKm / todos.length;
+    const mediaCusto = totalCusto / todos.length;
+
+    document.getElementById('statsMedias').innerHTML = [
+      {label:'Valor médio por corrida', val: formatCurrency(mediaValor)},
+      {label:'Lucro médio por corrida',  val: formatCurrency(mediaLucro)},
+      {label:'KM médio por corrida',     val: mediaKm.toFixed(1)+' km'},
+      {label:'Custo médio por corrida',  val: formatCurrency(mediaCusto)},
+    ].map(m=>`
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--muted)">${m.label}</div>
+        <div style="font-size:13px;font-weight:700">${m.val}</div>
+      </div>`).join('');
+
+    // ── Top 3 meses ───────────────────────────────────────────────
+    const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const porMes = {};
+    todos.forEach(l => {
+      if (!l.data) return;
+      const d   = new Date(l.data);
+      const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      if (!porMes[key]) porMes[key] = {fat:0,lucro:0,n:0,label:MESES[d.getMonth()]+' '+d.getFullYear()};
+      porMes[key].fat   += l.valor||0;
+      porMes[key].lucro += l.lucro||0;
+      porMes[key].n++;
+    });
+    const top3 = Object.values(porMes).sort((a,b)=>b.fat-a.fat).slice(0,3);
+
+    document.getElementById('statsTopMeses').innerHTML = top3.length === 0
+      ? '<small style="color:var(--muted)">—</small>'
+      : top3.map((m,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="width:26px;height:26px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${['🥇','🥈','🥉'][i]}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${m.label}</div>
+            <div style="font-size:11px;color:var(--muted)">${m.n} corridas</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:700;color:var(--accent)">${formatCurrency(m.fat)}</div>
+            <div style="font-size:11px;color:var(--primary)">${formatCurrency(m.lucro)}</div>
+          </div>
+        </div>`).join('');
+
+    // ── Top Clientes ──────────────────────────────────────────────
+    const porCli = {};
+    viagens.forEach(l => {
+      const vObj = vAppD.viagens?.find(v=>v.id===l.id);
+      const cli  = vObj ? cliMap[vObj.clienteId] : null;
+      const nome = cli?.nome || 'Desconhecido';
+      if (!porCli[nome]) porCli[nome] = {fat:0,lucro:0,n:0};
+      porCli[nome].fat   += l.valor||0;
+      porCli[nome].lucro += l.lucro||0;
+      porCli[nome].n++;
+    });
+    const topCli = Object.entries(porCli).sort((a,b)=>b[1].fat-a[1].fat).slice(0,5);
+
+    document.getElementById('statsTopClientes').innerHTML = topCli.length === 0
+      ? '<small style="color:var(--muted)">Nenhuma viagem com cliente registrada.</small>'
+      : topCli.map(([nome,d],i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${nome.charAt(0).toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${nome}</div>
+            <div style="font-size:11px;color:var(--muted)">${d.n} viagens</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:700;color:var(--accent)">${formatCurrency(d.fat)}</div>
+            <div style="font-size:11px;color:var(--primary)">${formatCurrency(d.lucro)}</div>
+          </div>
+        </div>`).join('');
+  }
+
+function exportarBackup() {
     const kmApp            = JSON.parse(localStorage.getItem('kmApp'))             || {};
     const viagensApp       = JSON.parse(localStorage.getItem('viagensApp'))        || {};
     const abastecimentoApp = JSON.parse(localStorage.getItem('abastecimentoApp'))  || {};
@@ -1026,6 +1224,54 @@
         // Validação básica
         if (!payload.kmApp && !payload.viagensApp) {
           throw new Error('Arquivo inválido ou corrompido.');
+        }
+
+        // Montar resumo do arquivo para exibir no modal
+        const kmD  = payload.kmApp        || {};
+        const vgD  = payload.viagensApp   || {};
+        const abD  = payload.abastecimentoApp || {};
+        const agD  = payload.agendaApp    || {};
+        const nEntregas    = (kmD.lancamentos||[]).filter(l=>l.tipo==='entrega').length;
+        const nViagens     = (vgD.viagens||[]).length;
+        const nClientes    = (vgD.clientes||[]).length;
+        const nAbast       = (abD.registros||[]).length;
+        const nAgendamentos= (agD.agendamentos||[]).length;
+        const exportadoEm  = payload.exportadoEm
+          ? new Date(payload.exportadoEm).toLocaleString('pt-BR') : '—';
+        const versao = payload.versao || '—';
+
+        const resumoEl = document.getElementById('importResumo');
+        if (resumoEl) {
+          resumoEl.innerHTML = `
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">
+              Conteúdo do arquivo
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px">
+              <div style="background:var(--bg2);border-radius:8px;padding:8px 10px">
+                <div style="color:var(--muted);font-size:11px">Viagens</div>
+                <div style="font-weight:700;color:var(--primary)">${nViagens}</div>
+              </div>
+              <div style="background:var(--bg2);border-radius:8px;padding:8px 10px">
+                <div style="color:var(--muted);font-size:11px">Entregas</div>
+                <div style="font-weight:700;color:var(--secondary)">${nEntregas}</div>
+              </div>
+              <div style="background:var(--bg2);border-radius:8px;padding:8px 10px">
+                <div style="color:var(--muted);font-size:11px">Agendamentos</div>
+                <div style="font-weight:700;color:var(--text)">${nAgendamentos}</div>
+              </div>
+              <div style="background:var(--bg2);border-radius:8px;padding:8px 10px">
+                <div style="color:var(--muted);font-size:11px">Abastecimentos</div>
+                <div style="font-weight:700;color:var(--text)">${nAbast}</div>
+              </div>
+              <div style="background:var(--bg2);border-radius:8px;padding:8px 10px;grid-column:span 2">
+                <div style="color:var(--muted);font-size:11px">Clientes cadastrados</div>
+                <div style="font-weight:700;color:var(--text)">${nClientes}</div>
+              </div>
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+              📅 Exportado em: <strong style="color:var(--text)">${exportadoEm}</strong>
+              &nbsp;·&nbsp; v${versao}
+            </div>`;
         }
 
         // Abre modal de confirmação antes de sobrescrever

@@ -285,28 +285,54 @@
 
 <!-- Modal limpeza viagem -->
 
+<!-- Modal Confirmar Exclusão de Viagem -->
+<div id="modalDelViagem" class="modal hidden">
+  <div class="modal-box confirmar-box" style="max-width:320px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:8px">🗑️</div>
+      <h3 style="margin:0 0 8px">Excluir viagem?</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0">Esta ação não pode ser desfeita. A viagem será removida do histórico e do financeiro.</p>
+    </div>
+    <div class="modal-actions">
+      <button onclick="cancelarDelViagem()">Cancelar</button>
+      <button class="danger" onclick="confirmarDelViagem()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Editar Viagem -->
-<div id="modalEditViagem" class="modal hidden">
+<div<id="modalEditViagem" class="modal hidden">
   <div class="modal-box">
     <h3>✏️ Editar Viagem</h3>
+
     <label>Data</label>
     <input type="date" id="editVData">
-    <label>KM inicial</label>
-    <input type="number" id="editVKmInicial" oninput="recalcularKmEdicaoViagem()">
-    <label>KM final</label>
-    <input type="number" id="editVKmFinal" oninput="recalcularKmEdicaoViagem()">
-    <label>KM rodados</label>
-    <input type="number" id="editVKm" disabled>
+
+    <!-- Rota salva (se existir) -->
+    <div id="editVRotaCard" style="display:none;background:var(--card2);border-radius:12px;padding:12px 14px;border:1px solid var(--border);margin-bottom:10px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">🗺️ Rota registrada</div>
+      <div id="editVRotaParadas" style="font-size:13px;margin-bottom:4px"></div>
+      <div style="display:flex;gap:12px;font-size:13px">
+        <span id="editVRotaKm" style="color:var(--secondary);font-weight:700"></span>
+        <span id="editVRotaDur" style="color:var(--muted)"></span>
+      </div>
+    </div>
+
+    <label>KM percorrido <span id="editVKmLabel" style="font-size:11px;color:var(--muted)"></span></label>
+    <input type="number" id="editVKm" oninput="recalcularKmEdicaoViagem()" placeholder="Ex: 12">
+
     <label>Valor recebido (R$)</label>
-    <input type="number" id="editVValor" step="0.01">
-    <div style="background:var(--input-bg);padding:10px;border-radius:10px;font-size:14px;color:var(--muted);margin-top:8px;margin-bottom:8px">
-      💸 O custo e lucro serão recalculados com base nos KM e custos do veículo
+    <input type="number" id="editVValor" step="0.01" oninput="recalcularKmEdicaoViagem()">
+
+    <div id="editVPreview" style="background:var(--input-bg);padding:10px;border-radius:10px;font-size:14px;color:var(--muted);margin-top:4px;margin-bottom:8px">
+      💸 Custo e lucro serão recalculados
     </div>
     <div class="modal-actions">
       <button onclick="fecharModalEditViagem()">Cancelar</button>
       <button onclick="salvarEdicaoViagem()">💾 Salvar</button>
     </div>
   </div>
+</div>
 </div>
 
 <div id="modalLimpezaViagem" class="modal hidden">
@@ -904,20 +930,32 @@ function renderHistoricoViagens() {
       <p style="margin:4px 0">💰 Lucro: <strong style="color:${cor}">${formatCurrency(v.lucro)}</strong></p>
       <div class="flex" style="margin-top:8px">
         <button onclick="abrirEditarViagem(${v.id})">✏️ Editar</button>
-        <button class="danger" onclick="delViagem(${v.id})">🗑️ Excluir</button>
+        <button class="danger" onclick="abrirDelViagem(${v.id})">🗑️ Excluir</button>
       </div>
     `;
     lista.appendChild(item);
   });
 }
 
-function delViagem(id) {
+function abrirDelViagem(id) {
+  viagemDeletandoId = id;
+  document.getElementById('modalDelViagem').classList.remove('hidden');
+}
+function confirmarDelViagem() {
+  if (!viagemDeletandoId) return;
+  const id = viagemDeletandoId;
   vData.viagens    = vData.viagens.filter(v=>v.id!==id);
   data.lancamentos = data.lancamentos.filter(l=>l.id!==id);
   recalcularFinanceiroGeral(); save();
   recalcularFinanceiroViagem(); vSave();
+  document.getElementById('modalDelViagem').classList.add('hidden');
+  viagemDeletandoId = null;
   renderHistoricoViagens();
-  showToast("Viagem excluída ❌","info");
+  showToast('Viagem excluída ❌','info');
+}
+function cancelarDelViagem() {
+  viagemDeletandoId = null;
+  document.getElementById('modalDelViagem').classList.add('hidden');
 }
 
 // ===== METAS VIAGEM =====
@@ -1128,17 +1166,39 @@ document.addEventListener("click",function(e){
 
 // ===== EDITAR VIAGEM =====
 let viagemEditandoId = null;
+let viagemDeletandoId = null;
 
 function abrirEditarViagem(id) {
-  const v = vData.viagens.find(v => v.id === id);
+  const v = vData.viagens.find(vg => vg.id === id);
   if (!v) return;
   viagemEditandoId = id;
+
+  // Data
   const dataLocal = new Date(v.data).toLocaleDateString('pt-BR').split('/').reverse().join('-');
-  document.getElementById('editVData').value      = dataLocal;
-  document.getElementById('editVKmInicial').value = v.kmInicial || 0;
-  document.getElementById('editVKmFinal').value   = v.kmFinal || 0;
-  document.getElementById('editVKm').value        = v.km;
-  document.getElementById('editVValor').value     = v.valor;
+  document.getElementById('editVData').value  = dataLocal;
+  document.getElementById('editVValor').value = v.valor;
+  document.getElementById('editVKm').value    = v.km || '';
+
+  // Mostrar rota se existir
+  const rotaCard = document.getElementById('editVRotaCard');
+  const kmLabel  = document.getElementById('editVKmLabel');
+  if (v.rota && v.rota.km) {
+    const r = v.rota;
+    const ps = (r.paradas||[]).map((p,i)=>{
+      const ic = i===0?'🟢':i===(r.paradas.length-1)?'🔴':'🟡';
+      return ic+' '+p.address.split(',')[0];
+    }).join(' → ');
+    document.getElementById('editVRotaParadas').textContent = ps;
+    document.getElementById('editVRotaKm').textContent = r.km+' km';
+    document.getElementById('editVRotaDur').textContent = r.duracao||'';
+    rotaCard.style.display = '';
+    if (kmLabel) kmLabel.textContent = '(da rota: '+r.km+' km)';
+  } else {
+    rotaCard.style.display = 'none';
+    if (kmLabel) kmLabel.textContent = '';
+  }
+
+  recalcularKmEdicaoViagem();
   document.getElementById('modalEditViagem').classList.remove('hidden');
 }
 
@@ -1148,10 +1208,21 @@ function fecharModalEditViagem() {
 }
 
 function recalcularKmEdicaoViagem() {
-  const ini = Number(document.getElementById('editVKmInicial').value);
-  const fim = Number(document.getElementById('editVKmFinal').value);
-  if (ini > 0 && fim > ini) {
-    document.getElementById('editVKm').value = fim - ini;
+  const km    = Number(document.getElementById('editVKm').value)    || 0;
+  const valor = Number(document.getElementById('editVValor').value) || 0;
+  const v     = getAtivo();
+  const prev  = document.getElementById('editVPreview');
+  if (prev) {
+    if (v && km > 0 && valor > 0) {
+      const custo = km * calcularCustoPorKm(v);
+      const lucro = valor - custo;
+      const cor   = lucro >= 0 ? '#22c55e' : '#ef4444';
+      prev.innerHTML = `💸 Custo: <strong>${formatCurrency(custo)}</strong> &nbsp;|&nbsp; 💰 Lucro: <strong style="color:${cor}">${formatCurrency(lucro)}</strong>`;
+      prev.style.color = 'var(--text)';
+    } else {
+      prev.textContent = '💸 Custo e lucro serão recalculados';
+      prev.style.color = 'var(--muted)';
+    }
   }
 }
 
@@ -1161,30 +1232,20 @@ function salvarEdicaoViagem() {
   const vg  = vData.viagens.find(v => v.id === viagemEditandoId);
   if (!vg) return;
 
-  const ini   = Number(document.getElementById('editVKmInicial').value);
-  const fim   = Number(document.getElementById('editVKmFinal').value);
-  const valor = Number(document.getElementById('editVValor').value);
+  const km        = Number(document.getElementById('editVKm').value);
+  const valor     = Number(document.getElementById('editVValor').value);
   const dataInput = document.getElementById('editVData').value;
 
-  if (!ini || !fim || fim <= ini) { showToast('KM inicial/final inválidos', 'info'); return; }
-  if (!valor || valor <= 0)       { showToast('Informe o valor recebido', 'info'); return; }
+  if (!km   || km <= 0)    { showToast('Informe o KM percorrido', 'info'); return; }
+  if (!valor || valor <= 0) { showToast('Informe o valor recebido', 'info'); return; }
 
-  const km         = fim - ini;
   const custoTotal = v ? km * calcularCustoPorKm(v) : vg.custoTotal;
   const lucro      = valor - custoTotal;
   const novaData   = dataInput ? new Date(dataInput + 'T12:00:00').toISOString() : vg.data;
 
-  // Atualiza em vData.viagens
-  vg.kmInicial = ini; vg.kmFinal = fim; vg.km = km;
-  vg.valor = valor; vg.custoTotal = custoTotal; vg.lucro = lucro;
+  // Atualiza em vData.viagens (sem kmInicial/Final — viagens usam rota)
+  vg.km = km; vg.valor = valor; vg.custoTotal = custoTotal; vg.lucro = lucro;
   vg.data = novaData;
-
-  // Atualiza em kmApp.lancamentos (espelho)
-  const lanc = data.lancamentos.find(l => l.id === viagemEditandoId);
-  if (lanc) {
-    lanc.km = km; lanc.valor = valor; lanc.custoTotal = custoTotal;
-    lanc.lucro = lucro; lanc.data = novaData;
-  }
 
   recalcularFinanceiroViagem();
   recalcularFinanceiroGeral();

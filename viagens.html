@@ -206,6 +206,15 @@
   </div>
   <div id="resumoFiltroViagem" style="margin-bottom:10px"></div>
   <div id="listaHistoricoViagens"></div>
+
+  <!-- Gráfico faturamento/lucro por mês -->
+  <div id="chartCardViagens" class="card" style="display:none;margin-top:12px;padding:14px 14px 10px">
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Faturamento × Lucro por mês</div>
+    <div style="position:relative;height:180px">
+      <canvas id="graficoViagens"></canvas>
+    </div>
+  </div>
+
   <button onclick="exportCSVViagens()" style="margin-top:8px">📤 Exportar CSV</button>
 </section>
 
@@ -908,6 +917,7 @@ function renderHistoricoViagens() {
 
   if (viagens.length===0) {
     lista.innerHTML="<small style='color:var(--muted)'>Nenhuma viagem neste período.</small>";
+    const card = document.getElementById('chartCardViagens'); if(card) card.style.display='none';
     return;
   }
 
@@ -919,22 +929,54 @@ function renderHistoricoViagens() {
     const cor = v.lucro>=0?'var(--primary)':'var(--danger)';
     const d = new Date(v.data);
     const dataStr = d.toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit', year:'2-digit'});
+    // Montar bloco de rota se existir
+    const rotaHtml = (() => {
+      if (!v.rota || !v.rota.paradas || v.rota.paradas.length < 2) return '';
+      const pStrs = v.rota.paradas.map((p,i,arr) => {
+        const ic = i===0?'🟢':i===arr.length-1?'🔴':'🟡';
+        return `<div style="font-size:12px;line-height:1.5">${ic} ${(p.address||'').split(',')[0]}</div>`;
+      }).join('');
+      return `
+        <div id="rota_${v.id}" style="display:none;margin-top:8px;background:var(--bg2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
+          ${pStrs}
+          <div style="margin-top:6px;font-size:11px;color:var(--muted)">${v.rota.km||v.km} km · ${v.rota.duracao||''}</div>
+        </div>`;
+    })();
+    const temRota = v.rota && v.rota.paradas && v.rota.paradas.length >= 2;
+
     item.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <strong>📅 ${dataStr}</strong>
-        <span style="font-size:12px;color:var(--muted)">${cliente?.nome||'—'}</span>
+        <strong style="font-size:14px">📅 ${dataStr}</strong>
+        <span style="font-size:11px;background:var(--card2);padding:2px 8px;border-radius:20px;color:var(--muted)">${cliente?.nome||'—'}</span>
       </div>
-      <p style="margin:4px 0">👤 Passageiro: <strong>${v.passageiroNome||'—'}</strong></p>
-      <p style="margin:4px 0">📍 KM rodados: <strong>${v.km} km</strong></p>
-      <p style="margin:4px 0">💵 Valor recebido: <strong style="color:var(--accent)">${formatCurrency(v.valor)}</strong></p>
-      <p style="margin:4px 0">💰 Lucro: <strong style="color:${cor}">${formatCurrency(v.lucro)}</strong></p>
-      <div class="flex" style="margin-top:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
+        <div style="background:var(--card2);border-radius:8px;padding:7px 10px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Passageiro</div>
+          <div style="font-size:13px;font-weight:600;margin-top:1px">${v.passageiroNome||'—'}</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:7px 10px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">KM percorrido</div>
+          <div style="font-size:13px;font-weight:600;color:var(--secondary);margin-top:1px">${v.km} km</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:7px 10px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Valor recebido</div>
+          <div style="font-size:13px;font-weight:700;color:var(--accent);margin-top:1px">${formatCurrency(v.valor)}</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:7px 10px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Lucro</div>
+          <div style="font-size:13px;font-weight:700;color:${cor};margin-top:1px">${formatCurrency(v.lucro)}</div>
+        </div>
+      </div>
+      ${rotaHtml}
+      <div class="flex" style="margin-top:8px;gap:6px">
+        ${temRota ? `<button onclick="document.getElementById('rota_${v.id}').style.display=document.getElementById('rota_${v.id}').style.display==='none'?'':'none'" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);font-size:12px;padding:6px 10px">🗺️ Rota</button>` : ''}
         <button onclick="abrirEditarViagem(${v.id})">✏️ Editar</button>
         <button class="danger" onclick="abrirDelViagem(${v.id})">🗑️ Excluir</button>
       </div>
     `;
     lista.appendChild(item);
   });
+  renderGraficoViagens();
 }
 
 function abrirDelViagem(id) {
@@ -1256,6 +1298,78 @@ function salvarEdicaoViagem() {
 }
 
 // ===== CSV =====
+function renderGraficoViagens() {
+  const card = document.getElementById('chartCardViagens');
+  if (!card) return;
+
+  const selAno = document.getElementById('filtroAnoViagem');
+  const anoFiltro = Number(selAno?.value) || new Date().getFullYear();
+
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const fat   = new Array(12).fill(0);
+  const lucro = new Array(12).fill(0);
+
+  vData.viagens.forEach(v => {
+    const d = new Date(v.data);
+    if (d.getFullYear() !== anoFiltro) return;
+    const m = d.getMonth();
+    fat[m]   += v.valor||0;
+    lucro[m] += v.lucro||0;
+  });
+
+  const temDados = fat.some(v=>v>0);
+  if (!temDados) { card.style.display='none'; return; }
+  card.style.display = '';
+
+  const isDark    = document.documentElement.getAttribute('data-theme') !== 'light';
+  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.07)';
+  const textColor = isDark ? '#768390' : '#57636d';
+
+  const ctx = document.getElementById('graficoViagens').getContext('2d');
+  if (window._chartViagens) window._chartViagens.destroy();
+
+  window._chartViagens = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: MESES,
+      datasets: [
+        {
+          label: 'Faturado',
+          data: fat,
+          backgroundColor: isDark ? 'rgba(46,168,160,.7)' : 'rgba(26,122,114,.65)',
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+        {
+          label: 'Lucro',
+          data: lucro,
+          backgroundColor: isDark ? 'rgba(34,197,94,.6)' : 'rgba(22,163,74,.5)',
+          borderRadius: 6,
+          borderSkipped: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: textColor, font:{size:11}, boxWidth:10, padding:12 } },
+        tooltip: {
+          backgroundColor: isDark?'#1c2128':'#fff',
+          borderColor: isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.1)', borderWidth:1,
+          titleColor: isDark?'#cdd9e5':'#1c2128', bodyColor: isDark?'#768390':'#57636d',
+          callbacks: { label: c => ' ' + c.dataset.label + ': ' + Number(c.raw).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) }
+        }
+      },
+      scales: {
+        x: { grid:{color:gridColor,drawTicks:false}, border:{display:false}, ticks:{color:textColor,font:{size:10}} },
+        y: { grid:{color:gridColor,drawTicks:false}, border:{display:false}, beginAtZero:true,
+             ticks:{color:textColor,font:{size:10},callback:v=>'R$'+(v>=1000?(v/1000).toFixed(1)+'k':v)} }
+      }
+    }
+  });
+}
+
 function exportCSVViagens() {
   if(vData.viagens.length===0){showToast("Nenhuma viagem para exportar","info");return;}
   let csv='Data,Cliente,Passageiro,KM,Recebido,Custo,Lucro\n';
@@ -1364,5 +1478,6 @@ function closeFab(){
     <span class="gnav-label">Cotação</span>
   </a>
 </nav>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </body>
 </html>

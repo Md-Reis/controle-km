@@ -100,7 +100,20 @@
 
 .ag-obs { font-size: 12px; color: var(--muted); font-style: italic; margin-bottom: 10px; padding: 6px 8px; background: var(--card2); border-radius: 8px; }
 
-.ag-status-badge {
+.ag-card-expanded {
+    box-shadow: 0 0 0 2px var(--primary);
+  }
+  .ag-card-summary:active {
+    opacity: .85;
+  }
+  .ag-card-chevron {
+    transition: transform .2s;
+    user-select: none;
+  }
+  .ag-card-expanded .ag-card-chevron {
+    transform: rotate(90deg);
+  }
+  .ag-status-badge {
   display: inline-block; padding: 3px 10px; border-radius: 20px;
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
 }
@@ -210,6 +223,95 @@
 .ag-rota-stat strong { color:var(--primary); }
 .ag-custo-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(229,83,75,.1); border:1px solid rgba(229,83,75,.2); color:#ef4444; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
 
+
+  /* ── VISTA SEMANAL ── */
+  .grade-sem {
+    display: grid;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    min-width: 480px;
+    font-size: 11px;
+  }
+  .grade-sem-header {
+    display: contents;
+  }
+  .gsem-hora-lbl {
+    background: var(--card2);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 4px 6px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .gsem-dia-hdr {
+    background: var(--card2);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 5px 4px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .gsem-dia-hdr:hover { background: var(--card); }
+  .gsem-dia-hdr.hoje  { background: rgba(46,168,160,.15); }
+  .gsem-dia-hdr .gsem-dia-num {
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .gsem-dia-hdr.hoje .gsem-dia-num { color: var(--primary); }
+  .gsem-dia-hdr .gsem-dia-sem {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .gsem-celula {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    min-height: 28px;
+    padding: 2px;
+    position: relative;
+    vertical-align: top;
+    cursor: pointer;
+  }
+  .gsem-celula:hover { background: rgba(255,255,255,.03); }
+  .gsem-celula.hora-cheia { border-bottom-color: var(--border); }
+  .gsem-hora-cell {
+    background: var(--card2);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 4px 6px;
+    text-align: right;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .gsem-hora-cell.meia-hora { border-bottom-color: rgba(255,255,255,.04); font-weight: 400; font-size: 9px; }
+  .gsem-ag-chip {
+    background: rgba(46,168,160,.25);
+    border-left: 3px solid var(--primary);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin-bottom: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    line-height: 1.3;
+  }
+  .gsem-ag-chip.confirmado { background:rgba(46,168,160,.3); border-color:var(--primary); }
+  .gsem-ag-chip.pendente   { background:rgba(232,148,10,.2); border-color:var(--secondary); }
+  .gsem-ag-chip.concluido  { background:rgba(34,197,94,.15); border-color:#22c55e; opacity:.8; }
+  .gsem-ag-chip.cancelado  { background:rgba(229,83,75,.12); border-color:var(--danger); opacity:.6; }
+  .gsem-ag-chip:hover { filter: brightness(1.15); }
 </style>
 </head>
 <body class="has-global-nav">
@@ -218,28 +320,58 @@
 
 <div style="padding:16px 16px 0">
 
-  <!-- Mini calendário -->
-  <div class="mini-cal" id="miniCal"></div>
-
-  <!-- Navegação de data -->
-  <div class="date-nav">
-    <button class="date-nav-btn" onclick="navDia(-1)">‹</button>
-    <div class="date-nav-center" onclick="irParaHoje()">
-      <div class="date-nav-dia" id="navDiaNum"></div>
-      <div class="date-nav-mes" id="navMesAno"></div>
-      <div class="date-nav-hoje" id="navHojeLabel"></div>
+  <!-- Toggle view dia/semana -->
+  <div style="display:flex;justify-content:center;margin-bottom:10px">
+    <div style="display:inline-flex;background:var(--card2);border-radius:22px;padding:3px;gap:2px">
+      <button id="btnViewDia"    onclick="setViewAg('dia')"    style="padding:5px 18px;border-radius:18px;font-size:13px;font-weight:600;background:var(--primary);color:#fff;border:none">📋 Dia</button>
+      <button id="btnViewSemana" onclick="setViewAg('semana')" style="padding:5px 18px;border-radius:18px;font-size:13px;font-weight:600;background:transparent;color:var(--muted);border:none">📅 Semana</button>
     </div>
-    <button class="date-nav-btn" onclick="navDia(1)">›</button>
   </div>
 
-  <!-- Resumo do dia -->
-  <div class="resumo-dia" id="resumoDia"></div>
+  <!-- ── VIEW DIA ── -->
+  <div id="viewDia">
+    <!-- Mini calendário -->
+    <div class="mini-cal" id="miniCal"></div>
 
-  <!-- Lista de agendamentos -->
-  <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
-    <button onclick="exportCSVAgenda()" style="font-size:12px;padding:5px 14px;background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px;font-weight:600">📤 Exportar CSV</button>
+    <!-- Navegação de data -->
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="navDia(-1)">‹</button>
+      <div class="date-nav-center" onclick="irParaHoje()">
+        <div class="date-nav-dia" id="navDiaNum"></div>
+        <div class="date-nav-mes" id="navMesAno"></div>
+        <div class="date-nav-hoje" id="navHojeLabel"></div>
+      </div>
+      <button class="date-nav-btn" onclick="navDia(1)">›</button>
+    </div>
+
+    <!-- Resumo do dia -->
+    <div class="resumo-dia" id="resumoDia"></div>
+
+    <!-- Botões -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <button onclick="abrirModalNovoAg()" style="font-size:13px;padding:7px 16px;background:var(--primary);color:#fff;border-radius:22px;font-weight:700;border:none;display:flex;align-items:center;gap:6px">
+        <span style="font-size:18px;line-height:1">＋</span> Novo Agendamento
+      </button>
+      <button onclick="exportCSVAgenda()" style="font-size:12px;padding:5px 14px;background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px;font-weight:600">📤 Exportar CSV</button>
+    </div>
+    <div id="listaAg" class="anim"></div>
   </div>
-  <div id="listaAg" class="anim"></div>
+
+  <!-- ── VIEW SEMANA ── -->
+  <div id="viewSemana" style="display:none">
+    <!-- Navegação de semana -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button class="date-nav-btn" onclick="navSemana(-1)">‹</button>
+      <div id="labelSemana" style="font-size:14px;font-weight:700;color:var(--text);text-align:center"></div>
+      <button class="date-nav-btn" onclick="navSemana(1)">›</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <button onclick="abrirModalNovoAg()" style="font-size:12px;padding:6px 14px;background:var(--primary);color:#fff;border-radius:20px;font-weight:700;border:none">＋ Novo</button>
+      <button onclick="irParaHoje();setViewAg('semana')" style="font-size:12px;padding:5px 14px;background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px">📍 Hoje</button>
+    </div>
+    <!-- Grade semanal -->
+    <div id="gradeSemanal" style="overflow-x:auto;-webkit-overflow-scrolling:touch"></div>
+  </div>
 
 </div>
 
@@ -327,6 +459,33 @@
   </div>
 </div>
 
+<!-- ═══ MODAL: Repetir Agendamento ═══ -->
+<div id="modalRepetirAg" class="modal hidden">
+  <div class="modal-box" style="max-width:360px">
+    <h3>🔁 Repetir Agendamento</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">
+      A rota, cliente, passageiro, valor e observações serão copiados. Escolha a(s) nova(s) data(s) e horário.
+    </p>
+
+    <!-- Resumo do original -->
+    <div id="repetirResumo" style="background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px"></div>
+
+    <label>Nova data</label>
+    <input type="date" id="repetirData">
+
+    <label>Horário</label>
+    <input type="time" id="repetirHora">
+
+    <label>Valor (R$) — opcional</label>
+    <input type="number" id="repetirValor" step="0.01" placeholder="Manter igual ao original">
+
+    <div class="modal-actions">
+      <button onclick="fecharRepetirAg()">Cancelar</button>
+      <button onclick="confirmarRepetirAg()" style="background:var(--primary)">🔁 Criar cópia</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: Confirmar exclusão ═══ -->
 <div id="modalDelAg" class="modal hidden">
   <div class="modal-box" style="max-width:320px">
@@ -365,6 +524,171 @@
 </div>
 
 <script>
+/* ── VISTA SEMANAL ── */
+let viewAtualAg   = 'dia';
+let semanaOffset  = 0;   // semanas a partir da semana atual
+
+function setViewAg(view) {
+  viewAtualAg = view;
+  document.getElementById('viewDia').style.display    = view === 'dia'    ? '' : 'none';
+  document.getElementById('viewSemana').style.display = view === 'semana' ? '' : 'none';
+
+  const btnDia    = document.getElementById('btnViewDia');
+  const btnSemana = document.getElementById('btnViewSemana');
+  if (btnDia && btnSemana) {
+    btnDia.style.background    = view === 'dia'    ? 'var(--primary)' : 'transparent';
+    btnDia.style.color         = view === 'dia'    ? '#fff' : 'var(--muted)';
+    btnSemana.style.background = view === 'semana' ? 'var(--primary)' : 'transparent';
+    btnSemana.style.color      = view === 'semana' ? '#fff' : 'var(--muted)';
+  }
+
+  if (view === 'semana') renderGradeSemanal();
+}
+
+function navSemana(dir) {
+  semanaOffset += dir;
+  renderGradeSemanal();
+}
+
+function getLuniDaSemana(baseDate, offset) {
+  // Retorna a segunda-feira da semana (offset semanas a partir da semana de baseDate)
+  const d = new Date(baseDate);
+  const dow = d.getDay(); // 0=dom
+  const diffToMon = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diffToMon + offset * 7);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function renderGradeSemanal() {
+  const grade   = document.getElementById('gradeSemanal');
+  const hoje    = new Date();
+  hoje.setHours(0,0,0,0);
+  const hojeStr = toDateStr(hoje);
+  const DIAS_ABR = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  // Segunda da semana exibida
+  const segunda  = getLuniDaSemana(dataAtual, semanaOffset);
+  const diasSem  = [];
+  for (let i=0; i<7; i++) {
+    const d2 = new Date(segunda);
+    d2.setDate(segunda.getDate() + i);
+    diasSem.push(d2);
+  }
+
+  // Label da semana no nav
+  const ini = diasSem[0].toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  const fim = diasSem[6].toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  const lblSem = document.getElementById('labelSemana');
+  if (lblSem) lblSem.textContent = ini + ' – ' + fim;
+
+  // Horários 06:00 a 20:30 em intervalos de 30 min
+  const slots = [];
+  for (let h=6; h<=20; h++) {
+    slots.push({ h, m: 0,  str: String(h).padStart(2,'0')+':00' });
+    if (h < 20) slots.push({ h, m: 30, str: String(h).padStart(2,'0')+':30' });
+  }
+
+  // Montar agendamentos indexados por data+hora
+  const agIndex = {};
+  agData.agendamentos
+    .filter(a => a.status !== 'cancelado')
+    .forEach(a => {
+      const key = a.data + '|' + (a.hora||'');
+      if (!agIndex[key]) agIndex[key] = [];
+      agIndex[key].push(a);
+    });
+
+  // nCols = 8 (hora + 7 dias)
+  const nCols = 8;
+
+  let html = `<div class="grade-sem" style="grid-template-columns:42px repeat(7,1fr)">`;
+
+  // Header linha 1: célula vazia + 7 dias
+  html += `<div class="gsem-hora-lbl"></div>`;
+  diasSem.forEach((d,i) => {
+    const ds      = toDateStr(d);
+    const isHoje  = ds === hojeStr;
+    const temAgs  = agData.agendamentos.some(a => a.data === ds && a.status !== 'cancelado');
+    html += `<div class="gsem-dia-hdr${isHoje?' hoje':''}" onclick="irParaDia('${ds}')">
+      <div class="gsem-dia-sem">${DIAS_ABR[d.getDay()]}</div>
+      <div class="gsem-dia-num">${d.getDate()}</div>
+      ${temAgs ? '<div style="width:5px;height:5px;background:var(--primary);border-radius:50%;margin:2px auto 0"></div>' : '<div style="height:7px"></div>'}
+    </div>`;
+  });
+
+  // Linhas de slots de horário
+  slots.forEach(slot => {
+    const isCheia  = slot.m === 0;
+    const horaLbl  = isCheia ? slot.str.replace(':00','h') : '';
+    html += `<div class="gsem-hora-cell${isCheia?'':' meia-hora'}">${horaLbl}</div>`;
+
+    diasSem.forEach(d => {
+      const ds  = toDateStr(d);
+      const key = ds + '|' + slot.str;
+      const ags = agIndex[key] || [];
+      const chips = ags.map(a => {
+        const cli    = vData.clientes.find(c=>c.id===a.clienteId);
+        const nome   = (cli?.nome||'?').split(' ')[0];
+        const pass   = a.passageiro && a.passageiro.split(' ')[0] !== nome ? ' · '+a.passageiro.split(' ')[0] : '';
+        return `<div class="gsem-ag-chip ${a.status||'pendente'}" onclick="event.stopPropagation();irParaDiaAg('${ds}',${a.id})" title="${cli?.nome||'?'}${a.passageiro?' — '+a.passageiro:''} · ${fmt(a.valor||0)}">
+          ${nome}${pass}
+        </div>`;
+      }).join('');
+      html += `<div class="gsem-celula${isCheia?' hora-cheia':''}" onclick="abrirNovoNoDia('${ds}','${slot.str}')">${chips}</div>`;
+    });
+  });
+
+  html += '</div>';
+  grade.innerHTML = html;
+}
+
+function irParaDia(dateStr) {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  dataAtual = new Date(y, m-1, d);
+  semanaOffset = 0;
+  setViewAg('dia');
+  render();
+}
+
+function irParaDiaAg(dateStr, agId) {
+  // Vai para o dia e expande o card do agendamento específico
+  irParaDia(dateStr);
+  // Aguarda renderização e expande o card
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.ag-card');
+    cards.forEach(card => {
+      if (card.querySelector(`[onclick*="${agId}"]`)) {
+        const summary = card.querySelector('.ag-card-summary');
+        if (summary) toggleCardAg(summary);
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }, 120);
+}
+
+function abrirNovoNoDia(dateStr, horaStr) {
+  // Abre modal de novo agendamento pré-preenchido com data e hora
+  const [y,m,d] = dateStr.split('-').map(Number);
+  dataAtual = new Date(y, m-1, d);
+  abrirModalNovoAg();
+  // Preencher hora
+  setTimeout(() => {
+    const horaEl = document.getElementById('agHora');
+    if (horaEl) horaEl.value = horaStr;
+  }, 50);
+}
+
+/* ── TOGGLE CARD AGENDA ── */
+function toggleCardAg(summaryEl) {
+  const card   = summaryEl.closest('.ag-card');
+  const detail = card.querySelector('.ag-card-detail');
+  const chev   = summaryEl.querySelector('.ag-card-chevron');
+  const open   = detail.style.display !== 'none';
+  detail.style.display = open ? 'none' : '';
+  chev.textContent     = open ? '›' : '⌄';
+  card.classList.toggle('ag-card-expanded', !open);
+}
 /* ── EXPORTAR CSV AGENDA ── */
 function exportCSVAgenda() {
   const ags = agData.agendamentos;
@@ -600,13 +924,16 @@ function renderLista() {
         }
         acoes += `<button class="ag-btn teal" onclick="abrirConverter(${ag.id})">🚕 Converter</button>`;
         acoes += `<button class="ag-btn" onclick="abrirEditarAg(${ag.id})">✏️</button>`;
+        acoes += `<button class="ag-btn" onclick="abrirRepetirAg(${ag.id})" title="Repetir este agendamento">🔁</button>`;
         acoes += `<button class="ag-btn red" onclick="abrirDelAg(${ag.id})">🗑️</button>`;
       } else if (ag.status === 'confirmado') {
         acoes += `<button class="ag-btn teal" onclick="abrirConverter(${ag.id})">🚕 Converter</button>`;
         acoes += `<button class="ag-btn" onclick="abrirEditarAg(${ag.id})">✏️</button>`;
+        acoes += `<button class="ag-btn" onclick="abrirRepetirAg(${ag.id})" title="Repetir este agendamento">🔁</button>`;
         acoes += `<button class="ag-btn red" onclick="mudarStatus(${ag.id},'cancelado')">✖ Cancelar</button>`;
       } else {
         acoes += `<button class="ag-btn" onclick="abrirEditarAg(${ag.id})">✏️ Editar</button>`;
+        acoes += `<button class="ag-btn" onclick="abrirRepetirAg(${ag.id})" title="Repetir">🔁 Repetir</button>`;
         acoes += `<button class="ag-btn red" onclick="abrirDelAg(${ag.id})">🗑️ Excluir</button>`;
       }
 
@@ -632,24 +959,30 @@ function renderLista() {
         </div>`;
       }
 
+      // Card colapsável: resumo sempre visível, detalhes sob clique
       card.innerHTML = `
-        <div class="ag-header">
-          <div>
-            <div class="ag-cliente">${nomeC}</div>
-            ${nomeP !== nomeC ? `<div class="ag-passageiro">👤 ${nomeP}</div>` : ''}
-          </div>
-          <div style="text-align:right">
-            ${ag.valor ? `<div class="ag-valor">${fmt(ag.valor)}</div>` : ''}
-            <span class="ag-status-badge ${badgeCls}" style="margin-top:4px;display:inline-block">${statusLabel}</span>
+        <div class="ag-card-summary" onclick="toggleCardAg(this)" style="cursor:pointer">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div style="min-width:0">
+              <div class="ag-cliente" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nomeC}</div>
+              ${nomeP !== nomeC ? `<div class="ag-passageiro">👤 ${nomeP}</div>` : ''}
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+              ${ag.valor ? `<div class="ag-valor">${fmt(ag.valor)}</div>` : ''}
+              <span class="ag-status-badge ${badgeCls}">${statusLabel}</span>
+            </div>
+            <div class="ag-card-chevron" style="color:var(--muted);font-size:14px;flex-shrink:0">›</div>
           </div>
         </div>
-        <div class="ag-meta">
-          ${ag.hora ? `<span>🕐 ${ag.hora}</span>` : ''}
-          ${ag.duracao ? `<span>⏱ ${ag.duracao}min</span>` : ''}
+        <div class="ag-card-detail" style="display:none">
+          <div class="ag-meta" style="margin-top:8px">
+            ${ag.hora ? `<span>🕐 ${ag.hora}</span>` : ''}
+            ${ag.duracao ? `<span>⏱ ${ag.duracao}min</span>` : ''}
+          </div>
+          ${ag.obs ? `<div class="ag-obs">💬 ${ag.obs}</div>` : ''}
+          ${rotaHtml}
+          <div class="ag-acoes">${acoes}</div>
         </div>
-        ${ag.obs ? `<div class="ag-obs">💬 ${ag.obs}</div>` : ''}
-        ${rotaHtml}
-        <div class="ag-acoes">${acoes}</div>
       `;
       slot.appendChild(card);
     });
@@ -664,6 +997,7 @@ function render() {
   renderHeader();
   renderResumoDia();
   renderLista();
+  if (viewAtualAg === 'semana') renderGradeSemanal();
 }
 
 // ════════ MODAL NOVO/EDITAR ════════
@@ -829,6 +1163,97 @@ function mudarStatus(id, novoStatus) {
   render();
   const labels = {confirmado:'Confirmado ✅',cancelado:'Cancelado ✖',concluido:'Concluído 🎉'};
   showToast(labels[novoStatus]||'Atualizado','success');
+}
+
+let repetindoId = null;
+
+function abrirRepetirAg(id) {
+  const orig = agData.agendamentos.find(a=>a.id===id);
+  if (!orig) return;
+  repetindoId = id;
+
+  // Preencher resumo do original
+  const cli   = vData.clientes.find(c=>c.id===orig.clienteId);
+  const nomeC = cli?.nome || 'Cliente';
+  const pass  = orig.passageiro && orig.passageiro !== nomeC ? ` · 👤 ${orig.passageiro}` : '';
+  const rotaStr = orig.rota?.paradas?.length >= 2
+    ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">🗺️ ${orig.rota.paradas.map((p,i,arr)=>{
+        const ic=i===0?'🟢':i===arr.length-1?'🔴':'🟡';
+        return ic+' '+(p.address||'').split(',')[0];
+      }).join(' → ')}<br>📏 ${orig.rota.km} km · ⏱ ${orig.rota.duracao||'—'}</div>` : '';
+
+  document.getElementById('repetirResumo').innerHTML = `
+    <div style="font-weight:700">${nomeC}${pass}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px">
+      ${orig.hora ? '🕐 '+orig.hora+' · ' : ''}${orig.duracao ? orig.duracao+'min' : ''}
+      ${orig.valor ? ' · 💵 '+fmt(orig.valor) : ''}
+    </div>
+    ${rotaStr}
+    ${orig.obs ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">💬 ${orig.obs}</div>` : ''}`;
+
+  // Sugerir próximo dia disponível (amanhã)
+  const amanha = new Date(dataAtual);
+  amanha.setDate(amanha.getDate()+1);
+  document.getElementById('repetirData').value = toDateStr(amanha);
+  document.getElementById('repetirHora').value = orig.hora || '';
+  document.getElementById('repetirValor').value = '';
+
+  document.getElementById('modalRepetirAg').classList.remove('hidden');
+}
+
+function fecharRepetirAg() {
+  document.getElementById('modalRepetirAg').classList.add('hidden');
+  repetindoId = null;
+}
+
+function confirmarRepetirAg() {
+  if (!repetindoId) return;
+  const orig  = agData.agendamentos.find(a=>a.id===repetindoId);
+  if (!orig) return;
+
+  const novaData = document.getElementById('repetirData').value;
+  const novaHora = document.getElementById('repetirHora').value;
+  const novoValor= parseFloat(document.getElementById('repetirValor').value) || orig.valor || 0;
+
+  if (!novaData) { showToast('Informe a data','info'); return; }
+  if (!novaHora) { showToast('Informe o horário','info'); return; }
+
+  // Verificar conflito
+  const conflito = agData.agendamentos.find(a =>
+    a.id !== orig.id &&
+    a.data === novaData &&
+    a.hora === novaHora &&
+    a.status !== 'cancelado'
+  );
+  if (conflito) {
+    const cli2 = vData.clientes.find(c=>c.id===conflito.clienteId);
+    showToast(`⚠️ Conflito com ${cli2?.nome||'outro agendamento'} às ${conflito.hora}`,'info');
+    return;
+  }
+
+  // Clonar o agendamento original
+  const copia = {
+    id:          Date.now(),
+    clienteId:   orig.clienteId,
+    passageiro:  orig.passageiro,
+    data:        novaData,
+    hora:        novaHora,
+    duracao:     orig.duracao,
+    valor:       novoValor,
+    obs:         orig.obs,
+    status:      'pendente',
+    rota:        orig.rota ? JSON.parse(JSON.stringify(orig.rota)) : null
+  };
+
+  agData.agendamentos.push(copia);
+  saveAg();
+  fecharRepetirAg();
+
+  // Navegar para o dia criado
+  const [y,m,d] = novaData.split('-').map(Number);
+  dataAtual = new Date(y, m-1, d);
+  render();
+  showToast('✅ Agendamento copiado para '+novaData.split('-').reverse().join('/'),'success');
 }
 
 function abrirDelAg(id) {

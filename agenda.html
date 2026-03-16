@@ -396,9 +396,13 @@
     </div>
 
     <label>Cliente</label>
-    <select id="agCliente" onchange="onAgClienteChange()">
-      <option value="">— Selecione um cliente —</option>
-    </select>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <select id="agCliente" onchange="onAgClienteChange()" style="flex:1;margin-bottom:0">
+        <option value="">— Selecione um cliente —</option>
+      </select>
+      <button type="button" onclick="abrirCadastroRapidoCli()" title="Cadastrar novo cliente"
+        style="flex-shrink:0;padding:10px 12px;background:var(--primary);color:#fff;border-radius:10px;font-size:16px;line-height:1;font-weight:700;border:none;width:42px;height:42px">＋</button>
+    </div>
 
     <div id="agPassWrap" style="display:none">
       <label>Passageiro</label>
@@ -486,6 +490,30 @@
   </div>
 </div>
 
+<!-- ═══ MODAL: Cadastro Rápido de Cliente ═══ -->
+<div id="modalNovoCli" class="modal hidden">
+  <div class="modal-box" style="max-width:360px">
+    <h3>👤 Novo Cliente</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">
+      O cliente será cadastrado e já estará disponível para selecionar no agendamento.
+    </p>
+
+    <label>Nome do cliente <span style="color:var(--danger)">*</span></label>
+    <input type="text" id="novoCliNome" placeholder="Ex: Maria Fernanda">
+
+    <label>Telefone (opcional)</label>
+    <input type="tel" id="novoCliTel" placeholder="(18) 99999-9999">
+
+    <label>Passageiro principal (opcional)</label>
+    <input type="text" id="novoCliPass" placeholder="Se diferente do cliente">
+
+    <div class="modal-actions">
+      <button onclick="fecharCadastroRapidoCli()">Cancelar</button>
+      <button onclick="confirmarCadastroRapidoCli()" style="background:var(--primary)">💾 Salvar cliente</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: Confirmar exclusão ═══ -->
 <div id="modalDelAg" class="modal hidden">
   <div class="modal-box" style="max-width:320px">
@@ -551,11 +579,11 @@ function navSemana(dir) {
 }
 
 function getLuniDaSemana(baseDate, offset) {
-  // Retorna a segunda-feira da semana (offset semanas a partir da semana de baseDate)
+  // Retorna o domingo da semana (início convencional)
   const d = new Date(baseDate);
-  const dow = d.getDay(); // 0=dom
-  const diffToMon = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + diffToMon + offset * 7);
+  const dow = d.getDay(); // 0=dom, 1=seg, ...
+  // Recuar até o domingo anterior (ou manter se já for domingo)
+  d.setDate(d.getDate() - dow + offset * 7);
   d.setHours(0,0,0,0);
   return d;
 }
@@ -589,12 +617,21 @@ function renderGradeSemanal() {
     if (h < 20) slots.push({ h, m: 30, str: String(h).padStart(2,'0')+':30' });
   }
 
-  // Montar agendamentos indexados por data+hora
+  // Montar agendamentos indexados por slot de 30min (arredonda para baixo)
+  // Ex: 11:55 → slot 11:30 | 13:30 → 13:30 | 07:05 → 07:00
+  function horaParaSlot(hora) {
+    if (!hora) return '';
+    const [hh, mm] = hora.split(':').map(Number);
+    const slotMm = mm >= 30 ? 30 : 0;
+    return String(hh).padStart(2,'0') + ':' + String(slotMm).padStart(2,'0');
+  }
+
   const agIndex = {};
   agData.agendamentos
     .filter(a => a.status !== 'cancelado')
     .forEach(a => {
-      const key = a.data + '|' + (a.hora||'');
+      const slotHora = horaParaSlot(a.hora);
+      const key = a.data + '|' + slotHora;
       if (!agIndex[key]) agIndex[key] = [];
       agIndex[key].push(a);
     });
@@ -1001,6 +1038,51 @@ function render() {
 }
 
 // ════════ MODAL NOVO/EDITAR ════════
+function abrirCadastroRapidoCli() {
+  document.getElementById('novoCliNome').value = '';
+  document.getElementById('novoCliTel').value  = '';
+  document.getElementById('novoCliPass').value = '';
+  document.getElementById('modalNovoCli').classList.remove('hidden');
+  setTimeout(() => document.getElementById('novoCliNome').focus(), 100);
+}
+
+function fecharCadastroRapidoCli() {
+  document.getElementById('modalNovoCli').classList.add('hidden');
+}
+
+function confirmarCadastroRapidoCli() {
+  const nome = document.getElementById('novoCliNome').value.trim();
+  const tel  = document.getElementById('novoCliTel').value.trim();
+  const pass = document.getElementById('novoCliPass').value.trim();
+
+  if (!nome) { showToast('Informe o nome do cliente', 'info'); return; }
+
+  // Verificar duplicata
+  const jaExiste = vData.clientes.find(c => c.nome.toLowerCase() === nome.toLowerCase());
+  if (jaExiste) {
+    showToast('Já existe um cliente com esse nome', 'info');
+    // Selecionar o existente
+    popularClientes();
+    document.getElementById('agCliente').value = jaExiste.id;
+    onAgClienteChange();
+    fecharCadastroRapidoCli();
+    return;
+  }
+
+  const passageiros = pass ? [{ nome: pass }] : [];
+  const novoId = Date.now();
+  vData.clientes.push({ id: novoId, nome, telefone: tel, passageiros });
+  saveVD();
+
+  // Atualizar select e pré-selecionar o novo
+  popularClientes();
+  document.getElementById('agCliente').value = novoId;
+  onAgClienteChange();
+
+  fecharCadastroRapidoCli();
+  showToast('✅ Cliente "' + nome + '" cadastrado!', 'success');
+}
+
 function popularClientes() {
   const sel = document.getElementById('agCliente');
   const val = sel.value;

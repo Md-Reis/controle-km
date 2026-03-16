@@ -50,6 +50,8 @@
     border-radius: 20px 20px 0 0;
     max-height: 92vh;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding: 16px 16px 48px;
     animation: slideUp .3s ease;
   }
@@ -240,8 +242,8 @@
 
 
 <!-- ===== DETALHE CLIENTE (bottom sheet) ===== -->
-<div id="detalheOverlay" class="detalhe-overlay hidden">
-  <div class="detalhe-sheet">
+<div id="detalheOverlay" class="detalhe-overlay hidden" onclick="fecharDetalheExterno(event)">
+  <div class="detalhe-sheet" onclick="event.stopPropagation()">
     <div class="detalhe-handle"></div>
 
     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -596,6 +598,10 @@ function deletarClienteConfirmado() {
 function fecharDetalhe() {
   document.getElementById("detalheOverlay").classList.add("hidden");
   clienteEditandoId = null;
+}
+function fecharDetalheExterno(e) {
+  // Fecha se clicou no backdrop (fora do sheet)
+  if (e.target === document.getElementById("detalheOverlay")) fecharDetalhe();
 }
 
 function showDetalheTab(tabId) {

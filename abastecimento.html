@@ -704,7 +704,7 @@
           },
           tooltip: {
             callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} km/l`
+              label: ctx => ` ${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(2)} km/l`
             }
           }
         },
@@ -712,7 +712,7 @@
           x: { grid:{color:gridColor}, ticks:{color:textColor, font:{size:11}} },
           y: {
             grid:{color:gridColor},
-            ticks:{color:textColor, font:{size:11}, callback: v => v+' km/l'},
+            ticks:{color:textColor, font:{size:11}, callback: v => Number(v).toFixed(2)+' km/l'},
             beginAtZero: false
           }
         }

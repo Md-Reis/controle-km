@@ -784,11 +784,18 @@
     const ini   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - dow);
     const fim   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + (6 - dow), 23, 59, 59);
 
+    // parseDataLocal: lê "YYYY-MM-DD" como data local (sem conversão UTC)
+    function parseDataLocal(str) {
+      if (!str) return new Date(NaN);
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0);
+    }
+
     const daSemana = todos.filter(l => {
       if (!l.data) return false;
-      const d = new Date(l.data);
+      const d = parseDataLocal(l.data);
       return d >= ini && d <= fim;
-    }).sort((a,b) => new Date(a.data) - new Date(b.data) || (a.hora||'').localeCompare(b.hora||''));
+    }).sort((a,b) => (a.data||'').localeCompare(b.data||'') || (a.hora||'').localeCompare(b.hora||''));
 
     if (daSemana.length === 0) {
       showToast('Nenhuma corrida esta semana', 'info');
@@ -823,7 +830,7 @@
     linhas.push('');
 
     Object.entries(porDia).forEach(([data, lancamentos]) => {
-      const d    = new Date(data + 'T12:00:00');
+      const d    = parseDataLocal(data);
       const dia  = DIAS_PT[d.getDay()] + ', ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
       linhas.push('*' + dia + '*');
 

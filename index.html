@@ -784,10 +784,11 @@
     const ini   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - dow);
     const fim   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + (6 - dow), 23, 59, 59);
 
-    // parseDataLocal: lê "YYYY-MM-DD" como data local (sem conversão UTC)
+    // parseDataLocal: aceita "YYYY-MM-DD" e "YYYY-MM-DDTHH:MM:SS.sssZ"
     function parseDataLocal(str) {
       if (!str) return new Date(NaN);
-      const [y, m, d] = str.split('-').map(Number);
+      const parte = str.slice(0, 10); // garante só "YYYY-MM-DD"
+      const [y, m, d] = parte.split('-').map(Number);
       return new Date(y, m - 1, d, 12, 0, 0);
     }
 

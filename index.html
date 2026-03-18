@@ -23,6 +23,7 @@
 <title>Controle KM</title>
 
 <link rel="stylesheet" href="./style.css">
+<script src="./shared.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
 </head>
@@ -418,9 +419,7 @@
     localStorage.setItem('kmApp', JSON.stringify(data));
   }
 
-  function formatCurrency(valor) {
-    return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  }
+  // formatCurrency, showToast, toLocalDateStr, toggleTheme, toggleFab, closeFab → shared.js
 
   // ======= PÁGINAS =======
   function showPage(id) {
@@ -447,15 +446,6 @@
     const custoFixoMensal = (v.custos.man||0) + (v.custos.pneu||0) + (v.custos.seg||0) + (v.custos.out||0);
     const kmMensal        = Number(v.kmMensal) || 900; // usa o km cadastrado, fallback 900
     return custoComb + (kmMensal > 0 ? custoFixoMensal / kmMensal : 0);
-  }
-
-  function showToast(msg, type = "success") {
-    const toast = document.getElementById("toast");
-    const colors = { success: "#22c55e", error: "#ef4444", info: "#38bdf8" };
-    toast.innerText = msg;
-    toast.style.borderLeft = `6px solid ${colors[type] || colors.success}`;
-    toast.style.display = "block";
-    setTimeout(() => { toast.style.display = "none"; }, 2500);
   }
 
   // ======= VEÍCULOS =======
@@ -895,7 +885,8 @@
     if (regs.length === 0) { el.innerHTML = ''; return; }
 
     const ultimo = regs[0];
-    const diasAtras = Math.floor((Date.now() - new Date(ultimo.data).getTime()) / 86400000);
+    // Compara apenas a data local (YYYY-MM-DD), ignorando hora/fuso — evita "-1 dias"
+    const diasAtras = diasAtrasDeHoje(ultimo.data);
     const diasLabel = diasAtras === 0 ? 'Hoje' : diasAtras === 1 ? 'Ontem' : `Há ${diasAtras} dias`;
 
     // KM rodados desde o último abastecimento
@@ -938,9 +929,7 @@
   }
 
   // ======= AGENDA NO DASHBOARD =======
-  function toLocalDateStr(d) {
-    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  }
+  // toLocalDateStr → shared.js
 
   function renderDashAgenda() {
     const agData  = JSON.parse(localStorage.getItem('agendaApp')) || {};
@@ -2177,39 +2166,21 @@ function exportarBackup() {
   <button id="fab-main" onclick="toggleFab()">+</button>
 </div>
 <script>
-/* ── TEMA ── */
+/* ── TEMA (inicialização) ── */
 (function(){
   const s = localStorage.getItem('kmTheme')||'dark';
   document.documentElement.setAttribute('data-theme', s);
   const b = document.getElementById('theme-toggle');
   if(b) b.textContent = s==='dark'?'🌙':'☀️';
+  // Badge da agenda na nav
+  atualizarBadgeAgenda();
 })();
-function toggleTheme(){
-  const c = document.documentElement.getAttribute('data-theme')||'dark';
-  const n = c==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',n);
-  localStorage.setItem('kmTheme',n);
-  const b=document.getElementById('theme-toggle');
-  if(b) b.textContent=n==='dark'?'🌙':'☀️';
-}
 /* ── FAB ── */
 function fabAcao(acao){
   closeFab();
   window.location.href = {entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html',agenda:'agenda.html'}[acao] || '#';
 }
-function toggleFab(){
-  const o=document.getElementById('fab-options');
-  const m=document.getElementById('fab-main');
-  const b=document.getElementById('fab-backdrop');
-  const open=o.classList.toggle('visible');
-  m.classList.toggle('open',open);
-  b.classList.toggle('visible',open);
-}
-function closeFab(){
-  document.getElementById('fab-options').classList.remove('visible');
-  document.getElementById('fab-main').classList.remove('open');
-  document.getElementById('fab-backdrop').classList.remove('visible');
-}
+// toggleFab, closeFab → shared.js
 </script>
 <!-- ═══ GLOBAL NAV ═══ -->
 <nav id="global-nav">

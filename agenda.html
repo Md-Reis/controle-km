@@ -81,22 +81,23 @@
   display: flex;
   align-items: center;
   border-radius: 14px;
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 700;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity .15s;
+  opacity: 1;
+  z-index: 0;
+  transition: none;
 }
 .ag-swipe-bg-right {
   background: #22c55e;
   justify-content: flex-start;
-  padding-left: 24px;
+  padding-left: 20px;
   color: #fff;
 }
 .ag-swipe-bg-left {
   background: var(--danger);
   justify-content: flex-end;
-  padding-right: 24px;
+  padding-right: 20px;
   color: #fff;
 }
 .ag-swipe-hint {
@@ -111,6 +112,7 @@
   transition: opacity .3s;
   pointer-events: none;
   letter-spacing: .3px;
+  z-index: 2;
 }
 .ag-swipe-wrap:hover .ag-swipe-hint,
 .ag-swipe-wrap.swiping .ag-swipe-hint { opacity: 1; }
@@ -120,6 +122,8 @@
   transition: transform .25s cubic-bezier(.25,.46,.45,.94), box-shadow .2s;
   margin-bottom: 0;
   border-radius: 14px; padding: 14px 16px;
+  position: relative;
+  z-index: 1;
   border: 1px solid var(--border);
   position: relative; overflow: hidden;
 }
@@ -1317,16 +1321,14 @@ function mudarStatus(id, novoStatus) {
 
 // ════════ SWIPE NOS CARDS ════════
 function adicionarSwipe(card, agId, status) {
-  const LIMIAR    = 80;   // px para confirmar a ação
-  const MAXIMO    = 130;  // px máximo de arrasto visual
+  const LIMIAR    = 90;   // px para confirmar a ação
+  const MAXIMO    = 140;  // px máximo de arrasto visual
   let xInicio     = 0;
   let yInicio     = 0;
   let arrastando  = false;
-  let bloqueado   = false; // bloqueado quando o scroll vertical domina
+  let bloqueado   = false;
 
   const wrap = card.parentElement;
-  const bgDir = wrap.querySelector('.ag-swipe-bg-right');
-  const bgEsq = wrap.querySelector('.ag-swipe-bg-left');
 
   function iniciar(x, y) {
     xInicio    = x;
@@ -1353,10 +1355,6 @@ function adicionarSwipe(card, agId, status) {
     // Limita o arrasto ao máximo visual
     const delta = Math.max(-MAXIMO, Math.min(MAXIMO, dx));
     card.style.transform = `translateX(${delta}px)`;
-
-    // Mostra o fundo correto conforme direção
-    if (bgDir) bgDir.style.opacity = delta > 0 ? Math.min(delta / LIMIAR, 1) : 0;
-    if (bgEsq) bgEsq.style.opacity = delta < 0 ? Math.min(-delta / LIMIAR, 1) : 0;
   }
 
   function soltar(x) {
@@ -1373,18 +1371,14 @@ function adicionarSwipe(card, agId, status) {
     if (dx >= LIMIAR) {
       // Swipe direita → concluir
       card.style.transform = `translateX(110%)`;
-      card.style.opacity   = '0';
-      setTimeout(() => mudarStatus(agId, 'concluido'), 250);
+      setTimeout(() => mudarStatus(agId, 'concluido'), 220);
     } else if (dx <= -LIMIAR) {
       // Swipe esquerda → cancelar
       card.style.transform = `translateX(-110%)`;
-      card.style.opacity   = '0';
-      setTimeout(() => mudarStatus(agId, 'cancelado'), 250);
+      setTimeout(() => mudarStatus(agId, 'cancelado'), 220);
     } else {
       // Volta à posição original
       card.style.transform = '';
-      if (bgDir) bgDir.style.opacity = 0;
-      if (bgEsq) bgEsq.style.opacity = 0;
     }
   }
 
@@ -1405,7 +1399,6 @@ function adicionarSwipe(card, agId, status) {
 
   // Mouse (desktop)
   card.addEventListener('mousedown', e => {
-    // Não inicia swipe em cliques em botões ou elementos interativos
     if (e.target.closest('button, a, input, select')) return;
     iniciar(e.clientX, e.clientY);
     const onMove = ev => mover(ev.clientX, ev.clientY);

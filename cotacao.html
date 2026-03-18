@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Cotação</title>
 <link rel="stylesheet" href="./style.css">
+<script src="./shared.js"></script>
 <style>
   .tipo-selector { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
   .tipo-btn {
@@ -458,12 +459,7 @@ let rotasSalvas = JSON.parse(localStorage.getItem('rotasSalvas')) || [];
 
 // ── Utils ──
 function fmt(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-function showToast(msg,type='success'){
-  const t=document.getElementById('toast');
-  const c={success:'#22c55e',error:'#ef4444',info:'#38bdf8'};
-  t.innerText=msg; t.style.borderLeft=`6px solid ${c[type]||c.success}`;
-  t.style.display='block'; setTimeout(()=>t.style.display='none',2800);
-}
+// showToast → shared.js
 function mascaraTel(i){
   let v=i.value.replace(/\D/g,'');
   v=v.length<=10?v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3'):v.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
@@ -1140,18 +1136,11 @@ function confirmarAgendar() {
   document.documentElement.setAttribute('data-theme',s);
   const b=document.getElementById('theme-toggle');
   if(b) b.textContent=s==='dark'?'🌙':'☀️';
+  atualizarBadgeAgenda();
 })();
-function toggleTheme(){
-  const c=document.documentElement.getAttribute('data-theme')||'dark';
-  const n=c==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',n);
-  localStorage.setItem('kmTheme',n);
-  const b=document.getElementById('theme-toggle');
-  if(b) b.textContent=n==='dark'?'🌙':'☀️';
-}
+// toggleTheme → shared.js
 function fabAcao(a){ closeFab(); window.location.href={entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[a]||'#'; }
-function toggleFab(){ const o=document.getElementById('fab-options'),m=document.getElementById('fab-main'),b=document.getElementById('fab-backdrop'); const open=o.classList.toggle('visible'); m.classList.toggle('open',open); b.classList.toggle('visible',open); }
-function closeFab(){ document.getElementById('fab-options').classList.remove('visible'); document.getElementById('fab-main').classList.remove('open'); document.getElementById('fab-backdrop').classList.remove('visible'); }
+// toggleFab, closeFab → shared.js
 </script>
 
 <nav id="global-nav">

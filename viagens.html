@@ -615,7 +615,47 @@ function renderHistCliente() {
 
   if (viagens.length===0) { lista.innerHTML="<small style='opacity:.5'>Nenhuma viagem registrada.</small>"; return; }
 
-  lista.innerHTML = "";
+  // ── Resumo financeiro do cliente ──────────────────────────────────
+  const totalFat   = viagens.reduce((s,v)=>s+(v.valor||0),0);
+  const totalLucro = viagens.reduce((s,v)=>s+(v.lucro||0),0);
+  const totalKm    = viagens.reduce((s,v)=>s+(v.km||0),0);
+  const corLucro   = totalLucro>=0 ? 'var(--accent)' : 'var(--danger)';
+
+  // Mês atual
+  const hoje = new Date();
+  const mesAtual = hoje.getMonth();
+  const anoAtual = hoje.getFullYear();
+  const viagensMes = viagens.filter(v => {
+    const d = new Date(v.data);
+    return d.getMonth()===mesAtual && d.getFullYear()===anoAtual;
+  });
+  const fatMes   = viagensMes.reduce((s,v)=>s+(v.valor||0),0);
+  const lucroMes = viagensMes.reduce((s,v)=>s+(v.lucro||0),0);
+
+  lista.innerHTML = `
+    <div style="background:var(--card2);border-radius:12px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Resumo geral · ${viagens.length} viagen${viagens.length!==1?'s':''}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:${viagensMes.length>0?'10px':'0'}">
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--muted)">Faturado</div>
+          <div style="font-size:14px;font-weight:800;color:var(--accent);margin-top:2px">${formatCurrency(totalFat)}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--muted)">Lucro</div>
+          <div style="font-size:14px;font-weight:800;color:${corLucro};margin-top:2px">${formatCurrency(totalLucro)}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--muted)">KM total</div>
+          <div style="font-size:14px;font-weight:800;color:var(--secondary);margin-top:2px">${totalKm.toFixed(0)} km</div>
+        </div>
+      </div>
+      ${viagensMes.length > 0 ? `
+      <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
+        <span>Este mês · ${viagensMes.length} viagen${viagensMes.length!==1?'s':''}</span>
+        <span>${formatCurrency(fatMes)} · lucro <strong style="color:${lucroMes>=0?'var(--accent)':'var(--danger)'}">${formatCurrency(lucroMes)}</strong></span>
+      </div>` : ''}
+    </div>`;
+
   viagens.forEach(v=>{
     // Montar HTML da rota se existir
     let rotaHtml = '';
@@ -624,12 +664,19 @@ function renderHistCliente() {
         const ic = i===0 ? '🟢' : i===v.rota.paradas.length-1 ? '🔴' : '🟡';
         return `<span style="white-space:nowrap">${ic} ${p.address.split(',')[0]}</span>`;
       }).join(' <span style="color:var(--muted)">→</span> ');
+      const rotaJson = JSON.stringify(v.rota).replace(/"/g,'&quot;');
       rotaHtml = `
         <div style="margin:6px 0;padding:8px 10px;background:rgba(46,168,160,.07);border:1px solid rgba(46,168,160,.2);border-radius:8px;font-size:12px">
           <div style="color:var(--text);line-height:1.8;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">${ps}</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)">
-            <span>📏 <strong style="color:var(--primary)">${v.rota.km} km</strong></span>
-            ${v.rota.duracao ? `<span>⏱ <strong style="color:var(--primary)">${v.rota.duracao}</strong></span>` : ''}
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)">
+              <span>📏 <strong style="color:var(--primary)">${v.rota.km} km</strong></span>
+              ${v.rota.duracao ? `<span>⏱ <strong style="color:var(--primary)">${v.rota.duracao}</strong></span>` : ''}
+            </div>
+            <button onclick="abrirNoMaps(JSON.parse(this.dataset.rota))" data-rota="${rotaJson}"
+              style="background:transparent;border:1px solid var(--primary);color:var(--primary);font-size:11px;padding:3px 10px;border-radius:8px;width:auto">
+              🗺️ Maps
+            </button>
           </div>
         </div>`;
     }
@@ -803,6 +850,12 @@ function salvarViagem() {
   const custoTotal = km*calcularCustoPorKm(v);
   const lucro      = valor-custoTotal;
   const agora      = new Date();
+
+  // Alerta de margem baixa (< 25%)
+  const margem = valor > 0 ? (lucro / valor) * 100 : 0;
+  if (margem < 25 && lucro >= 0) {
+    if (!confirm(`⚠️ Margem baixa: ${margem.toFixed(0)}%\nLucro: R$ ${lucro.toFixed(2)} sobre R$ ${valor.toFixed(2)}.\n\nSalvar mesmo assim?`)) return;
+  }
 
   const viagem = {
     id: Date.now(),
@@ -1281,7 +1334,7 @@ function salvarEdicaoViagem() {
 
   const custoTotal = v ? km * calcularCustoPorKm(v) : vg.custoTotal;
   const lucro      = valor - custoTotal;
-  const novaData   = dataInput ? new Date(dataInput + 'T12:00:00').toISOString() : vg.data;
+  const novaData   = dataInput ? dataInput : vg.data.slice(0, 10);
 
   // Atualiza em vData.viagens (sem kmInicial/Final — viagens usam rota)
   vg.km = km; vg.valor = valor; vg.custoTotal = custoTotal; vg.lucro = lucro;

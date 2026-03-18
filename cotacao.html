@@ -1136,7 +1136,6 @@ function confirmarAgendar() {
   document.documentElement.setAttribute('data-theme',s);
   const b=document.getElementById('theme-toggle');
   if(b) b.textContent=s==='dark'?'🌙':'☀️';
-  atualizarBadgeAgenda();
 })();
 // toggleTheme → shared.js
 function fabAcao(a){ closeFab(); window.location.href={entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html'}[a]||'#'; }

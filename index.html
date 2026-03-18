@@ -1230,6 +1230,8 @@
     }
 
     // ── viagensApp: migração v1.3 → v1.4 ─────────────────────────────
+    // Remove kmInicial/kmFinal (legados), usa rota.km se disponível
+    // passageiroNome é preservado intacto — identifica quem viajou
     if (payload.viagensApp) {
       const vClean = JSON.parse(JSON.stringify(payload.viagensApp));
       if (Array.isArray(vClean.viagens)) {
@@ -1237,18 +1239,13 @@
           if (v.rota && v.rota.km) v.km = v.rota.km;
           delete v.kmInicial;
           delete v.kmFinal;
-          if ('passageiroNome' in v) {
-            if (!('passageiro' in v)) v.passageiro = v.passageiroNome;
-            delete v.passageiroNome;
-          }
-          if (v.passageiro === null || v.passageiro === undefined) v.passageiro = '';
           return v;
         });
       }
       localStorage.setItem('viagensApp', JSON.stringify(vClean));
     }
 
-    // ── agendaApp: normalizar passageiro null ─────────────────────────
+    // ── agendaApp: normalizar passageiro null → "" ───────────────────
     if (payload.agendaApp) {
       const aClean = JSON.parse(JSON.stringify(payload.agendaApp));
       if (Array.isArray(aClean.agendamentos)) {
@@ -1426,11 +1423,11 @@ function exportarBackup() {
       kmAppClean.lancamentos = kmAppClean.lancamentos.filter(l => l.tipo === 'entrega');
     }
 
-    // ── viagensApp: normalizar para estrutura v1.4 ───────────────────
-    // • Remove kmInicial / kmFinal (substituídos por rota.km)
+    // ── viagensApp: normalizar estrutura v1.4 ────────────────────────
+    // • Remove kmInicial / kmFinal (campos de hodômetro, substituídos por rota.km)
     // • Usa rota.km como km principal se disponível
-    // • Unifica passageiroNome → passageiro
-    // • Normaliza passageiro null → ""
+    // • passageiroNome é mantido intacto — identifica quem viajou dentro do grupo do cliente
+    // • agendamentos usam campo "passageiro" (diferente) — não alterar
     const viagensClean = JSON.parse(JSON.stringify(viagensApp));
     if (Array.isArray(viagensClean.viagens)) {
       viagensClean.viagens = viagensClean.viagens.map(v => {
@@ -1438,11 +1435,6 @@ function exportarBackup() {
         if (norm.rota && norm.rota.km) norm.km = norm.rota.km;
         delete norm.kmInicial;
         delete norm.kmFinal;
-        if ('passageiroNome' in norm) {
-          if (!('passageiro' in norm)) norm.passageiro = norm.passageiroNome;
-          delete norm.passageiroNome;
-        }
-        if (norm.passageiro === null || norm.passageiro === undefined) norm.passageiro = '';
         return norm;
       });
     }

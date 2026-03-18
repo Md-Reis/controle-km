@@ -320,10 +320,7 @@
   let chartInstance  = null;
   let novaConsumMedia = null; // para calibração
 
-  // showToast → shared.js
-  function toLocalDateStr(d) {
-    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  }
+  // showToast, toLocalDateStr → shared.js
 
   function getVeiculo(id) { return kmApp.veiculos.find(v=>v.id===id); }
 
@@ -763,7 +760,7 @@
     abastApp.registros.push({
       id:         Date.now(),
       veiculoId,
-      data:       new Date(dataVal + 'T12:00:00').toISOString(),
+      data:       dataVal,
       km,
       litros,
       valor,
@@ -836,7 +833,7 @@
     r.km     = novoKm;
     r.litros = novoLitros;
     r.valor  = novoValor;
-    r.data   = new Date(novaData + 'T12:00:00').toISOString();
+    r.data   = novaData;
     r.posto  = document.getElementById('editPosto').value.trim();
     saveAbast();
     document.getElementById('modalEdit').classList.add('hidden');

@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Abastecimento</title>
 <link rel="stylesheet" href="./style.css">
+<script src="./shared.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   /* ── Resumo veículo ── */
@@ -319,20 +320,7 @@
   let chartInstance  = null;
   let novaConsumMedia = null; // para calibração
 
-  // ── Helpers ──
-  function formatCurrency(v) {
-    return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-  }
-
-  function showToast(msg, type='success') {
-    const t = document.getElementById('toast');
-    const c = {success:'#22c55e', error:'#e5534b', info:'#2ea8a0'};
-    t.textContent = msg;
-    t.style.borderLeft = `4px solid ${c[type]||c.success}`;
-    t.style.display = 'block';
-    setTimeout(() => t.style.display='none', 2800);
-  }
-
+  // showToast → shared.js
   function toLocalDateStr(d) {
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
@@ -952,38 +940,18 @@ function exportCSVAbastecimento() {
 </script>
 
 <script>
-/* ── TEMA ── */
+/* ── TEMA (inicialização) ── */
 (function(){
   const s = localStorage.getItem('kmTheme')||'dark';
   document.documentElement.setAttribute('data-theme', s);
   const b = document.getElementById('theme-toggle');
   if(b) b.textContent = s==='dark'?'🌙':'☀️';
+  atualizarBadgeAgenda();
 })();
-function toggleTheme(){
-  const c = document.documentElement.getAttribute('data-theme')||'dark';
-  const n = c==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',n);
-  localStorage.setItem('kmTheme',n);
-  const b=document.getElementById('theme-toggle');
-  if(b) b.textContent=n==='dark'?'🌙':'☀️';
-}
 /* ── FAB ── */
 function fabAcao(acao){
   closeFab();
   window.location.href = {entregas:'entregas.html',viagens:'viagens.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html',agenda:'agenda.html'}[acao] || '#';
-}
-function toggleFab(){
-  const o=document.getElementById('fab-options');
-  const m=document.getElementById('fab-main');
-  const b=document.getElementById('fab-backdrop');
-  const open=o.classList.toggle('visible');
-  m.classList.toggle('open',open);
-  b.classList.toggle('visible',open);
-}
-function closeFab(){
-  document.getElementById('fab-options').classList.remove('visible');
-  document.getElementById('fab-main').classList.remove('open');
-  document.getElementById('fab-backdrop').classList.remove('visible');
 }
 </script>
 <!-- ═══ GLOBAL NAV ═══ -->

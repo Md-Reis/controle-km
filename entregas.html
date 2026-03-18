@@ -415,7 +415,7 @@
     const lucro = valor - custoTotal;
 
     const dataEntregaVal = document.getElementById("lDataEntrega")?.value || toLocalDateStr(new Date());
-    const dataEntrega = new Date(dataEntregaVal + 'T12:00:00').toISOString();
+    const dataEntrega = dataEntregaVal;
 
     data.lancamentos.push({
       id: Date.now(),
@@ -430,8 +430,8 @@
       tipo: 'entrega'
     });
 
-    const dEntrega = new Date(dataEntrega);
-    addFaturamentoMes(dEntrega.getFullYear(), dEntrega.getMonth(), valor);
+    const [deY, deM] = dataEntrega.split('-').map(Number);
+    addFaturamentoMes(deY, deM - 1, valor);
     delete data.draftLancamento;
     save();
 
@@ -674,7 +674,7 @@
     const custoTotal = km * custoKm;
     const lucro      = valor - custoTotal;
 
-    h.data      = new Date(document.getElementById("editData").value).toISOString();
+    h.data      = document.getElementById("editData").value;
     h.kmInicial = kmInicial;
     h.kmFinal   = kmFinal;
     h.km        = km;

@@ -73,50 +73,25 @@
   position: relative;
   border-radius: 14px;
   margin-bottom: 8px;
-  isolation: isolate;
+  background: var(--card);
 }
-.ag-swipe-bg {
+.ag-swipe-wrap.dir { background: #22c55e; }
+.ag-swipe-wrap.esq { background: var(--danger); }
+.ag-swipe-label {
   position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  font-size: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
   pointer-events: none;
-  z-index: 0;
   opacity: 0;
-}
-.ag-swipe-bg-right {
-  background: #22c55e;
-  justify-content: flex-start;
-  padding-left: 20px;
-}
-.ag-swipe-bg-left {
-  background: var(--danger);
-  justify-content: flex-end;
-  padding-right: 20px;
-}
-/* Mostra apenas o lado correto durante o arrasto */
-.ag-swipe-wrap.dir  .ag-swipe-bg-right { opacity: 1; }
-.ag-swipe-wrap.esq  .ag-swipe-bg-left  { opacity: 1; }
-.ag-swipe-hint {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  color: var(--muted);
   white-space: nowrap;
-  opacity: 0;
-  transition: opacity .3s;
-  pointer-events: none;
-  letter-spacing: .3px;
-  z-index: 2;
 }
-.ag-swipe-wrap:hover .ag-swipe-hint,
-.ag-swipe-wrap.swiping .ag-swipe-hint { opacity: 1; }
+.ag-swipe-label-right { left: 20px; }
+.ag-swipe-label-left  { right: 20px; }
+.ag-swipe-wrap.dir .ag-swipe-label-right { opacity: 1; }
+.ag-swipe-wrap.esq .ag-swipe-label-left  { opacity: 1; }
 .ag-card {
   touch-action: pan-y;
   will-change: transform;
@@ -124,10 +99,11 @@
   margin-bottom: 0;
   border-radius: 14px; padding: 14px 16px;
   position: relative;
-  z-index: 1;
   border: 1px solid var(--border);
   overflow: hidden;
+  background: var(--card);
 }
+.ag-card.confirmado { background: var(--card); border-color: rgba(46,168,160,.25); }
 .ag-card:hover { transform: translateY(-1px); box-shadow: 0 4px 20px var(--shadow); }
 .ag-card::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0;
@@ -136,7 +112,6 @@
 
 .ag-card.pendente   { background: var(--card); }
 .ag-card.pendente::before   { background: var(--secondary); }
-.ag-card.confirmado { background: rgba(46,168,160,.05); border-color: rgba(46,168,160,.25); }
 .ag-card.confirmado::before { background: var(--primary); }
 .ag-card.concluido  { background: rgba(34,197,94,.04); border-color: rgba(34,197,94,.2); opacity:.85; }
 .ag-card.concluido::before  { background: #22c55e; }
@@ -1072,22 +1047,17 @@ function renderLista() {
         const wrap = document.createElement('div');
         wrap.className = 'ag-swipe-wrap';
 
-        const bgDir = document.createElement('div');
-        bgDir.className = 'ag-swipe-bg ag-swipe-bg-right';
-        bgDir.textContent = '✅ Concluir';
+        const lblDir = document.createElement('div');
+        lblDir.className = 'ag-swipe-label ag-swipe-label-right';
+        lblDir.textContent = '✅ Concluir';
 
-        const bgEsq = document.createElement('div');
-        bgEsq.className = 'ag-swipe-bg ag-swipe-bg-left';
-        bgEsq.textContent = 'Cancelar ✖';
+        const lblEsq = document.createElement('div');
+        lblEsq.className = 'ag-swipe-label ag-swipe-label-left';
+        lblEsq.textContent = 'Cancelar ✖';
 
-        const hint = document.createElement('div');
-        hint.className = 'ag-swipe-hint';
-        hint.textContent = '← cancelar · concluir →';
-
-        wrap.appendChild(bgDir);
-        wrap.appendChild(bgEsq);
+        wrap.appendChild(lblDir);
+        wrap.appendChild(lblEsq);
         wrap.appendChild(card);
-        wrap.appendChild(hint);
         slot.appendChild(wrap);
         adicionarSwipe(card, ag.id);
       } else {

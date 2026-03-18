@@ -1220,20 +1220,49 @@
     if (!payload) return;
     const status = document.getElementById('importStatus');
 
+    // ── kmApp: apenas entregas ────────────────────────────────────────
     if (payload.kmApp) {
-      // Garantir que kmApp.lancamentos contém SOMENTE entregas (tipo:'entrega')
-      // Viagens ficam exclusivamente em viagensApp.viagens (sem espelho)
       const kmClean = JSON.parse(JSON.stringify(payload.kmApp));
       if (Array.isArray(kmClean.lancamentos)) {
         kmClean.lancamentos = kmClean.lancamentos.filter(l => l.tipo === 'entrega');
       }
       localStorage.setItem('kmApp', JSON.stringify(kmClean));
     }
-    if (payload.viagensApp)        localStorage.setItem('viagensApp',        JSON.stringify(payload.viagensApp));
-    if (payload.abastecimentoApp)  localStorage.setItem('abastecimentoApp',  JSON.stringify(payload.abastecimentoApp));
-    if (payload.agendaApp)         localStorage.setItem('agendaApp',         JSON.stringify(payload.agendaApp));
+
+    // ── viagensApp: migração v1.3 → v1.4 ─────────────────────────────
+    if (payload.viagensApp) {
+      const vClean = JSON.parse(JSON.stringify(payload.viagensApp));
+      if (Array.isArray(vClean.viagens)) {
+        vClean.viagens = vClean.viagens.map(v => {
+          if (v.rota && v.rota.km) v.km = v.rota.km;
+          delete v.kmInicial;
+          delete v.kmFinal;
+          if ('passageiroNome' in v) {
+            if (!('passageiro' in v)) v.passageiro = v.passageiroNome;
+            delete v.passageiroNome;
+          }
+          if (v.passageiro === null || v.passageiro === undefined) v.passageiro = '';
+          return v;
+        });
+      }
+      localStorage.setItem('viagensApp', JSON.stringify(vClean));
+    }
+
+    // ── agendaApp: normalizar passageiro null ─────────────────────────
+    if (payload.agendaApp) {
+      const aClean = JSON.parse(JSON.stringify(payload.agendaApp));
+      if (Array.isArray(aClean.agendamentos)) {
+        aClean.agendamentos = aClean.agendamentos.map(a => {
+          if (a.passageiro === null || a.passageiro === undefined) a.passageiro = '';
+          return a;
+        });
+      }
+      localStorage.setItem('agendaApp', JSON.stringify(aClean));
+    }
+
+    if (payload.abastecimentoApp) localStorage.setItem('abastecimentoApp', JSON.stringify(payload.abastecimentoApp));
     if (Array.isArray(payload.rotasSalvas)) localStorage.setItem('rotasSalvas', JSON.stringify(payload.rotasSalvas));
-    if (payload.kmTheme)           localStorage.setItem('kmTheme',           payload.kmTheme);
+    if (payload.kmTheme) localStorage.setItem('kmTheme', payload.kmTheme);
 
     if (status) { status.textContent = '✅ Dados restaurados! Recarregando...'; status.style.color = 'var(--accent)'; }
     pendingImportPayload = null;
@@ -1391,19 +1420,49 @@ function exportarBackup() {
     const rotasSalvas      = JSON.parse(localStorage.getItem('rotasSalvas'))       || [];
     const tema             = localStorage.getItem('kmTheme') || 'dark';
 
-    // Garantir que kmApp exportado contém SOMENTE entregas (sem espelhos de viagens)
+    // ── kmApp: apenas entregas, sem espelhos de viagens ──────────────
     const kmAppClean = JSON.parse(JSON.stringify(kmApp));
     if (Array.isArray(kmAppClean.lancamentos)) {
       kmAppClean.lancamentos = kmAppClean.lancamentos.filter(l => l.tipo === 'entrega');
     }
 
+    // ── viagensApp: normalizar para estrutura v1.4 ───────────────────
+    // • Remove kmInicial / kmFinal (substituídos por rota.km)
+    // • Usa rota.km como km principal se disponível
+    // • Unifica passageiroNome → passageiro
+    // • Normaliza passageiro null → ""
+    const viagensClean = JSON.parse(JSON.stringify(viagensApp));
+    if (Array.isArray(viagensClean.viagens)) {
+      viagensClean.viagens = viagensClean.viagens.map(v => {
+        const norm = Object.assign({}, v);
+        if (norm.rota && norm.rota.km) norm.km = norm.rota.km;
+        delete norm.kmInicial;
+        delete norm.kmFinal;
+        if ('passageiroNome' in norm) {
+          if (!('passageiro' in norm)) norm.passageiro = norm.passageiroNome;
+          delete norm.passageiroNome;
+        }
+        if (norm.passageiro === null || norm.passageiro === undefined) norm.passageiro = '';
+        return norm;
+      });
+    }
+
+    // ── agendaApp: normalizar passageiro null → "" ───────────────────
+    const agendaClean = JSON.parse(JSON.stringify(agendaApp));
+    if (Array.isArray(agendaClean.agendamentos)) {
+      agendaClean.agendamentos = agendaClean.agendamentos.map(a => {
+        if (a.passageiro === null || a.passageiro === undefined) a.passageiro = '';
+        return a;
+      });
+    }
+
     const payload = {
-      versao:      '1.3',
+      versao:      '1.4',
       exportadoEm: new Date().toISOString(),
-      kmApp:       kmAppClean,   // contém apenas entregas
-      viagensApp,                 // contém viagens com cliente/passageiro/rota
+      kmApp:       kmAppClean,
+      viagensApp:  viagensClean,
       abastecimentoApp,
-      agendaApp,
+      agendaApp:   agendaClean,
       rotasSalvas,
       kmTheme: tema
     };

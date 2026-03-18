@@ -68,13 +68,59 @@
   flex-shrink: 0; margin-left: -25px;
 }
 
-/* ── Card de agendamento ── */
+/* ── Swipe nos cards ── */
+.ag-swipe-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+.ag-swipe-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+  font-size: 22px;
+  font-weight: 700;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.ag-swipe-bg-right {
+  background: #22c55e;
+  justify-content: flex-start;
+  padding-left: 24px;
+  color: #fff;
+}
+.ag-swipe-bg-left {
+  background: var(--danger);
+  justify-content: flex-end;
+  padding-right: 24px;
+  color: #fff;
+}
+.ag-swipe-hint {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+  letter-spacing: .3px;
+}
+.ag-swipe-wrap:hover .ag-swipe-hint,
+.ag-swipe-wrap.swiping .ag-swipe-hint { opacity: 1; }
 .ag-card {
+  touch-action: pan-y;
+  will-change: transform;
+  transition: transform .25s cubic-bezier(.25,.46,.45,.94), box-shadow .2s;
+  margin-bottom: 0;
   border-radius: 14px; padding: 14px 16px;
   border: 1px solid var(--border);
   position: relative; overflow: hidden;
-  transition: transform .2s, box-shadow .2s;
-  margin-bottom: 8px;
 }
 .ag-card:hover { transform: translateY(-1px); box-shadow: 0 4px 20px var(--shadow); }
 .ag-card::before {
@@ -989,7 +1035,6 @@ function renderLista() {
         </div>`;
       }
 
-      // Card colapsável: resumo sempre visível, detalhes sob clique
       card.innerHTML = `
         <div class="ag-card-summary" onclick="toggleCardAg(this)" style="cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
@@ -1014,7 +1059,34 @@ function renderLista() {
           <div class="ag-acoes">${acoes}</div>
         </div>
       `;
-      slot.appendChild(card);
+
+      // Envolve em swipe-wrap apenas para cards que podem mudar de status
+      const podeSwipe = ag.status === 'pendente' || ag.status === 'confirmado';
+      if (podeSwipe) {
+        const wrap = document.createElement('div');
+        wrap.className = 'ag-swipe-wrap';
+
+        const bgDir = document.createElement('div');
+        bgDir.className = 'ag-swipe-bg ag-swipe-bg-right';
+        bgDir.innerHTML = '✅ Concluir';
+
+        const bgEsq = document.createElement('div');
+        bgEsq.className = 'ag-swipe-bg ag-swipe-bg-left';
+        bgEsq.innerHTML = 'Cancelar ✖';
+
+        const hint = document.createElement('div');
+        hint.className = 'ag-swipe-hint';
+        hint.textContent = '← cancelar · concluir →';
+
+        wrap.appendChild(bgDir);
+        wrap.appendChild(bgEsq);
+        wrap.appendChild(card);
+        wrap.appendChild(hint);
+        slot.appendChild(wrap);
+        adicionarSwipe(card, ag.id, ag.status);
+      } else {
+        slot.appendChild(card);
+      }
     });
 
     lista.appendChild(slot);
@@ -1240,6 +1312,106 @@ function mudarStatus(id, novoStatus) {
   render();
   const labels = {confirmado:'Confirmado ✅',cancelado:'Cancelado ✖',concluido:'Concluído 🎉'};
   showToast(labels[novoStatus]||'Atualizado','success');
+}
+
+// ════════ SWIPE NOS CARDS ════════
+function adicionarSwipe(card, agId, status) {
+  const LIMIAR    = 80;   // px para confirmar a ação
+  const MAXIMO    = 130;  // px máximo de arrasto visual
+  let xInicio     = 0;
+  let yInicio     = 0;
+  let arrastando  = false;
+  let bloqueado   = false; // bloqueado quando o scroll vertical domina
+
+  const wrap = card.parentElement;
+  const bgDir = wrap.querySelector('.ag-swipe-bg-right');
+  const bgEsq = wrap.querySelector('.ag-swipe-bg-left');
+
+  function iniciar(x, y) {
+    xInicio    = x;
+    yInicio    = y;
+    arrastando = true;
+    bloqueado  = false;
+    card.style.transition = 'none';
+    wrap.classList.add('swiping');
+  }
+
+  function mover(x, y) {
+    if (!arrastando) return;
+    const dx = x - xInicio;
+    const dy = y - yInicio;
+
+    // Se movimento vertical domina nos primeiros pixels → scroll normal, cancela swipe
+    if (!bloqueado && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+      bloqueado = true;
+      encerrar(0);
+      return;
+    }
+    if (bloqueado) return;
+
+    // Limita o arrasto ao máximo visual
+    const delta = Math.max(-MAXIMO, Math.min(MAXIMO, dx));
+    card.style.transform = `translateX(${delta}px)`;
+
+    // Mostra o fundo correto conforme direção
+    if (bgDir) bgDir.style.opacity = delta > 0 ? Math.min(delta / LIMIAR, 1) : 0;
+    if (bgEsq) bgEsq.style.opacity = delta < 0 ? Math.min(-delta / LIMIAR, 1) : 0;
+  }
+
+  function soltar(x) {
+    if (!arrastando || bloqueado) return;
+    const dx = x - xInicio;
+    encerrar(dx);
+  }
+
+  function encerrar(dx) {
+    arrastando = false;
+    wrap.classList.remove('swiping');
+    card.style.transition = '';
+
+    if (dx >= LIMIAR) {
+      // Swipe direita → concluir
+      card.style.transform = `translateX(110%)`;
+      card.style.opacity   = '0';
+      setTimeout(() => mudarStatus(agId, 'concluido'), 250);
+    } else if (dx <= -LIMIAR) {
+      // Swipe esquerda → cancelar
+      card.style.transform = `translateX(-110%)`;
+      card.style.opacity   = '0';
+      setTimeout(() => mudarStatus(agId, 'cancelado'), 250);
+    } else {
+      // Volta à posição original
+      card.style.transform = '';
+      if (bgDir) bgDir.style.opacity = 0;
+      if (bgEsq) bgEsq.style.opacity = 0;
+    }
+  }
+
+  // Touch
+  card.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    iniciar(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  card.addEventListener('touchmove', e => {
+    if (!arrastando || bloqueado) return;
+    mover(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  card.addEventListener('touchend', e => {
+    soltar(e.changedTouches[0].clientX);
+  }, { passive: true });
+
+  // Mouse (desktop)
+  card.addEventListener('mousedown', e => {
+    // Não inicia swipe em cliques em botões ou elementos interativos
+    if (e.target.closest('button, a, input, select')) return;
+    iniciar(e.clientX, e.clientY);
+    const onMove = ev => mover(ev.clientX, ev.clientY);
+    const onUp   = ev => { soltar(ev.clientX); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
 let repetindoId = null;

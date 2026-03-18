@@ -1031,13 +1031,11 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </div>
 <script>
 /* ── AGENDAR DA COTAÇÃO ── */
-function toLocalDateStrCot(d) {
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
+// toLocalDateStr → shared.js
 
 function abrirModalAgendar() {
   const agDataEl = document.getElementById('agData');
-  if (agDataEl) agDataEl.value = toLocalDateStrCot(new Date());
+  if (agDataEl) agDataEl.value = toLocalDateStr(new Date());
 
   // Preenche valor com o calculado — usa variável global (funciona em modo único E constante)
   const valorEl = document.getElementById('agValor');
@@ -1119,7 +1117,7 @@ function confirmarAgendar() {
     ? { km: kmRota, duracao: duracaoRota || String(duracao), paradas: paradasAtuais } : null;
 
   agData.agendamentos.push({
-    id: Date.now(), clienteId, passageiro: null,
+    id: Date.now(), clienteId, passageiro: '',
     data, hora, duracao, valor, obs,
     status: 'pendente', rota: rotaSalva
   });

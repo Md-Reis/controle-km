@@ -604,6 +604,25 @@ body { padding-bottom: 80px; }
 [data-theme="light"] .gnav-item        { color: var(--muted); }
 [data-theme="light"] .gnav-item.active { color: var(--primary); }
 
+/* ── Badge de pendências na nav ── */
+.gnav-badge {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
 /* ═══════════════════════════════════════════════
    FAB — posicionado acima da bottom nav
    ═══════════════════════════════════════════════ */

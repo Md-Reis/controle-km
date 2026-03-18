@@ -73,38 +73,34 @@
   position: relative;
   border-radius: 14px;
   margin-bottom: 8px;
+  isolation: isolate;
 }
-/* Fundo verde (concluir) — revelado quando card desliza para direita */
-.ag-swipe-wrap::before {
-  content: '✅ Concluir';
+.ag-swipe-bg {
   position: absolute;
   inset: 0;
-  background: #22c55e;
   border-radius: 14px;
   display: flex;
   align-items: center;
-  padding-left: 20px;
   font-size: 15px;
   font-weight: 700;
   color: #fff;
   pointer-events: none;
+  z-index: 0;
+  opacity: 0;
 }
-/* Fundo vermelho (cancelar) — revelado quando card desliza para esquerda */
-.ag-swipe-wrap::after {
-  content: 'Cancelar ✖';
-  position: absolute;
-  inset: 0;
+.ag-swipe-bg-right {
+  background: #22c55e;
+  justify-content: flex-start;
+  padding-left: 20px;
+}
+.ag-swipe-bg-left {
   background: var(--danger);
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
   justify-content: flex-end;
   padding-right: 20px;
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  pointer-events: none;
 }
+/* Mostra apenas o lado correto durante o arrasto */
+.ag-swipe-wrap.dir  .ag-swipe-bg-right { opacity: 1; }
+.ag-swipe-wrap.esq  .ag-swipe-bg-left  { opacity: 1; }
 .ag-swipe-hint {
   position: absolute;
   bottom: 4px;
@@ -1076,14 +1072,24 @@ function renderLista() {
         const wrap = document.createElement('div');
         wrap.className = 'ag-swipe-wrap';
 
+        const bgDir = document.createElement('div');
+        bgDir.className = 'ag-swipe-bg ag-swipe-bg-right';
+        bgDir.textContent = '✅ Concluir';
+
+        const bgEsq = document.createElement('div');
+        bgEsq.className = 'ag-swipe-bg ag-swipe-bg-left';
+        bgEsq.textContent = 'Cancelar ✖';
+
         const hint = document.createElement('div');
         hint.className = 'ag-swipe-hint';
         hint.textContent = '← cancelar · concluir →';
 
+        wrap.appendChild(bgDir);
+        wrap.appendChild(bgEsq);
         wrap.appendChild(card);
         wrap.appendChild(hint);
         slot.appendChild(wrap);
-        adicionarSwipe(card, ag.id, ag.status);
+        adicionarSwipe(card, ag.id);
       } else {
         slot.appendChild(card);
       }
@@ -1315,13 +1321,13 @@ function mudarStatus(id, novoStatus) {
 }
 
 // ════════ SWIPE NOS CARDS ════════
-function adicionarSwipe(card, agId, status) {
-  const LIMIAR    = 90;   // px para confirmar a ação
-  const MAXIMO    = 140;  // px máximo de arrasto visual
-  let xInicio     = 0;
-  let yInicio     = 0;
-  let arrastando  = false;
-  let bloqueado   = false;
+function adicionarSwipe(card, agId) {
+  const LIMIAR   = 90;
+  const MAXIMO   = 140;
+  let xInicio    = 0;
+  let yInicio    = 0;
+  let arrastando = false;
+  let bloqueado  = false;
 
   const wrap = card.parentElement;
 
@@ -1339,7 +1345,7 @@ function adicionarSwipe(card, agId, status) {
     const dx = x - xInicio;
     const dy = y - yInicio;
 
-    // Se movimento vertical domina nos primeiros pixels → scroll normal, cancela swipe
+    // Movimento vertical domina → scroll normal, cancela swipe
     if (!bloqueado && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
       bloqueado = true;
       encerrar(0);
@@ -1347,37 +1353,35 @@ function adicionarSwipe(card, agId, status) {
     }
     if (bloqueado) return;
 
-    // Limita o arrasto ao máximo visual
     const delta = Math.max(-MAXIMO, Math.min(MAXIMO, dx));
     card.style.transform = `translateX(${delta}px)`;
+
+    // Mostra apenas o fundo do lado correto
+    wrap.classList.toggle('dir', delta > 10);
+    wrap.classList.toggle('esq', delta < -10);
   }
 
   function soltar(x) {
     if (!arrastando || bloqueado) return;
-    const dx = x - xInicio;
-    encerrar(dx);
+    encerrar(x - xInicio);
   }
 
   function encerrar(dx) {
     arrastando = false;
-    wrap.classList.remove('swiping');
+    wrap.classList.remove('swiping', 'dir', 'esq');
     card.style.transition = '';
 
     if (dx >= LIMIAR) {
-      // Swipe direita → concluir
-      card.style.transform = `translateX(110%)`;
+      card.style.transform = 'translateX(110%)';
       setTimeout(() => mudarStatus(agId, 'concluido'), 220);
     } else if (dx <= -LIMIAR) {
-      // Swipe esquerda → cancelar
-      card.style.transform = `translateX(-110%)`;
+      card.style.transform = 'translateX(-110%)';
       setTimeout(() => mudarStatus(agId, 'cancelado'), 220);
     } else {
-      // Volta à posição original
       card.style.transform = '';
     }
   }
 
-  // Touch
   card.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
     iniciar(e.touches[0].clientX, e.touches[0].clientY);
@@ -1392,7 +1396,6 @@ function adicionarSwipe(card, agId, status) {
     soltar(e.changedTouches[0].clientX);
   }, { passive: true });
 
-  // Mouse (desktop)
   card.addEventListener('mousedown', e => {
     if (e.target.closest('button, a, input, select')) return;
     iniciar(e.clientX, e.clientY);

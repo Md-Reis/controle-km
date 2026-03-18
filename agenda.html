@@ -1222,6 +1222,7 @@ function salvarAgendamento() {
   }
 
   saveAg();
+  atualizarBadgeAgenda();
   fecharModalAg();
   // Navega para o dia salvo
   const [y,m,d2] = data.split('-').map(Number);
@@ -1235,6 +1236,7 @@ function mudarStatus(id, novoStatus) {
   if (!ag) return;
   ag.status = novoStatus;
   saveAg();
+  atualizarBadgeAgenda();
   render();
   const labels = {confirmado:'Confirmado ✅',cancelado:'Cancelado ✖',concluido:'Concluído 🎉'};
   showToast(labels[novoStatus]||'Atualizado','success');
@@ -1338,6 +1340,7 @@ function abrirDelAg(id) {
 function confirmarDelAg() {
   agData.agendamentos = agData.agendamentos.filter(a=>a.id!==deletandoId);
   saveAg();
+  atualizarBadgeAgenda();
   document.getElementById('modalDelAg').classList.add('hidden');
   showToast('Agendamento excluído','info');
   render();
@@ -1453,6 +1456,7 @@ function confirmarConverter() {
   // Marca agendamento como concluído
   ag.status = 'concluido';
   saveAg();
+  atualizarBadgeAgenda();
 
   document.getElementById('modalConverter').classList.add('hidden');
   showToast(`Viagem salva! Lucro: ${fmt(lucro)} 🎉`,'success');

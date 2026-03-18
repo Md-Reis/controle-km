@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Viagens</title>
 <link rel="stylesheet" href="./style.css">
+<script src="./shared.js"></script>
 <style>
   .cliente-card {
     background: var(--card);
@@ -398,17 +399,7 @@ let vgRotaAtual = null;   // rota da viagem atual (km, paradas, duração)
 function save()  { localStorage.setItem('kmApp',     JSON.stringify(data));  }
 function vSave() { localStorage.setItem('viagensApp', JSON.stringify(vData)); }
 
-function formatCurrency(v) {
-  return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-}
-function showToast(msg, type="success") {
-  const t = document.getElementById("toast");
-  const c = {success:"#22c55e",error:"#ef4444",info:"#38bdf8"};
-  t.innerText = msg;
-  t.style.borderLeft = `6px solid ${c[type]||c.success}`;
-  t.style.display = "block";
-  setTimeout(()=>t.style.display="none", 2500);
-}
+// formatCurrency, showToast, toLocalDateStr, abrirNoMaps → shared.js
 
 // ===== PÁGINAS =====
 function showPage(id) {
@@ -816,7 +807,7 @@ function salvarViagem() {
   const viagem = {
     id: Date.now(),
     clienteId, veiculoId:v.id, passageiroNome:passageiro,
-    data: agora.toISOString(),
+    data: toLocalDateStr(agora),
     km, valor, custoTotal, lucro, tipo:'viagem',
     rota: rotaAtual
   };
@@ -946,6 +937,7 @@ function renderHistoricoViagens() {
         <div id="rota_${v.id}" style="display:none;margin-top:8px;background:var(--bg2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
           ${pStrs}
           <div style="margin-top:6px;font-size:11px;color:var(--muted)">${v.rota.km||v.km} km · ${v.rota.duracao||''}</div>
+          <button onclick="abrirNoMaps(${JSON.stringify(v.rota).replace(/"/g,'&quot;')})" style="margin-top:8px;background:var(--card2);border:1px solid var(--border);color:var(--primary);font-size:12px;padding:6px 12px;width:auto">🗺️ Abrir no Google Maps</button>
         </div>`;
     })();
     const temRota = v.rota && v.rota.paradas && v.rota.paradas.length >= 2;
@@ -1423,38 +1415,19 @@ if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
   <button id="fab-main" onclick="toggleFab()">+</button>
 </div>
 <script>
-/* ── TEMA ── */
+/* ── TEMA (inicialização) ── */
 (function(){
   const s = localStorage.getItem('kmTheme')||'dark';
   document.documentElement.setAttribute('data-theme', s);
   const b = document.getElementById('theme-toggle');
   if(b) b.textContent = s==='dark'?'🌙':'☀️';
+  atualizarBadgeAgenda();
 })();
-function toggleTheme(){
-  const c = document.documentElement.getAttribute('data-theme')||'dark';
-  const n = c==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',n);
-  localStorage.setItem('kmTheme',n);
-  const b=document.getElementById('theme-toggle');
-  if(b) b.textContent=n==='dark'?'🌙':'☀️';
-}
 /* ── FAB ── */
 function fabAcao(acao){
   closeFab();
-  if(acao==='viagens'){closeFab();showPage('lancamento');}else{window.location.href={entregas:'entregas.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html',agenda:'agenda.html'}[acao]||'#';}
-}
-function toggleFab(){
-  const o=document.getElementById('fab-options');
-  const m=document.getElementById('fab-main');
-  const b=document.getElementById('fab-backdrop');
-  const open=o.classList.toggle('visible');
-  m.classList.toggle('open',open);
-  b.classList.toggle('visible',open);
-}
-function closeFab(){
-  document.getElementById('fab-options').classList.remove('visible');
-  document.getElementById('fab-main').classList.remove('open');
-  document.getElementById('fab-backdrop').classList.remove('visible');
+  if(acao==='viagens'){showPage('lancamento');}
+  else{window.location.href={entregas:'entregas.html',cotacao:'cotacao.html',abastecimento:'abastecimento.html',agenda:'agenda.html'}[acao]||'#';}
 }
 </script>
 <!-- ═══ GLOBAL NAV ═══ -->

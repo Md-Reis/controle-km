@@ -122,3 +122,13 @@ function closeFab() {
   if (m) m.classList.remove('open');
   if (b) b.classList.remove('visible');
 }
+
+// ── Inicialização automática após DOM pronto ─────
+// Chama atualizarBadgeAgenda() quando o DOM estiver carregado,
+// garantindo que o <nav id="global-nav"> já existe na página.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', atualizarBadgeAgenda);
+} else {
+  // DOM já está pronto (script carregado defer ou no fim do body)
+  atualizarBadgeAgenda();
+}

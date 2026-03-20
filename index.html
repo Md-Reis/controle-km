@@ -30,8 +30,8 @@
 
 <body class="has-global-nav">
 <nav id="internal-nav">
-  <button onclick="showPage('veiculos')" id="navVeiculos" class="active"><span class="nav-icon">🚗</span><span class="nav-label">Veículos</span></button>
-  <button onclick="showPage('dashboard')" id="navDashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
+  <button onclick="showPage('veiculos')" id="navVeiculos"><span class="nav-icon">🚗</span><span class="nav-label">Veículos</span></button>
+  <button onclick="showPage('dashboard')" id="navDashboard" class="active"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
   <button onclick="showPage('stats')" id="navStats"><span class="nav-icon">🏆</span><span class="nav-label">Stats</span></button>
   <button onclick="showPage('backup')" id="navBackup"><span class="nav-icon">💾</span><span class="nav-label">Backup</span></button>
 </nav>
@@ -45,7 +45,7 @@
 
 
 <!-- VEÍCULOS -->
-<section id="veiculos" class="page active">
+<section id="veiculos" class="page">
   <h2>🚗 Veículos</h2>
 
   <!-- Busca global -->
@@ -70,27 +70,13 @@
   </button>
 
   <div id="listaVeiculos"></div>
-
-
-  <!-- Metas Totais (inline na aba Veículos) -->
-  <div style="margin-top:28px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h3 style="margin:0;font-size:15px;font-weight:700">🎯 Metas Totais</h3>
-      <div style="display:flex;align-items:center;gap:6px">
-        <select id="metaAnoTotal" onchange="renderMetasTotal()"
-          style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 8px;font-size:13px"></select>
-      </div>
-    </div>
-    <p style="opacity:.6;font-size:13px;margin:-4px 0 12px">Soma de entregas + viagens por mês</p>
-    <div id="resumoTotal" class="card" style="margin-bottom:14px"></div>
-    <div id="gaugesTotal" class="gauges-grid"></div>
-  </div>
+  <div id="custosVeiculoAtivo" style="margin-top:16px"></div>
 
 <div style="height:80px"></div>
 </section>
 
 <!-- DASHBOARD -->
-<section id="dashboard" class="page">
+<section id="dashboard" class="page active">
   <h2>📊 Dashboard do Dia</h2>
 
   <!-- Data e saudação -->
@@ -207,6 +193,18 @@
 
   <!-- KPIs All-time -->
   <div id="statsAllTime" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
+
+  <!-- Metas Totais (movido de Veículos) -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">🎯 Metas por mês</div>
+      <select id="metaAnoTotal" onchange="renderMetasTotal()"
+        style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:3px 8px;font-size:12px"></select>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px">Soma de entregas + viagens por mês</p>
+    <div id="resumoTotal" style="margin-bottom:12px"></div>
+    <div id="gaugesTotal" class="gauges-grid"></div>
+  </div>
 
   <!-- Recordes -->
   <div class="card" style="margin-bottom:12px">
@@ -429,10 +427,10 @@
     const btn = event.target.closest('button');
     if (btn) btn.classList.add('active');
 
-    if (id === 'veiculos')  { renderVeiculos(); carregarAnosTotalMeta(); renderMetasTotal(); }
+    if (id === 'veiculos')  { renderVeiculos(); }
     if (id === 'dashboard') { renderDashboard(); }
     if (id === 'backup')    { renderBackupStats(); }
-    if (id === 'stats')     { renderStats(); }
+    if (id === 'stats')     { carregarAnosTotalMeta(); renderMetasTotal(); renderStats(); }
   }
 
   // ======= AUX =======
@@ -1827,6 +1825,7 @@ function exportarBackup() {
       `;
       listaVeiculos.appendChild(card);
     });
+    renderCustosVeiculoAtivo();
   }
 
   function setAtivo(id) {
@@ -1836,6 +1835,45 @@ function exportarBackup() {
     save();
     renderVeiculos();
     showToast(`Veículo "${v.nome}" selecionado 🚗`, "success");
+  }
+
+  function renderCustosVeiculoAtivo() {
+    const el = document.getElementById('custosVeiculoAtivo');
+    if (!el) return;
+    const v = getAtivo();
+    if (!v || !v.custos) { el.innerHTML = ''; return; }
+
+    const c = v.custos;
+    const custoKmComb  = v.consumo > 0 && c.comb > 0 ? c.comb / v.consumo : 0;
+    const custoKmTotal = calcularCustoPorKm(v);
+    const totalMensal  = (c.comb||0) + (c.man||0) + (c.pneu||0) + (c.seg||0) + (c.out||0);
+
+    const item = (icon, label, valor, destaque) => `
+      <div style="background:var(--card2);border-radius:10px;padding:10px 12px;text-align:center">
+        <div style="font-size:18px;margin-bottom:3px">${icon}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${label}</div>
+        <div style="font-size:${destaque?'16px':'14px'};font-weight:800;color:${destaque?'var(--primary)':'var(--text)'};margin-top:3px">${valor}</div>
+      </div>`;
+
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0;font-size:14px;font-weight:700;color:var(--text)">💸 Custos mensais · ${v.nome}</h3>
+        <button onclick="abrirModalVeiculo(${v.id})" style="background:transparent;border:1px solid var(--border);color:var(--primary);font-size:12px;padding:4px 12px;border-radius:8px;width:auto">✏️ Editar</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        ${item('⛽','Combustível/mês', formatCurrency(c.comb||0), false)}
+        ${item('🔧','Manutenção',      formatCurrency(c.man||0),  false)}
+        ${item('🛞','Pneus',           formatCurrency(c.pneu||0), false)}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        ${item('🛡️','Seguro',          formatCurrency(c.seg||0),  false)}
+        ${item('📦','Outros',          formatCurrency(c.out||0),  false)}
+        ${item('📊','Total/mês',       formatCurrency(totalMensal), false)}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${item('⛽','Custo comb./km',  custoKmComb > 0 ? 'R$ '+custoKmComb.toFixed(3) : '—', false)}
+        ${item('🔧','Custo total/km',  custoKmTotal > 0 ? 'R$ '+custoKmTotal.toFixed(3) : '—', true)}
+      </div>`;
   }
 
   function abrirModalVeiculo(id) {
@@ -2110,9 +2148,9 @@ function exportarBackup() {
   }
 
   // ======= INIT =======
-  renderVeiculos();
+  renderDashboard();
+  // Veículos e metas carregam ao navegar para a aba
   carregarAnosTotalMeta();
-  renderMetasTotal();
 
   window.addEventListener("load", () => {
     const splash = document.getElementById("splash");

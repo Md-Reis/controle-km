@@ -30,50 +30,16 @@
 
 <body class="has-global-nav">
 <nav id="internal-nav">
-  <button onclick="showPage('veiculos')" id="navVeiculos"><span class="nav-icon">🚗</span><span class="nav-label">Veículos</span></button>
   <button onclick="showPage('dashboard')" id="navDashboard" class="active"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
+  <button onclick="showPage('veiculos')" id="navVeiculos"><span class="nav-icon">🚗</span><span class="nav-label">Veículos</span></button>
   <button onclick="showPage('stats')" id="navStats"><span class="nav-icon">🏆</span><span class="nav-label">Stats</span></button>
   <button onclick="showPage('backup')" id="navBackup"><span class="nav-icon">💾</span><span class="nav-label">Backup</span></button>
 </nav>
-
 
 <!-- Splash Screen -->
 <div id="splash" style="display:none">
   <img src="assets/logo.webp" alt="Sheyla Toyota">
 </div>
-
-
-
-<!-- VEÍCULOS -->
-<section id="veiculos" class="page">
-  <h2>🚗 Veículos</h2>
-
-  <!-- Busca global -->
-  <div style="position:relative;margin-bottom:12px">
-    <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🔍</span>
-    <input id="buscaGlobal" type="text" placeholder="Buscar cliente, agendamento, viagem…"
-      oninput="executarBuscaGlobal(this.value)"
-      style="width:100%;padding:11px 14px 11px 40px;border-radius:14px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:14px;box-sizing:border-box">
-  </div>
-  <div id="resultadosBusca" style="margin-bottom:12px;display:none"></div>
-
-  <button onclick="abrirModalVeiculo(null)" style="
-    width:100%; padding:16px 20px; border-radius:14px; margin-bottom:4px;
-    background:linear-gradient(135deg, var(--primary) 0%, #1a8a82 100%);
-    color:#fff; font-size:15px; font-weight:700; border:none;
-    box-shadow:0 4px 18px rgba(46,168,160,.3); cursor:pointer;
-    display:flex; align-items:center; justify-content:center; gap:10px;
-    transition:filter .15s, transform .1s;
-  " onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''"
-     ontouchstart="this.style.transform='scale(.97)'" ontouchend="this.style.transform=''">
-    <span style="font-size:24px;line-height:1">＋</span> Novo Veículo
-  </button>
-
-  <div id="listaVeiculos"></div>
-  <div id="custosVeiculoAtivo" style="margin-top:16px"></div>
-
-<div style="height:80px"></div>
-</section>
 
 <!-- DASHBOARD -->
 <section id="dashboard" class="page active">
@@ -183,6 +149,37 @@
     <strong>🕒 Últimas corridas</strong>
     <div id="dashUltimas" style="margin-top:10px;max-height:320px;overflow-y:auto"></div>
   </div>
+</section>
+
+<!-- VEÍCULOS -->
+<section id="veiculos" class="page">
+  <h2>🚗 Veículos</h2>
+
+  <!-- Busca global -->
+  <div style="position:relative;margin-bottom:12px">
+    <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🔍</span>
+    <input id="buscaGlobal" type="text" placeholder="Buscar cliente, agendamento, viagem…"
+      oninput="executarBuscaGlobal(this.value)"
+      style="width:100%;padding:11px 14px 11px 40px;border-radius:14px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:14px;box-sizing:border-box">
+  </div>
+  <div id="resultadosBusca" style="margin-bottom:12px;display:none"></div>
+
+  <button onclick="abrirModalVeiculo(null)" style="
+    width:100%; padding:16px 20px; border-radius:14px; margin-bottom:4px;
+    background:linear-gradient(135deg, var(--primary) 0%, #1a8a82 100%);
+    color:#fff; font-size:15px; font-weight:700; border:none;
+    box-shadow:0 4px 18px rgba(46,168,160,.3); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:filter .15s, transform .1s;
+  " onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''"
+     ontouchstart="this.style.transform='scale(.97)'" ontouchend="this.style.transform=''">
+    <span style="font-size:24px;line-height:1">＋</span> Novo Veículo
+  </button>
+
+  <div id="listaVeiculos"></div>
+  <div id="custosVeiculoAtivo" style="margin-top:16px"></div>
+
+<div style="height:80px"></div>
 </section>
 
 <!-- BACKUP -->

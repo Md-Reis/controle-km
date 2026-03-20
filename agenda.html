@@ -75,7 +75,7 @@
   margin-bottom: 8px;
   background: var(--card);
 }
-.ag-swipe-wrap.dir { background: #22c55e; }
+.ag-swipe-wrap.dir { background: var(--primary); }
 .ag-swipe-wrap.esq { background: var(--danger); }
 .ag-swipe-label {
   position: absolute;
@@ -530,7 +530,7 @@
     <input type="text" id="novoCliNome" placeholder="Ex: Maria Fernanda">
 
     <label>Telefone (opcional)</label>
-    <input type="tel" id="novoCliTel" placeholder="(18) 99999-9999">
+    <input type="tel" id="novoCliTel" placeholder="(18) 99999-9999" inputmode="numeric" maxlength="15" oninput="mascaraTelefoneAg(this)">
 
     <label>Passageiro principal (opcional)</label>
     <input type="text" id="novoCliPass" placeholder="Se diferente do cliente">
@@ -550,6 +550,21 @@
     <div class="modal-actions">
       <button onclick="document.getElementById('modalDelAg').classList.add('hidden')">Cancelar</button>
       <button class="danger" onclick="confirmarDelAg()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Confirmar cancelamento ═══ -->
+<div id="modalCancelarAg" class="modal hidden">
+  <div class="modal-box" style="max-width:340px">
+    <h3>✖ Cancelar agendamento?</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:12px">
+      O agendamento será marcado como <strong style="color:var(--danger)">Cancelado</strong> e não poderá mais ser convertido em viagem.
+    </p>
+    <div id="cancelarAgResumo" style="background:var(--card2);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;line-height:1.6"></div>
+    <div class="modal-actions">
+      <button onclick="fecharCancelarAg()">Voltar</button>
+      <button class="danger" onclick="confirmarCancelarAg()">✖ Confirmar cancelamento</button>
     </div>
   </div>
 </div>
@@ -1049,7 +1064,7 @@ function renderLista() {
 
         const lblDir = document.createElement('div');
         lblDir.className = 'ag-swipe-label ag-swipe-label-right';
-        lblDir.textContent = '✅ Concluir';
+        lblDir.textContent = '🚕 Converter';
 
         const lblEsq = document.createElement('div');
         lblEsq.className = 'ag-swipe-label ag-swipe-label-left';
@@ -1079,6 +1094,16 @@ function render() {
 }
 
 // ════════ MODAL NOVO/EDITAR ════════
+function mascaraTelefoneAg(input) {
+  let v = input.value.replace(/\D/g, '');
+  if (v.length <= 10) {
+    v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  } else {
+    v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+  }
+  input.value = v;
+}
+
 function abrirCadastroRapidoCli() {
   document.getElementById('novoCliNome').value = '';
   document.getElementById('novoCliTel').value  = '';
@@ -1290,6 +1315,37 @@ function mudarStatus(id, novoStatus) {
   showToast(labels[novoStatus]||'Atualizado','success');
 }
 
+let cancelandoId = null;
+function abrirConfirmarCancelar(id) {
+  const ag  = agData.agendamentos.find(a=>a.id===id);
+  if (!ag) return;
+  cancelandoId = id;
+  const cli  = vData.clientes.find(c=>c.id===ag.clienteId);
+  const nome = cli?.nome || '—';
+  const pass = ag.passageiro && ag.passageiro !== nome ? ` · 👤 ${ag.passageiro}` : '';
+  const hora = ag.hora ? ` às ${ag.hora}` : '';
+  const val  = ag.valor ? ` · ${fmt(ag.valor)}` : '';
+  document.getElementById('cancelarAgResumo').innerHTML =
+    `<strong>${nome}${pass}</strong><br><span style="font-size:12px;color:var(--muted)">${ag.data.split('-').reverse().join('/')}${hora}${val}</span>`;
+  document.getElementById('modalCancelarAg').classList.remove('hidden');
+}
+function confirmarCancelarAg() {
+  if (!cancelandoId) return;
+  const ag = agData.agendamentos.find(a=>a.id===cancelandoId);
+  if (!ag) return;
+  ag.status = 'cancelado';
+  saveAg();
+  atualizarBadgeAgenda();
+  cancelandoId = null;
+  document.getElementById('modalCancelarAg').classList.add('hidden');
+  showToast('Agendamento cancelado ✖', 'info');
+  render();
+}
+function fecharCancelarAg() {
+  cancelandoId = null;
+  document.getElementById('modalCancelarAg').classList.add('hidden');
+}
+
 // ════════ SWIPE NOS CARDS ════════
 function adicionarSwipe(card, agId) {
   const LIMIAR   = 90;
@@ -1342,11 +1398,13 @@ function adicionarSwipe(card, agId) {
     card.style.transition = '';
 
     if (dx >= LIMIAR) {
-      card.style.transform = 'translateX(110%)';
-      setTimeout(() => mudarStatus(agId, 'concluido'), 220);
+      // Swipe direita → abre modal Converter em Viagem (igual ao botão 🚕 Converter)
+      card.style.transform = '';
+      abrirConverter(agId);
     } else if (dx <= -LIMIAR) {
-      card.style.transform = 'translateX(-110%)';
-      setTimeout(() => mudarStatus(agId, 'cancelado'), 220);
+      // Swipe esquerda → abre modal de confirmação de cancelamento
+      card.style.transform = '';
+      abrirConfirmarCancelar(agId);
     } else {
       card.style.transform = '';
     }

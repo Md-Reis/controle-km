@@ -447,11 +447,18 @@
   
 
   // ======= DASHBOARD =======
-  let dashMesOffset = 0; // 0 = mês atual, -1 = mês anterior, etc.
+  let dashMesOffset  = 0; // 0 = mês atual, -1 = mês anterior, etc.
+  let dashSemOffset  = 0; // 0 = semana atual, -1 = semana passada, etc.
 
   function dashNavMes(delta) {
     dashMesOffset += delta;
     renderDashboard();
+  }
+
+  function dashNavSem(delta) {
+    dashSemOffset += delta;
+    const todos = getAllLancamentos();
+    renderDashSemana(todos);
   }
 
   function getAllLancamentos() {
@@ -766,21 +773,19 @@
     const todos = getAllLancamentos();
     const hoje  = new Date();
     const dow   = hoje.getDay();
-    const ini   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - dow);
-    const fim   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + (6 - dow), 23, 59, 59);
+    // Início da semana base (domingo desta semana)
+    const iniBase = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - dow);
+    // Aplica offset
+    const ini = new Date(iniBase.getFullYear(), iniBase.getMonth(), iniBase.getDate() + dashSemOffset * 7);
+    const fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 6, 23, 59, 59);
 
-    // parseDataLocal: aceita "YYYY-MM-DD" e "YYYY-MM-DDTHH:MM:SS.sssZ"
-    function parseDataLocal(str) {
-      if (!str) return new Date(NaN);
-      const parte = str.slice(0, 10); // garante só "YYYY-MM-DD"
-      const [y, m, d] = parte.split('-').map(Number);
-      return new Date(y, m - 1, d, 12, 0, 0);
-    }
+    const iniStr = toLocalDateStr(ini);
+    const fimStr = toLocalDateStr(fim);
 
     const daSemana = todos.filter(l => {
       if (!l.data) return false;
-      const d = parseDataLocal(l.data);
-      return d >= ini && d <= fim;
+      const ds = l.data.slice(0, 10);
+      return ds >= iniStr && ds <= fimStr;
     }).sort((a,b) => (a.data||'').localeCompare(b.data||'') || (a.hora||'').localeCompare(b.hora||''));
 
     if (daSemana.length === 0) {
@@ -816,7 +821,9 @@
     linhas.push('');
 
     Object.entries(porDia).forEach(([data, lancamentos]) => {
-      const d    = parseDataLocal(data);
+      const ds = data.slice(0,10);
+      const [dy, dm, dd] = ds.split('-').map(Number);
+      const d    = new Date(dy, dm - 1, dd, 12, 0, 0);
       const dia  = DIAS_PT[d.getDay()] + ', ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
       linhas.push('*' + dia + '*');
 
@@ -1134,15 +1141,23 @@
   }
 
   function renderDashSemana(todos) {
-    const hoje     = new Date();
-    const diaSem   = hoje.getDay();
-    const ini = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - diaSem);
-    const fim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + (6 - diaSem), 23, 59, 59);
+    // Calcula a semana com base no offset (0 = atual, -1 = passada, etc.)
+    const hoje    = new Date();
+    const diaSem  = hoje.getDay();
+    // Início da semana atual (domingo)
+    const iniBase = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - diaSem);
+    // Desloca pelo offset em semanas
+    const ini = new Date(iniBase.getFullYear(), iniBase.getMonth(), iniBase.getDate() + dashSemOffset * 7);
+    const fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 6, 23, 59, 59);
+
+    // Filtra usando string local (YYYY-MM-DD) para evitar problemas de fuso
+    const iniStr = toLocalDateStr(ini);
+    const fimStr = toLocalDateStr(fim);
 
     const daSemana = todos.filter(l => {
       if (!l.data) return false;
-      const d = new Date(l.data);
-      return d >= ini && d <= fim;
+      const ds = l.data.slice(0, 10);
+      return ds >= iniStr && ds <= fimStr;
     });
 
     const fatSem      = daSemana.reduce((s,l) => s+(l.valor||0), 0);
@@ -1156,13 +1171,20 @@
     const diaIni   = ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
     const diaFim   = fim.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
     const corLucro = lucroSem >= 0 ? 'var(--accent)' : 'var(--danger)';
+    const ehSemAtual = dashSemOffset === 0;
+    const tituloSem  = ehSemAtual ? '📆 Esta semana' : `📆 Semana ${diaIni}–${diaFim}`;
 
     el.innerHTML = `
       <div class="card" style="padding:14px 16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <strong style="font-size:14px">📆 Esta semana</strong>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <button onclick="dashNavSem(-1)" style="width:26px;height:26px;padding:0;font-size:14px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);cursor:pointer">&#8249;</button>
+            <strong style="font-size:13px">${tituloSem}</strong>
+            <button onclick="dashNavSem(1)" ${ehSemAtual ? 'disabled style="width:26px;height:26px;padding:0;font-size:14px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--muted);cursor:not-allowed;opacity:.4"' : 'style="width:26px;height:26px;padding:0;font-size:14px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);cursor:pointer"'}>&#8250;</button>
+          </div>
           <button onclick="copiarResumoSemana()" style="font-size:11px;padding:4px 11px;background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:16px;font-weight:600">📋 Copiar</button>
         </div>
+        ${!ehSemAtual ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:center">${diaIni} a ${diaFim}</div>` : ''}
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;text-align:center">
           <div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Faturado</div>
@@ -1181,6 +1203,7 @@
             <div style="font-size:15px;font-weight:800;color:var(--text)">${corridasSem}</div>
           </div>
         </div>
+        ${corridasSem === 0 && !ehSemAtual ? '<div style="text-align:center;font-size:12px;color:var(--muted);margin-top:10px">Nenhuma corrida nesta semana</div>' : ''}
       </div>`;
   }
 
@@ -1843,7 +1866,26 @@ function exportarBackup() {
     const c = v.custos;
     const custoKmComb  = v.consumo > 0 && c.comb > 0 ? c.comb / v.consumo : 0;
     const custoKmTotal = calcularCustoPorKm(v);
-    const totalMensal  = (c.comb||0) + (c.man||0) + (c.pneu||0) + (c.seg||0) + (c.out||0);
+
+    // ── Combustível real do mês atual (soma dos abastecimentos) ──────
+    // Usa toLocalDateStr para evitar problemas de fuso (igual shared.js)
+    const agora = new Date();
+    const mesAtualStr  = toLocalDateStr(agora).slice(0, 7); // "YYYY-MM"
+    const abastApp = JSON.parse(localStorage.getItem('abastecimentoApp')) || {};
+    const combMesReal = (abastApp.registros || [])
+      .filter(r => {
+        if (v.id && r.veiculoId !== v.id) return false; // filtra pelo veículo ativo
+        if (!r.data) return false;
+        return r.data.slice(0, 7) === mesAtualStr;       // compara "YYYY-MM" local
+      })
+      .reduce((s, r) => s + (r.valor || 0), 0);
+
+    // Total mensal = custos fixos (man, pneu, seg, out) + combustível real do mês
+    const fixosMensais = (c.man||0) + (c.pneu||0) + (c.seg||0) + (c.out||0);
+    const totalMensal  = fixosMensais + combMesReal;
+
+    const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const labelCombMes = `⛽ Comb. ${MESES[agora.getMonth()]}`;
 
     const item = (icon, label, valor, destaque) => `
       <div style="background:var(--card2);border-radius:10px;padding:10px 12px;text-align:center">
@@ -1858,7 +1900,7 @@ function exportarBackup() {
         <button onclick="abrirModalVeiculo(${v.id})" style="background:transparent;border:1px solid var(--border);color:var(--primary);font-size:12px;padding:4px 12px;border-radius:8px;width:auto">✏️ Editar</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        ${item('⛽','Combustível/mês', formatCurrency(c.comb||0), false)}
+        ${item('⛽', labelCombMes, formatCurrency(combMesReal), false)}
         ${item('🔧','Manutenção',      formatCurrency(c.man||0),  false)}
         ${item('🛞','Pneus',           formatCurrency(c.pneu||0), false)}
       </div>
@@ -1870,7 +1912,8 @@ function exportarBackup() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${item('⛽','Custo comb./km',  custoKmComb > 0 ? 'R$ '+custoKmComb.toFixed(3) : '—', false)}
         ${item('🔧','Custo total/km',  custoKmTotal > 0 ? 'R$ '+custoKmTotal.toFixed(3) : '—', true)}
-      </div>`;
+      </div>
+      ${combMesReal === 0 ? `<div style="margin-top:8px;font-size:11px;color:var(--muted);text-align:center">Nenhum abastecimento registrado em ${MESES[agora.getMonth()]}. O custo/km usa o valor configurado no veículo.</div>` : ''}`;
   }
 
   function abrirModalVeiculo(id) {

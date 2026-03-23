@@ -808,11 +808,14 @@
 
     const DIAS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-    // Agrupar por dia
+    // Agrupar por dia — usa sempre os 10 primeiros caracteres (YYYY-MM-DD)
+    // para evitar que datas com e sem horário (ex: "2025-03-16" vs "2025-03-16T10:30")
+    // gerem chaves diferentes e quebrem o agrupamento
     const porDia = {};
     daSemana.forEach(l => {
-      if (!porDia[l.data]) porDia[l.data] = [];
-      porDia[l.data].push(l);
+      const chave = (l.data || '').slice(0, 10);
+      if (!porDia[chave]) porDia[chave] = [];
+      porDia[chave].push(l);
     });
 
     let linhas = [];

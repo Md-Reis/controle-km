@@ -479,7 +479,8 @@ function initBanner(){
 function popularClientes(){
   const s=document.getElementById('selectCliente');
   s.innerHTML='<option value="">— Selecione um cliente —</option>';
-  (vData.clientes||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;s.appendChild(o);});
+  [...(vData.clientes||[])].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'}))
+  .forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;s.appendChild(o);});
 }
 function setTipo(t){
   tipoViagem=t;

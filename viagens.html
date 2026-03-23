@@ -709,7 +709,8 @@ function initLancamento() {
 
   const sel = document.getElementById("vgCliente");
   sel.innerHTML = '<option value="">— Selecione um cliente —</option>';
-  vData.clientes.forEach(c=>{
+  [...(vData.clientes||[])].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'}))
+  .forEach(c=>{
     const opt = document.createElement("option");
     opt.value=c.id; opt.textContent=c.nome;
     sel.appendChild(opt);
@@ -887,7 +888,8 @@ function popularFiltroCliente() {
   const sel = document.getElementById("filtroCliente");
   const val = sel.value;
   sel.innerHTML = '<option value="">Todos os clientes</option>';
-  vData.clientes.forEach(c=>{
+  [...(vData.clientes||[])].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'}))
+  .forEach(c=>{
     const opt=document.createElement("option");
     opt.value=c.id; opt.textContent=c.nome;
     sel.appendChild(opt);

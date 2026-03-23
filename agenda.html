@@ -1153,7 +1153,9 @@ function popularClientes() {
   const sel = document.getElementById('agCliente');
   const val = sel.value;
   sel.innerHTML = '<option value="">— Selecione um cliente —</option>';
-  vData.clientes.forEach(c => {
+  const sorted = [...(vData.clientes||[])].sort((a,b) =>
+    (a.nome||'').localeCompare(b.nome||'', 'pt-BR', {sensitivity:'base'}));
+  sorted.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id; opt.textContent = c.nome;
     sel.appendChild(opt);

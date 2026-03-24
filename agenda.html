@@ -1625,23 +1625,28 @@ function confirmarConverter() {
   const cKm = calcCustoKm(v);
   const custoTotal = km*cKm;
   const lucro = valor-custoTotal;
-  const agora = new Date();
+
+  // Data e hora da viagem = data/hora do AGENDAMENTO (não de quando se converteu)
+  const dataViagem = ag.data; // já é "YYYY-MM-DD"
+  const horaViagem = ag.hora || '';
+  // Ano/mês para faturamento: extraídos da data do agendamento (sem UTC)
+  const [anoAg, mesAg] = dataViagem.split('-').map(Number);
 
   // Salva em viagensApp
   const viagem = {
     id: Date.now(), clienteId:ag.clienteId, veiculoId:v.id,
     passageiroNome: ag.passageiro||'',
-    data: toLocalDateStr(agora),
+    data: dataViagem,
+    hora: horaViagem,
     km, valor, custoTotal, lucro, tipo:'viagem',
-    rota: ag.rota || null  // rota salva para histórico do cliente
+    rota: ag.rota || null
   };
   vData.viagens.push(viagem);
-  // Faturamento viagem
-  const ano = agora.getFullYear(), mes = agora.getMonth();
+  // Faturamento usa ano/mês do agendamento
   if (!vData.financeiro) vData.financeiro={anos:{}};
-  if (!vData.financeiro.anos[ano]) vData.financeiro.anos[ano]={metas:{},faturamento:{}};
-  vData.financeiro.anos[ano].faturamento[mes] =
-    (vData.financeiro.anos[ano].faturamento[mes]||0) + valor;
+  if (!vData.financeiro.anos[anoAg]) vData.financeiro.anos[anoAg]={metas:{},faturamento:{}};
+  vData.financeiro.anos[anoAg].faturamento[mesAg-1] =
+    (vData.financeiro.anos[anoAg].faturamento[mesAg-1]||0) + valor;
   saveVD();
 
   // Nota: viagens são lidas pelo dashboard via getAllLancamentos() — não duplicamos em kmApp

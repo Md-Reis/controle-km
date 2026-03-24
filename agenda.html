@@ -1611,7 +1611,6 @@ function confirmarConverter() {
   const v = kmApp.veiculos.find(v=>v.id===kmApp.ativo);
   if (!v) { showToast('Nenhum veículo ativo','error'); return; }
 
-  // Se há rota com km, usa. Senão, usa km inicial/final.
   const rotaAg = ag?.rota;
   let km;
   if (rotaAg && rotaAg.km) {
@@ -1622,43 +1621,44 @@ function confirmarConverter() {
     showToast('Informe o KM inicial/final ou certifique que a rota tem distância','info');
     return;
   }
-  const cKm = calcCustoKm(v);
-  const custoTotal = km*cKm;
-  const lucro = valor-custoTotal;
 
-  // Data e hora da viagem = data/hora do AGENDAMENTO (não de quando se converteu)
-  const dataViagem = ag.data; // já é "YYYY-MM-DD"
-  const horaViagem = ag.hora || '';
-  // Ano/mês para faturamento: extraídos da data do agendamento (sem UTC)
-  const [anoAg, mesAg] = dataViagem.split('-').map(Number);
+  const cKm        = calcCustoKm(v);
+  const custoTotal = km * cKm;
+  const lucro      = valor - custoTotal;
+
+  // Data e hora da viagem = sempre os do AGENDAMENTO (não do momento da conversão)
+  const dataViagem = ag.data;          // "YYYY-MM-DD" — data real da corrida
+  const horaViagem = ag.hora || '';    // hora agendada
+
+  // Ano e mês para faturamento — lidos da data do agendamento sem UTC
+  const [anoAg, mesAg] = dataViagem.split('-').map(Number); // mesAg é 1–12
 
   // Salva em viagensApp
   const viagem = {
-    id: Date.now(), clienteId:ag.clienteId, veiculoId:v.id,
-    passageiroNome: ag.passageiro||'',
+    id: Date.now(), clienteId: ag.clienteId, veiculoId: v.id,
+    passageiroNome: ag.passageiro || '',
     data: dataViagem,
     hora: horaViagem,
-    km, valor, custoTotal, lucro, tipo:'viagem',
+    km, valor, custoTotal, lucro, tipo: 'viagem',
     rota: ag.rota || null
   };
   vData.viagens.push(viagem);
-  // Faturamento usa ano/mês do agendamento
-  if (!vData.financeiro) vData.financeiro={anos:{}};
-  if (!vData.financeiro.anos[anoAg]) vData.financeiro.anos[anoAg]={metas:{},faturamento:{}};
-  vData.financeiro.anos[anoAg].faturamento[mesAg-1] =
-    (vData.financeiro.anos[anoAg].faturamento[mesAg-1]||0) + valor;
+
+  // Faturamento: usa o mês do agendamento (mesAg-1 porque o objeto usa índice 0–11)
+  if (!vData.financeiro) vData.financeiro = {anos:{}};
+  if (!vData.financeiro.anos[anoAg]) vData.financeiro.anos[anoAg] = {metas:{}, faturamento:{}};
+  vData.financeiro.anos[anoAg].faturamento[mesAg - 1] =
+    (vData.financeiro.anos[anoAg].faturamento[mesAg - 1] || 0) + valor;
   saveVD();
 
-  // Nota: viagens são lidas pelo dashboard via getAllLancamentos() — não duplicamos em kmApp
-  saveKm();   // salva kmApp (veículos/config), sem adicionar lançamento duplicado
+  saveKm();
 
-  // Marca agendamento como concluído
   ag.status = 'concluido';
   saveAg();
   atualizarBadgeAgenda();
 
   document.getElementById('modalConverter').classList.add('hidden');
-  showToast(`Viagem salva! Lucro: ${fmt(lucro)} 🎉`,'success');
+  showToast(`Viagem salva! Lucro: ${fmt(lucro)} 🎉`, 'success');
   render();
 }
 

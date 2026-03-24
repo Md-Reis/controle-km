@@ -469,7 +469,7 @@
     const vAppData = JSON.parse(localStorage.getItem('viagensApp'))|| {};
     const entregas = (kmData.lancamentos || []).filter(l => l.tipo === 'entrega');
     const viagens  = (vAppData.viagens   || []).map(v => ({
-      id: v.id, veiculoId: v.veiculoId, data: v.data,
+      id: v.id, veiculoId: v.veiculoId, data: v.data, hora: v.hora||'',
       km: v.km, valor: v.valor, custoTotal: v.custoTotal, lucro: v.lucro, tipo: 'viagem'
     }));
     return [...entregas, ...viagens];
@@ -494,7 +494,9 @@
 
     todos.forEach(l => {
       if (!l.data) return;
-      const d = new Date(l.data);
+      const s = (l.data||'').slice(0,10);
+      const [py,pm,pd] = s.split('-').map(Number);
+      const d = new Date(py, pm-1, pd, 12, 0, 0);
       if (d.getFullYear()===anoAtual && d.getMonth()===mesAtual) {
         const dia = d.getDate() - 1;
         if (l.tipo === 'viagem')  viagensMes[dia]  += l.valor||0;
@@ -668,9 +670,15 @@
     document.getElementById('dashCorridasHoje').textContent = corridasHoje;
 
     // Faturamento do mês selecionado
+    // parseDataLocal: lê apenas YYYY-MM-DD, ignora hora/fuso
+    function parseDataLocal(str) {
+      const s = (str||'').slice(0,10);
+      const [y,m,d] = s.split('-').map(Number);
+      return new Date(y, m-1, d, 12, 0, 0);
+    }
     const doMes = todos.filter(l => {
       if (!l.data) return false;
-      const d = new Date(l.data);
+      const d = parseDataLocal(l.data);
       return d.getFullYear() === ano && d.getMonth() === mes;
     });
     const fatMes = doMes.reduce((s,l) => s + (l.valor||0), 0);
@@ -714,7 +722,11 @@
 
     // Últimas corridas - TODAS ordenadas, mas exibe todas (scroll)
     const ul = document.getElementById('dashUltimas');
-    const todasOrdenadas = [...todos].sort((a,b) => new Date(b.data) - new Date(a.data));
+    const todasOrdenadas = [...todos].sort((a,b) => {
+      const ka = (a.data||'').slice(0,10) + (a.hora||'');
+      const kb = (b.data||'').slice(0,10) + (b.hora||'');
+      return kb.localeCompare(ka);
+    });
     if (todasOrdenadas.length === 0) {
       ul.innerHTML = '<small style="color:var(--muted)">Nenhuma corrida registrada ainda.</small>';
       return;
@@ -727,9 +739,10 @@
     (vAppUl.clientes||[]).forEach(c => cliMap[c.id] = c);
 
     ul.innerHTML = todasOrdenadas.map(l => {
-      const d    = new Date(l.data);
-      const dia  = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-      const hora = d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+      const dataStr = (l.data||'').slice(0,10);
+      const [dy, dm, dd] = dataStr.split('-').map(Number);
+      const dia  = String(dd).padStart(2,'0') + '/' + String(dm).padStart(2,'0');
+      const hora = l.hora ? l.hora : '';
       const icon = l.tipo === 'entrega' ? '📦' : '🚕';
       const cor  = l.lucro >= 0 ? 'var(--accent)' : 'var(--danger)';
       const link = l.tipo === 'entrega' ? 'entregas.html' : 'viagens.html';
@@ -748,7 +761,7 @@
           <div style="width:36px;height:36px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${icon}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:600">${formatCurrency(l.valor)}</div>
-            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dia} às ${hora} · ${(l.km||0).toFixed(0)} km${nomeExtra ? ' · ' + nomeExtra : ''}</div>
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dia}${hora ? ' às '+hora : ''} · ${(l.km||0).toFixed(0)} km${nomeExtra ? ' · ' + nomeExtra : ''}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
             <div style="font-size:12px;font-weight:700;color:${cor}">${formatCurrency(l.lucro)}</div>
@@ -885,7 +898,7 @@
 
     const regs = (abastApp.registros || [])
       .filter(r => !veiculoAtivo || r.veiculoId === veiculoAtivo.id)
-      .sort((a,b) => new Date(b.data) - new Date(a.data));
+      .sort((a,b) => (b.data||'').slice(0,10).localeCompare((a.data||'').slice(0,10)));
 
     if (regs.length === 0) { el.innerHTML = ''; return; }
 
@@ -1239,16 +1252,26 @@
       localStorage.setItem('kmApp', JSON.stringify(kmClean));
     }
 
-    // ── viagensApp: migração v1.3 → v1.4 ─────────────────────────────
-    // Remove kmInicial/kmFinal (legados), usa rota.km se disponível
-    // passageiroNome é preservado intacto — identifica quem viajou
+    // ── viagensApp: migração v1.3 → v1.4 + normalização de datas ────
     if (payload.viagensApp) {
       const vClean = JSON.parse(JSON.stringify(payload.viagensApp));
+      const agsRef = payload.agendaApp ? (payload.agendaApp.agendamentos || []) : [];
       if (Array.isArray(vClean.viagens)) {
         vClean.viagens = vClean.viagens.map(v => {
           if (v.rota && v.rota.km) v.km = v.rota.km;
           delete v.kmInicial;
           delete v.kmFinal;
+          // Normalizar data ISO → YYYY-MM-DD local
+          if (v.data) v.data = v.data.slice(0, 10);
+          // Se não tem hora, buscar do agendamento correspondente
+          if (!v.hora) {
+            const agRef = agsRef.find(a =>
+              a.clienteId === v.clienteId &&
+              (a.data || '').slice(0, 10) === v.data &&
+              a.status === 'concluido'
+            );
+            if (agRef && agRef.hora) v.hora = agRef.hora;
+          }
           return v;
         });
       }
@@ -1267,7 +1290,17 @@
       localStorage.setItem('agendaApp', JSON.stringify(aClean));
     }
 
-    if (payload.abastecimentoApp) localStorage.setItem('abastecimentoApp', JSON.stringify(payload.abastecimentoApp));
+    // ── abastecimentoApp: normalizar datas ISO → YYYY-MM-DD ─────────
+    if (payload.abastecimentoApp) {
+      const abClean = JSON.parse(JSON.stringify(payload.abastecimentoApp));
+      if (Array.isArray(abClean.registros)) {
+        abClean.registros = abClean.registros.map(r => {
+          if (r.data) r.data = r.data.slice(0, 10);
+          return r;
+        });
+      }
+      localStorage.setItem('abastecimentoApp', JSON.stringify(abClean));
+    }
     if (Array.isArray(payload.rotasSalvas)) localStorage.setItem('rotasSalvas', JSON.stringify(payload.rotasSalvas));
     if (payload.kmTheme) localStorage.setItem('kmTheme', payload.kmTheme);
 
@@ -1434,18 +1467,39 @@ function exportarBackup() {
     }
 
     // ── viagensApp: normalizar estrutura v1.4 ────────────────────────
-    // • Remove kmInicial / kmFinal (campos de hodômetro, substituídos por rota.km)
+    // • Remove kmInicial / kmFinal
     // • Usa rota.km como km principal se disponível
-    // • passageiroNome é mantido intacto — identifica quem viajou dentro do grupo do cliente
-    // • agendamentos usam campo "passageiro" (diferente) — não alterar
+    // • Normaliza data ISO → YYYY-MM-DD (sem hora/fuso)
+    // • Adiciona hora do agendamento correspondente se ausente
+    const agendamentosRef = (agendaApp.agendamentos || []);
     const viagensClean = JSON.parse(JSON.stringify(viagensApp));
     if (Array.isArray(viagensClean.viagens)) {
       viagensClean.viagens = viagensClean.viagens.map(v => {
         const norm = Object.assign({}, v);
+        // Normalizar data: sempre YYYY-MM-DD local
+        if (norm.data) norm.data = norm.data.slice(0, 10);
         if (norm.rota && norm.rota.km) norm.km = norm.rota.km;
         delete norm.kmInicial;
         delete norm.kmFinal;
+        // Se não tem hora, tentar buscar do agendamento correspondente
+        if (!norm.hora) {
+          const agRef = agendamentosRef.find(a =>
+            a.clienteId === norm.clienteId &&
+            (a.data || '').slice(0, 10) === norm.data &&
+            a.status === 'concluido'
+          );
+          if (agRef && agRef.hora) norm.hora = agRef.hora;
+        }
         return norm;
+      });
+    }
+
+    // ── abastecimentoApp: normalizar datas ISO → YYYY-MM-DD ──────────
+    const abastClean = JSON.parse(JSON.stringify(abastecimentoApp));
+    if (Array.isArray(abastClean.registros)) {
+      abastClean.registros = abastClean.registros.map(r => {
+        if (r.data) r.data = r.data.slice(0, 10);
+        return r;
       });
     }
 
@@ -1463,7 +1517,7 @@ function exportarBackup() {
       exportadoEm: new Date().toISOString(),
       kmApp:       kmAppClean,
       viagensApp:  viagensClean,
-      abastecimentoApp,
+      abastecimentoApp: abastClean,
       agendaApp:   agendaClean,
       rotasSalvas,
       kmTheme: tema

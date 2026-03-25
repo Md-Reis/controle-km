@@ -655,9 +655,9 @@ function renderGradeSemanal() {
 
   // Horários 06:00 a 20:30 em intervalos de 30 min
   const slots = [];
-  for (let h=6; h<=20; h++) {
+  for (let h=0; h<=23; h++) {
     slots.push({ h, m: 0,  str: String(h).padStart(2,'0')+':00' });
-    if (h < 20) slots.push({ h, m: 30, str: String(h).padStart(2,'0')+':30' });
+    if (h < 23) slots.push({ h, m: 30, str: String(h).padStart(2,'0')+':30' });
   }
 
   // Montar agendamentos indexados por slot de 30min (arredonda para baixo)

@@ -605,6 +605,12 @@ function showDetalheTab(tabId) {
   if (tabId==="histClienteTab"){ document.getElementById("tabHistCliente").classList.add("active"); renderHistCliente(); }
 }
 
+// Helper: parse "YYYY-MM-DD" sem problema de UTC
+function parseDL(str) {
+  const s = (str||'').slice(0,10);
+  const [y,m,d] = s.split('-').map(Number);
+  return isNaN(y) ? new Date(NaN) : new Date(y, m-1, d, 12, 0, 0);
+}
 function renderHistCliente() {
   const lista = document.getElementById("listaHistCliente");
   if (!clienteEditandoId) { lista.innerHTML="<small>Selecione um cliente.</small>"; return; }
@@ -626,7 +632,7 @@ function renderHistCliente() {
   const mesAtual = hoje.getMonth();
   const anoAtual = hoje.getFullYear();
   const viagensMes = viagens.filter(v => {
-    const d = new Date(v.data);
+    const d = parseDL(v.data);
     return d.getMonth()===mesAtual && d.getFullYear()===anoAtual;
   });
   const fatMes   = viagensMes.reduce((s,v)=>s+(v.valor||0),0);
@@ -685,7 +691,7 @@ function renderHistCliente() {
     item.className = "hist-item";
     item.innerHTML = `
       <div class="hist-item-header">
-        <span>📅 ${new Date(v.data).toLocaleDateString("pt-BR")}</span>
+        <span>📅 ${parseDL(v.data).toLocaleDateString("pt-BR")}</span>
         <span style="color:${v.lucro>=0?'var(--accent)':'var(--danger)'};font-weight:bold">${formatCurrency(v.valor)}</span>
       </div>
       <div style="font-size:13px;color:var(--muted);margin-top:2px">
@@ -901,7 +907,7 @@ function popularAnosFiltroViagem() {
   const sel = document.getElementById('filtroAnoViagem');
   if (!sel) return;
   const anoAtual = new Date().getFullYear();
-  const anos = new Set(vData.viagens.map(v => new Date(v.data).getFullYear()));
+  const anos = new Set(vData.viagens.map(v => parseDL(v.data).getFullYear()));
   anos.add(anoAtual);
   sel.innerHTML = [...anos].sort((a,b)=>b-a).map(a =>
     `<option value="${a}" ${a===anoAtual?'selected':''}>${a}</option>`
@@ -934,7 +940,7 @@ function renderHistoricoViagens() {
   const viagens = vData.viagens
     .filter(v => {
       if (filtroId && v.clienteId !== filtroId) return false;
-      const d = new Date(v.data);
+      const d = parseDL(v.data);
       if (d.getFullYear() !== anoFiltro) return false;
       if (mesFiltro > 0 && d.getMonth() + 1 !== mesFiltro) return false;
       return true;
@@ -979,7 +985,7 @@ function renderHistoricoViagens() {
     const item=document.createElement('div');
     item.className='card';
     const cor = v.lucro>=0?'var(--primary)':'var(--danger)';
-    const d = new Date(v.data);
+    const d = parseDL(v.data);
     const dataStr = d.toLocaleDateString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit', year:'2-digit'});
     // Montar bloco de rota se existir
     const rotaHtml = (() => {
@@ -1070,7 +1076,7 @@ function recalcularFinanceiroViagem() {
     vData.financeiro.anos[ano].faturamento=new Array(12).fill(0);
   });
   vData.viagens.forEach(v=>{
-    const d=new Date(v.data);
+    const d=parseDL(v.data);
     const a=getAnoFinanceiroViagem(d.getFullYear());
     a.faturamento[d.getMonth()]+=Number(v.valor)||0;
   });
@@ -1269,7 +1275,7 @@ function abrirEditarViagem(id) {
   viagemEditandoId = id;
 
   // Data
-  const dataLocal = new Date(v.data).toLocaleDateString('pt-BR').split('/').reverse().join('-');
+  const dataLocal = parseDL(v.data).toLocaleDateString('pt-BR').split('/').reverse().join('-');
   document.getElementById('editVData').value  = dataLocal;
   document.getElementById('editVValor').value = v.valor;
   document.getElementById('editVKm').value    = v.km || '';
@@ -1363,7 +1369,7 @@ function renderGraficoViagens() {
   const lucro = new Array(12).fill(0);
 
   vData.viagens.forEach(v => {
-    const d = new Date(v.data);
+    const d = parseDL(v.data);
     if (d.getFullYear() !== anoFiltro) return;
     const m = d.getMonth();
     fat[m]   += v.valor||0;

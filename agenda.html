@@ -732,7 +732,7 @@ function renderGradeSemanal() {
           const nome = (cli?.nome||'?').split(' ')[0];
           const pass = a.passageiro && a.passageiro.split(' ')[0] !== nome ? ' · '+a.passageiro.split(' ')[0] : '';
           const horaLabel = a.hora ? `<span style="opacity:.7;font-size:9px;margin-right:2px">${a.hora}</span>` : '';
-          return `<div class="gsem-ag-chip ${a.status||'pendente'}" onclick="event.stopPropagation();irParaDiaAg('${ds}',${a.id})" title="${cli?.nome||'?'}${a.passageiro?' — '+a.passageiro:''} · ${a.hora||''} · ${fmt(a.valor||0)}">${horaLabel}${nome}${pass}</div>`;
+          return `<div class="gsem-ag-chip ${a.status||'pendente'}" onclick="event.stopPropagation();irParaDiaAg('${ds}',${a.id})" title="${cli?.nome||'?'}${a.passageiro?'  '+a.passageiro:''} · ${a.hora||''} · ${fmt(a.valor||0)}">${horaLabel}${nome}${pass}</div>`;
         }).join('');
         return `<div class="gsem-meia${meia==='30'?' bottom':''}" onclick="abrirNovoNoDia('${ds}','${horaClick}')">${chips}</div>`;
       }

@@ -253,11 +253,9 @@
 
 
   /* ── VISTA SEMANAL ── */
-  /* Wrapper scrollável — garante que o grid nunca comprime no mobile */
   #gradeSemanal {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    /* Força o scroll antes de comprimir as colunas */
     width: 100%;
   }
   .grade-sem {
@@ -265,9 +263,9 @@
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
-    /* Largura mínima fixa: 38px hora + 7 × 56px dias = garante 7 colunas visíveis */
+    /* No desktop expande 100%; no mobile o min-width ativa o scroll horizontal */
+    width: 100%;
     min-width: 430px;
-    width: max-content;
     font-size: 11px;
   }
   .gsem-hora-lbl {
@@ -718,7 +716,7 @@ function renderGradeSemanal() {
   // nCols = 8 (hora + 7 dias)
   const nCols = 8;
 
-  let html = `<div class="grade-sem" style="grid-template-columns:38px repeat(7,minmax(54px,1fr))">`;
+  let html = `<div class="grade-sem" style="grid-template-columns:38px repeat(7,1fr)">`;
 
   // Header linha 1: célula vazia + 7 dias
   html += `<div class="gsem-hora-lbl"></div>`;

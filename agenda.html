@@ -258,8 +258,9 @@
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
-    min-width: 480px;
     font-size: 11px;
+    width: max-content;
+    min-width: 100%;
   }
   .grade-sem-header {
     display: contents;
@@ -699,7 +700,7 @@ function renderGradeSemanal() {
   // nCols = 8 (hora + 7 dias)
   const nCols = 8;
 
-  let html = `<div class="grade-sem" style="grid-template-columns:42px repeat(7,1fr)">`;
+  let html = `<div class="grade-sem" style="grid-template-columns:42px repeat(7,minmax(44px,1fr))">`;
 
   // Header linha 1: célula vazia + 7 dias
   html += `<div class="gsem-hora-lbl"></div>`;

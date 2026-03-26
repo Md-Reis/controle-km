@@ -299,7 +299,7 @@
   .gsem-celula {
     border-right: 1px solid var(--border);
     border-bottom: 1px solid rgba(255,255,255,.04);
-    min-height: 28px;
+    min-height: 40px;
     padding: 2px;
     position: relative;
     vertical-align: top;
@@ -318,7 +318,6 @@
     font-weight: 600;
     white-space: nowrap;
   }
-  .gsem-hora-cell.meia-hora { border-bottom-color: rgba(255,255,255,.04); font-weight: 400; font-size: 9px; }
   .gsem-ag-chip {
     background: rgba(46,168,160,.25);
     border-left: 3px solid var(--primary);
@@ -653,20 +652,18 @@ function renderGradeSemanal() {
   const lblSem = document.getElementById('labelSemana');
   if (lblSem) lblSem.textContent = ini + ' – ' + fim;
 
-  // Horários 06:00 a 20:30 em intervalos de 30 min
+  // Horários 00:00 a 23:00 em intervalos de 1 hora
   const slots = [];
-  for (let h=0; h<=23; h++) {
-    slots.push({ h, m: 0,  str: String(h).padStart(2,'0')+':00' });
-    if (h < 23) slots.push({ h, m: 30, str: String(h).padStart(2,'0')+':30' });
+  for (let h = 0; h <= 23; h++) {
+    slots.push({ h, m: 0, str: String(h).padStart(2,'0')+':00' });
   }
 
-  // Montar agendamentos indexados por slot de 30min (arredonda para baixo)
-  // Ex: 11:55 → slot 11:30 | 13:30 → 13:30 | 07:05 → 07:00
+  // Montar agendamentos indexados por hora cheia (arredonda para a hora anterior)
+  // Ex: 11:55 → 11:00 | 13:30 → 13:00 | 07:05 → 07:00
   function horaParaSlot(hora) {
     if (!hora) return '';
-    const [hh, mm] = hora.split(':').map(Number);
-    const slotMm = mm >= 30 ? 30 : 0;
-    return String(hh).padStart(2,'0') + ':' + String(slotMm).padStart(2,'0');
+    const [hh] = hora.split(':').map(Number);
+    return String(hh).padStart(2,'0') + ':00';
   }
 
   const agIndex = {};
@@ -699,9 +696,8 @@ function renderGradeSemanal() {
 
   // Linhas de slots de horário
   slots.forEach(slot => {
-    const isCheia  = slot.m === 0;
-    const horaLbl  = isCheia ? slot.str.replace(':00','h') : '';
-    html += `<div class="gsem-hora-cell${isCheia?'':' meia-hora'}">${horaLbl}</div>`;
+    const horaLbl = slot.str.replace(':00','h');
+    html += `<div class="gsem-hora-cell">${horaLbl}</div>`;
 
     diasSem.forEach(d => {
       const ds  = toDateStr(d);
@@ -715,7 +711,7 @@ function renderGradeSemanal() {
           ${nome}${pass}
         </div>`;
       }).join('');
-      html += `<div class="gsem-celula${isCheia?' hora-cheia':''}" onclick="abrirNovoNoDia('${ds}','${slot.str}')">${chips}</div>`;
+      html += `<div class="gsem-celula hora-cheia" onclick="abrirNovoNoDia('${ds}','${slot.str}')">${chips}</div>`;
     });
   });
 

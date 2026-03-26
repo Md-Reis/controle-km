@@ -299,29 +299,14 @@
   .gsem-celula {
     border-right: 1px solid var(--border);
     border-bottom: 1px solid rgba(255,255,255,.04);
-    min-height: 44px;
-    padding: 0;
+    min-height: 28px;
+    padding: 2px;
     position: relative;
     vertical-align: top;
     cursor: pointer;
-    display: flex;
-    flex-direction: column;
   }
   .gsem-celula:hover { background: rgba(255,255,255,.03); }
   .gsem-celula.hora-cheia { border-bottom-color: var(--border); }
-  /* Duas metades: :00-:29 (top) e :30-:59 (bottom) */
-  .gsem-meia {
-    flex: 1;
-    padding: 2px 2px 1px;
-    position: relative;
-    min-height: 20px;
-  }
-  .gsem-meia.bottom {
-    border-top: 1px dashed rgba(255,255,255,.08);
-  }
-  [data-theme="light"] .gsem-meia.bottom {
-    border-top-color: rgba(0,0,0,.08);
-  }
   .gsem-hora-cell {
     background: var(--card2);
     border-right: 1px solid var(--border);
@@ -333,6 +318,7 @@
     font-weight: 600;
     white-space: nowrap;
   }
+  .gsem-hora-cell.meia-hora { border-bottom-color: rgba(255,255,255,.04); font-weight: 400; font-size: 9px; }
   .gsem-ag-chip {
     background: rgba(46,168,160,.25);
     border-left: 3px solid var(--primary);
@@ -669,28 +655,24 @@ function renderGradeSemanal() {
 
   // Horários 00:00 a 23:00 em intervalos de 1 hora
   const slots = [];
-  for (let h = 0; h <= 23; h++) {
+  for (let h=0; h<=23; h++) {
     slots.push({ h, m: 0, str: String(h).padStart(2,'0')+':00' });
   }
 
-  // Cada agendamento vai para a metade correta dentro do slot de 1 hora:
-  // :00–:29 → top (meia = '00') | :30–:59 → bottom (meia = '30')
-  function horaParaMeia(hora) {
-    if (!hora) return { slot: '', meia: '00' };
-    const [hh, mm] = hora.split(':').map(Number);
-    return {
-      slot: String(hh).padStart(2,'0') + ':00',
-      meia: mm >= 30 ? '30' : '00'
-    };
+  // Montar agendamentos indexados por slot de 1h (arredonda para baixo)
+  // Ex: 21:45 → slot 21:00 | 13:30 → 13:00 | 07:05 → 07:00
+  function horaParaSlot(hora) {
+    if (!hora) return '';
+    const [hh] = hora.split(':').map(Number);
+    return String(hh).padStart(2,'0') + ':00';
   }
 
-  // agIndex keys: "data|HH:00|00" (top) ou "data|HH:00|30" (bottom)
   const agIndex = {};
   agData.agendamentos
     .filter(a => a.status !== 'cancelado')
     .forEach(a => {
-      const { slot, meia } = horaParaMeia(a.hora);
-      const key = a.data + '|' + slot + '|' + meia;
+      const slotHora = horaParaSlot(a.hora);
+      const key = a.data + '|' + slotHora;
       if (!agIndex[key]) agIndex[key] = [];
       agIndex[key].push(a);
     });
@@ -715,29 +697,22 @@ function renderGradeSemanal() {
 
   // Linhas de slots de horário
   slots.forEach(slot => {
-    const horaLbl = slot.str.replace(':00','h');
+    const horaLbl  = slot.str.replace(':00','h');
     html += `<div class="gsem-hora-cell">${horaLbl}</div>`;
 
     diasSem.forEach(d => {
-      const ds = toDateStr(d);
-
-      function renderMeia(meia) {
-        const key  = ds + '|' + slot.str + '|' + meia;
-        const ags  = agIndex[key] || [];
-        const horaClick = meia === '30'
-          ? slot.str.replace(':00', ':30')
-          : slot.str;
-        const chips = ags.map(a => {
-          const cli  = vData.clientes.find(c=>c.id===a.clienteId);
-          const nome = (cli?.nome||'?').split(' ')[0];
-          const pass = a.passageiro && a.passageiro.split(' ')[0] !== nome ? ' · '+a.passageiro.split(' ')[0] : '';
-          const horaLabel = a.hora ? `<span style="opacity:.7;font-size:9px;margin-right:2px">${a.hora}</span>` : '';
-          return `<div class="gsem-ag-chip ${a.status||'pendente'}" onclick="event.stopPropagation();irParaDiaAg('${ds}',${a.id})" title="${cli?.nome||'?'}${a.passageiro?'  '+a.passageiro:''} · ${a.hora||''} · ${fmt(a.valor||0)}">${horaLabel}${nome}${pass}</div>`;
-        }).join('');
-        return `<div class="gsem-meia${meia==='30'?' bottom':''}" onclick="abrirNovoNoDia('${ds}','${horaClick}')">${chips}</div>`;
-      }
-
-      html += `<div class="gsem-celula hora-cheia">${renderMeia('00')}${renderMeia('30')}</div>`;
+      const ds  = toDateStr(d);
+      const key = ds + '|' + slot.str;
+      const ags = agIndex[key] || [];
+      const chips = ags.map(a => {
+        const cli    = vData.clientes.find(c=>c.id===a.clienteId);
+        const nome   = (cli?.nome||'?').split(' ')[0];
+        const pass   = a.passageiro && a.passageiro.split(' ')[0] !== nome ? ' · '+a.passageiro.split(' ')[0] : '';
+        return `<div class="gsem-ag-chip ${a.status||'pendente'}" onclick="event.stopPropagation();irParaDiaAg('${ds}',${a.id})" title="${cli?.nome||'?'}${a.passageiro?' — '+a.passageiro:''} · ${fmt(a.valor||0)}">
+          ${nome}${pass}
+        </div>`;
+      }).join('');
+      html += `<div class="gsem-celula hora-cheia" onclick="abrirNovoNoDia('${ds}','${slot.str}')">${chips}</div>`;
     });
   });
 

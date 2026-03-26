@@ -418,6 +418,15 @@ function showPage(id) {
 // ===== AUX =====
 function getAtivo() { return data.veiculos.find(v=>v.id===data.ativo); }
 
+// parseDL: converte "YYYY-MM-DD" (ou ISO) em Date local sem problema de UTC
+// new Date("2026-03-24") = UTC meia-noite → BRT 23/03 às 21h → DIA ERRADO
+// parseDL("2026-03-24") = new Date(2026, 2, 24, 12, 0, 0) → sempre 24/03
+function parseDL(str) {
+  const s = (str || '').slice(0, 10);
+  const [y, m, d] = s.split('-').map(Number);
+  return isNaN(y) ? new Date(NaN) : new Date(y, m - 1, d, 12, 0, 0);
+}
+
 function calcularCustoPorKm(v) {
   if (!v||v.consumo<=0) return 0;
   const cComb = v.custos.comb / v.consumo;
@@ -605,12 +614,6 @@ function showDetalheTab(tabId) {
   if (tabId==="histClienteTab"){ document.getElementById("tabHistCliente").classList.add("active"); renderHistCliente(); }
 }
 
-// Helper: parse "YYYY-MM-DD" sem problema de UTC
-function parseDL(str) {
-  const s = (str||'').slice(0,10);
-  const [y,m,d] = s.split('-').map(Number);
-  return isNaN(y) ? new Date(NaN) : new Date(y, m-1, d, 12, 0, 0);
-}
 function renderHistCliente() {
   const lista = document.getElementById("listaHistCliente");
   if (!clienteEditandoId) { lista.innerHTML="<small>Selecione um cliente.</small>"; return; }
@@ -945,7 +948,11 @@ function renderHistoricoViagens() {
       if (mesFiltro > 0 && d.getMonth() + 1 !== mesFiltro) return false;
       return true;
     })
-    .sort((a,b) => new Date(b.data) - new Date(a.data));
+    .sort((a,b) => {
+      const ka = (a.data||'').slice(0,10) + (a.hora||'');
+      const kb = (b.data||'').slice(0,10) + (b.hora||'');
+      return kb.localeCompare(ka);
+    });
 
   // Resumo do período
   const resumoEl = document.getElementById('resumoFiltroViagem');
@@ -1090,7 +1097,7 @@ function recalcularFinanceiroGeral() {
     data.financeiro.anos[ano].faturamento=new Array(12).fill(0);
   });
   data.lancamentos.forEach(l=>{
-    const d=new Date(l.data); const ano=d.getFullYear();
+    const d=parseDL(l.data); const ano=d.getFullYear();
     if (!data.financeiro.anos[ano]) data.financeiro.anos[ano]={metas:{},faturamento:{}};
     const f=data.financeiro.anos[ano].faturamento;
     if (!f[d.getMonth()]) f[d.getMonth()]=0;
@@ -1275,7 +1282,7 @@ function abrirEditarViagem(id) {
   viagemEditandoId = id;
 
   // Data
-  const dataLocal = parseDL(v.data).toLocaleDateString('pt-BR').split('/').reverse().join('-');
+  const dataLocal = (v.data || '').slice(0, 10);
   document.getElementById('editVData').value  = dataLocal;
   document.getElementById('editVValor').value = v.valor;
   document.getElementById('editVKm').value    = v.km || '';

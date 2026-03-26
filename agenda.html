@@ -253,16 +253,22 @@
 
 
   /* ── VISTA SEMANAL ── */
+  /* Wrapper scrollável — garante que o grid nunca comprime no mobile */
+  #gradeSemanal {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Força o scroll antes de comprimir as colunas */
+    width: 100%;
+  }
   .grade-sem {
     display: grid;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
-    min-width: 480px;
+    /* Largura mínima fixa: 38px hora + 7 × 56px dias = garante 7 colunas visíveis */
+    min-width: 430px;
+    width: max-content;
     font-size: 11px;
-  }
-  .grade-sem-header {
-    display: contents;
   }
   .gsem-hora-lbl {
     background: var(--card2);
@@ -281,6 +287,8 @@
     padding: 5px 4px;
     text-align: center;
     cursor: pointer;
+    /* Largura mínima por coluna de dia */
+    min-width: 54px;
   }
   .gsem-dia-hdr:hover { background: var(--card); }
   .gsem-dia-hdr.hoje  { background: rgba(46,168,160,.15); }
@@ -296,45 +304,58 @@
     text-transform: uppercase;
     letter-spacing: .4px;
   }
+  /* Célula de conteúdo — flex coluna para acomodar as 2 meias */
   .gsem-celula {
     border-right: 1px solid var(--border);
-    border-bottom: 1px solid rgba(255,255,255,.04);
-    min-height: 44px;
+    border-bottom: 1px solid var(--border);
+    min-height: 48px;
+    min-width: 54px;
     padding: 0;
     position: relative;
     vertical-align: top;
-    cursor: pointer;
     display: flex;
     flex-direction: column;
   }
-  .gsem-celula:hover { background: rgba(255,255,255,.03); }
-  .gsem-celula.hora-cheia { border-bottom-color: var(--border); }
   /* Duas metades: :00-:29 (top) e :30-:59 (bottom) */
   .gsem-meia {
     flex: 1;
     padding: 2px 2px 1px;
-    position: relative;
-    min-height: 20px;
+    min-height: 22px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
   }
-  .gsem-meia.bottom {}
-  [data-theme="light"] .gsem-meia.bottom {}
+  .gsem-meia:hover { background: rgba(255,255,255,.03); }
+  /* Linha divisória sutil apenas entre top e bottom */
+  .gsem-meia.bottom {
+    border-top: 1px dashed rgba(255,255,255,.05);
+  }
+  [data-theme="light"] .gsem-meia.bottom {
+    border-top-color: rgba(0,0,0,.05);
+  }
+  /* Coluna de hora — mesma altura que a célula dupla */
   .gsem-hora-cell {
     background: var(--card2);
     border-right: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
-    padding: 4px 6px;
+    padding: 5px 5px 0;
     text-align: right;
     font-size: 10px;
     color: var(--muted);
-    font-weight: 600;
+    font-weight: 700;
     white-space: nowrap;
+    min-height: 48px;
+    /* Label no topo da célula */
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
   }
   .gsem-ag-chip {
     background: rgba(46,168,160,.25);
     border-left: 3px solid var(--primary);
     border-radius: 4px;
     padding: 2px 4px;
-    margin-bottom: 2px;
     font-size: 10px;
     font-weight: 600;
     color: var(--text);
@@ -344,12 +365,13 @@
     text-overflow: ellipsis;
     max-width: 100%;
     line-height: 1.3;
+    display: block;
   }
-  .gsem-ag-chip.confirmado { background:rgba(46,168,160,.3); border-color:var(--primary); }
-  .gsem-ag-chip.pendente   { background:rgba(232,148,10,.2); border-color:var(--secondary); }
-  .gsem-ag-chip.concluido  { background:rgba(34,197,94,.15); border-color:#22c55e; opacity:.8; }
-  .gsem-ag-chip.cancelado  { background:rgba(229,83,75,.12); border-color:var(--danger); opacity:.6; }
-  .gsem-ag-chip:hover { filter: brightness(1.15); }
+  .gsem-ag-chip.confirmado { background:rgba(46,168,160,.3);  border-color:var(--primary); }
+  .gsem-ag-chip.pendente   { background:rgba(232,148,10,.2);  border-color:var(--secondary); }
+  .gsem-ag-chip.concluido  { background:rgba(34,197,94,.15);  border-color:#22c55e; opacity:.8; }
+  .gsem-ag-chip.cancelado  { background:rgba(229,83,75,.12);  border-color:var(--danger); opacity:.6; }
+  .gsem-ag-chip:hover { filter: brightness(1.2); }
 </style>
 </head>
 <body class="has-global-nav">
@@ -408,7 +430,7 @@
       <button onclick="irParaHoje();setViewAg('semana')" style="font-size:12px;padding:5px 14px;background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px">📍 Hoje</button>
     </div>
     <!-- Grade semanal -->
-    <div id="gradeSemanal" style="overflow-x:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="gradeSemanal"></div>
   </div>
 
 </div>
@@ -634,10 +656,12 @@ function navSemana(dir) {
 function getLuniDaSemana(baseDate, offset) {
   // Retorna o domingo da semana (início convencional)
   const d = new Date(baseDate);
-  const dow = d.getDay(); // 0=dom, 1=seg, ...
-  // Recuar até o domingo anterior (ou manter se já for domingo)
-  d.setDate(d.getDate() - dow + offset * 7);
-  d.setHours(0,0,0,0);
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay(); // 0=dom, 1=seg, ..., 6=sáb
+  // Recua até o domingo da semana atual, depois aplica offset
+  d.setDate(d.getDate() - dow);
+  d.setDate(d.getDate() + offset * 7);
+  d.setHours(0, 0, 0, 0);
   return d;
 }
 
@@ -694,7 +718,7 @@ function renderGradeSemanal() {
   // nCols = 8 (hora + 7 dias)
   const nCols = 8;
 
-  let html = `<div class="grade-sem" style="grid-template-columns:42px repeat(7,1fr)">`;
+  let html = `<div class="grade-sem" style="grid-template-columns:38px repeat(7,minmax(54px,1fr))">`;
 
   // Header linha 1: célula vazia + 7 dias
   html += `<div class="gsem-hora-lbl"></div>`;

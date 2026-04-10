@@ -147,6 +147,11 @@
       <div class="kpi-valor" id="kpiGastoMes">—</div>
       <div class="kpi-sub" id="kpiGastoMesSub">estimado: —</div>
     </div>
+    <div class="kpi-card">
+      <div class="kpi-label">KM desde último</div>
+      <div class="kpi-valor" id="kpiKmDesdeUltimo">—</div>
+      <div class="kpi-sub" id="kpiKmDesdeUltimoSub">abastecimento</div>
+    </div>
   </div>
 </div>
 
@@ -322,6 +327,14 @@
 
   // showToast, toLocalDateStr → shared.js
 
+  // parseDL: converte "YYYY-MM-DD" em Date local (sem UTC shift)
+  // new Date("2026-04-03") = UTC meia-noite → BRT = 02/04 às 21h → DIA ERRADO
+  function parseDL(str) {
+    const s = (str||'').slice(0,10);
+    const [y,m,d] = s.split('-').map(Number);
+    return isNaN(y) ? new Date(NaN) : new Date(y, m-1, d, 12, 0, 0);
+  }
+
   function getVeiculo(id) { return kmApp.veiculos.find(v=>v.id===id); }
 
   function calcularCustoPorKm(v) {
@@ -393,7 +406,7 @@
   function getRegistrosVeiculo() {
     return abastApp.registros
       .filter(r => r.veiculoId === veiculoAtualId)
-      .sort((a,b) => new Date(a.data) - new Date(b.data));
+      .sort((a,b) => (a.data||'').slice(0,10).localeCompare((b.data||'').slice(0,10)));
   }
 
   // Calcula consumo entre dois registros consecutivos
@@ -446,15 +459,33 @@
 
     // Gasto real no mês atual
     const agora = new Date();
+    const mesAtualStr = toLocalDateStr(agora).slice(0,7); // "YYYY-MM"
     const gastoMes = regs
-      .filter(r => {
-        const d = new Date(r.data);
-        return d.getFullYear()===agora.getFullYear() && d.getMonth()===agora.getMonth();
-      })
+      .filter(r => (r.data||'').slice(0,7) === mesAtualStr)
       .reduce((s,r)=>s+r.valor,0);
 
     document.getElementById('kpiGastoMes').textContent    = formatCurrency(gastoMes);
     document.getElementById('kpiGastoMesSub').textContent = `estimado: ${formatCurrency(v.custos?.comb||0)}`;
+
+    // KM percorridos desde o último abastecimento
+    // = KM atual do odômetro (último registro) − KM do penúltimo registro
+    const kmEl    = document.getElementById('kpiKmDesdeUltimo');
+    const kmSubEl = document.getElementById('kpiKmDesdeUltimoSub');
+    if (kmEl) {
+      if (regs.length >= 2) {
+        const ultimo     = regs[regs.length - 1];
+        const penultimo  = regs[regs.length - 2];
+        const kmPercorr  = ultimo.km - penultimo.km;
+        kmEl.textContent    = kmPercorr > 0 ? kmPercorr.toLocaleString('pt-BR') + ' km' : '—';
+        kmSubEl.textContent = `até ${parseDL(ultimo.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`;
+      } else if (regs.length === 1) {
+        kmEl.textContent    = '—';
+        kmSubEl.textContent = 'só 1 registro';
+      } else {
+        kmEl.textContent    = '—';
+        kmSubEl.textContent = 'abastecimento';
+      }
+    }
   }
 
   function renderAlerta() {
@@ -514,7 +545,7 @@
     if (!sel) return;
     const regs = getRegistrosVeiculo();
     const anoAtual = new Date().getFullYear();
-    const anos = new Set(regs.map(r => new Date(r.data).getFullYear()));
+    const anos = new Set(regs.map(r => parseDL(r.data).getFullYear()));
     anos.add(anoAtual);
     sel.innerHTML = [...anos].sort((a,b)=>b-a).map(a =>
       `<option value="${a}" ${a===anoAtual?'selected':''}>${a}</option>`
@@ -548,7 +579,7 @@
 
     // Filtrar registros pelo período
     const regsFiltrados = regs.filter(r => {
-      const d = new Date(r.data);
+      const d = parseDL(r.data);
       if (d.getFullYear() !== anoFiltro) return false;
       if (mesFiltro > 0 && d.getMonth() + 1 !== mesFiltro) return false;
       return true;
@@ -601,7 +632,7 @@
     lista.innerHTML = regsDesc.map((r) => {
       const idxOriginal = regs.indexOf(r);
       const cons = consumoMap[idxOriginal];
-      const d    = new Date(r.data);
+      const d    = parseDL(r.data);
       const dataStr = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'});
       const combIcon = {gasolina:'⛽',etanol:'🌿'}[r.combustivel]||'⛽';
 
@@ -640,7 +671,7 @@
     if (consumos.length < 2) { card.style.display='none'; return; }
     card.style.display = '';
 
-    const labels = consumos.map(c => new Date(c.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    const labels = consumos.map(c => parseDL(c.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
     const vals   = consumos.map(c => parseFloat(c.consumo.toFixed(2)));
     const v      = getVeiculo(veiculoAtualId);
     const estimado = v?.consumo || null;
@@ -846,7 +877,7 @@
     const r = abastApp.registros.find(r => r.id === id);
     if (!r) return;
     deletandoId = id;
-    const d = new Date(r.data).toLocaleDateString('pt-BR');
+    const d = parseDL(r.data).toLocaleDateString('pt-BR');
     document.getElementById('modalDelTexto').textContent =
       `Excluir o abastecimento de ${d} — ${r.litros.toFixed(1)}L por ${formatCurrency(r.valor)}?`;
     document.getElementById('modalDel').classList.remove('hidden');
@@ -908,8 +939,7 @@ function exportCSVAbastecimento() {
   consumos.forEach(c => consumoMap[c.idx] = c);
 
   const rows = regs.map((r, i) => {
-    const d = new Date(r.data);
-    const data = d.toLocaleDateString('pt-BR');
+    const data = parseDL(r.data).toLocaleDateString('pt-BR');
     const litros = r.litros.toFixed(2);
     const valor  = r.valor.toFixed(2);
     const precoL = (r.valor / r.litros).toFixed(3);

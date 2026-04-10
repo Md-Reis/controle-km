@@ -893,7 +893,7 @@
 
     const regs = (abastApp.registros || [])
       .filter(r => !veiculoAtivo || r.veiculoId === veiculoAtivo.id)
-      .sort((a,b) => new Date(b.data) - new Date(a.data));
+      .sort((a,b) => (b.data||'').slice(0,10).localeCompare((a.data||'').slice(0,10)));
 
     if (regs.length === 0) { el.innerHTML = ''; return; }
 
@@ -1345,7 +1345,7 @@
     const maiorLucro = todos.reduce((m,l)=>l.lucro>m.lucro?l:m, todos[0]);
 
     const recFmt = (l) => {
-      const d = new Date(l.data);
+      const d = parseDateLocal(l.data);
       return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
     };
 
@@ -1384,7 +1384,7 @@
     const porMes = {};
     todos.forEach(l => {
       if (!l.data) return;
-      const d   = new Date(l.data);
+      const d   = parseDateLocal(l.data);
       const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
       if (!porMes[key]) porMes[key] = {fat:0,lucro:0,n:0,label:MESES[d.getMonth()]+' '+d.getFullYear()};
       porMes[key].fat   += l.valor||0;
@@ -2080,7 +2080,7 @@ function exportarBackup() {
     const todos = getAllLancamentos();
     const fatTotal = new Array(12).fill(0);
     todos.forEach(l => {
-      const d = new Date(l.data);
+      const d = parseDateLocal(l.data);
       if (d.getFullYear() === ano) {
         fatTotal[d.getMonth()] += Number(l.valor) || 0;
       }
@@ -2089,7 +2089,7 @@ function exportarBackup() {
     // Resumo do ano
     const totalAno = fatTotal.reduce((a, b) => a + b, 0);
     const lucroTotal = todos
-      .filter(l => new Date(l.data).getFullYear() === ano)
+      .filter(l => parseDateLocal(l.data).getFullYear() === ano)
       .reduce((acc, l) => acc + (l.lucro || 0), 0);
 
     document.getElementById("resumoTotal").innerHTML = `
